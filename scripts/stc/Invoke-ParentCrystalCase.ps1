@@ -49,10 +49,8 @@ $evidence.frozenReplayLimit='DataSet mode has no native SQL schema fallback; ass
 $oldTemp=$env:PARENT_REPORTS_CRYSTAL_TEMP_ROOT
 $oldRoot=$env:PARENT_REPORTS_CRYSTAL_TEMPLATE_ROOT
 try {
-    $builder=[System.Data.SqlClient.SqlConnectionStringBuilder]::new()
-    $builder.DataSource=$Server; $builder.InitialCatalog=$case.database
-    $builder.IntegratedSecurity=$true; $builder.TrustServerCertificate=$true; $builder.ConnectTimeout=10
-    $connection=[System.Data.SqlClient.SqlConnection]::new($builder.ConnectionString)
+    $connectionString=New-CaseConnectionString $Server $case.database
+    $connection=[System.Data.SqlClient.SqlConnection]::new($connectionString)
     $connection.Open()
     try {
         $metadata=$connection.CreateCommand()
@@ -95,7 +93,7 @@ try {
     $liveOutput=Join-Path $run ('crystal-'+$nonce+'.output.pdf')
     [IO.File]::WriteAllBytes($liveOutput,[byte[]]@())
     $requests.Add($liveRequest)
-    @{reportPath=$template;outputPath=$liveOutput;connectionString=$builder.ConnectionString;queryType='stored_procedure';storedProcedure=$case.procedure;queryParams=$selectors;reportVariables=$variables;exportFormat='pdf'} | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $liveRequest -Encoding utf8
+    @{reportPath=$template;outputPath=$liveOutput;connectionString=$connectionString;queryType='stored_procedure';storedProcedure=$case.procedure;queryParams=$selectors;reportVariables=$variables;exportFormat='pdf'} | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $liveRequest -Encoding utf8
     try {
         $process=Invoke-CaseProcess $NativeBridge @($liveRequest) $run 'native-live'
         Assert-CasePdfResult $process $liveOutput -Typed

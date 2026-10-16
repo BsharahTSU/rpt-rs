@@ -45,7 +45,7 @@ def inspect(directory, engine):
     pages = list(ET.fromstring(xml).iter(NS + 'page'))
     if not pages:
         raise ValueError(f'{engine}: no pages')
-    words = [[normalize(w.text or '') for w in page.iter(NS + 'word')] for page in pages]
+    words = [[normalize(w.text) for w in page.iter(NS + 'word') if w.text and normalize(w.text)] for page in pages]
     subprocess.run(['pdftoppm', '-r', '96', '-png', str(path), str(directory / engine)], check=True, timeout=120, capture_output=True)
     return {
         'pages': len(pages), 'page_boxes': [[float(p.attrib['width']), float(p.attrib['height'])] for p in pages],
@@ -69,8 +69,11 @@ def run(directory):
     (directory / 'comparison.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
     panes = []
     for engine, facts in result['engines'].items():
-        images = sorted(directory.glob(engine + '-*.png'), key=lambda p: int(p.stem.rsplit('-', 1)[1]))
-        panes.append('<section><h2>' + html.escape(engine) + f" ({facts['pages']} pages)</h2>" + ''.join(
+        # Poppler zero-pads page numbers to the total page count's width. Select only current
+        # pages; a previous longer render must not leak stale trailing images into this view.
+        width = len(str(facts['pages']))
+        images = [directory / f'{engine}-{i:0{width}d}.png' for i in range(1, facts['pages'] + 1)]
+        panes.append('<section><h2>' + html.escape(engine) + f" ({facts['pages']} pages)</h2><p><a href=\"{engine}.pdf\">Open PDF</a></p>" + ''.join(
             f'<figure><figcaption>Page {i}</figcaption><img src="{html.escape(p.name, quote=True)}" alt="Page {i}"></figure>'
             for i, p in enumerate(images, 1)) + '</section>')
     document = '<!doctype html><meta charset="utf-8"><title>Crystal comparison</title><style>body{font:16px system-ui;margin:24px;background:#eef1f5;color:#182337}main{display:flex;gap:20px;align-items:flex-start}section{min-width:0;flex:1}h2{position:sticky;top:0;background:#eef1f5;padding:12px}figure{margin:0 0 24px}img{width:100%;box-shadow:0 2px 10px #bcc5cf}figcaption{padding:8px}</style><h1>' + html.escape(evidence['caseId']) + '</h1><p>Private local comparison. Structural/text checks do not establish visual parity. Review every page and record findings separately.</p><main>' + ''.join(panes) + '</main>'

@@ -82,9 +82,9 @@ visual acceptance. Record an explicit review of all pages and case-specific valu
 ## Focused checks
 
 - `scripts/stc/Test-CaseTools.ps1`: cross-table scope rejection, Chinese/Arabic normalization, schema,
-  decimal/binary/null fidelity, path containment, subprocess argument/exit handling and stale PDF rejection.
+  decimal/binary/null fidelity, path containment, subprocess argument/exit handling, SQL connection-string construction and stale PDF rejection (13 checks on PowerShell 5.1 and 7).
 - Docker `python3 -m unittest test_compare_case.py` in `scripts/stc`: duplicate value loss, moved content,
-  Chinese/Arabic text, paper/date differences and refusal to infer visual acceptance.
+  Chinese/Arabic text, paper/date differences, refusal to infer visual acceptance and stale trailing PNG exclusion (four tests).
 - Clock, bridge and worker checks are described in [clock-parity](clock-parity.md).
 
 Keep real artifacts private. Commit only scripts, synthetic checks, sanitized findings and Markdown

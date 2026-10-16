@@ -80,3 +80,11 @@ function Assert-CasePdfResult($Process, [string]$Output, [switch]$Typed) {
     } elseif ($response.Error -ne $false -or [string]$response.Result -ne $Output) { throw 'DataSet bridge rejected the case.' }
     if (-not (Test-Path -LiteralPath $Output) -or (Get-Item -LiteralPath $Output).Length -le 0) { throw 'Bridge produced no fresh PDF.' }
 }
+
+function New-CaseConnectionString([string]$Server, [string]$Database) {
+    # PowerShell's dictionary adapter resolves property assignments as connection-string keys.
+    $builder=[Data.SqlClient.SqlConnectionStringBuilder]::new()
+    $builder['Data Source']=$Server; $builder['Initial Catalog']=$Database
+    $builder['Integrated Security']=$true; $builder['TrustServerCertificate']=$true; $builder['Connect Timeout']=10
+    return $builder.ConnectionString
+}

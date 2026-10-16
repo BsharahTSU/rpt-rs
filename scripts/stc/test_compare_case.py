@@ -1,6 +1,9 @@
 import importlib.util
 from pathlib import Path
 import unittest
+import tempfile
+import json
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('compare_case', Path(__file__).with_name('compare_case.py'))
 module = importlib.util.module_from_spec(spec)
@@ -30,6 +33,19 @@ class ComparisonTests(unittest.TestCase):
         result = module.compare(a, b)
         self.assertFalse(result['page_boxes_equal'])
         self.assertFalse(result['dates_per_page_equal'])
+
+    def test_html_ignores_stale_trailing_pngs(self):
+        with tempfile.TemporaryDirectory() as folder:
+            directory = Path(folder)
+            (directory / 'evidence.json').write_text(json.dumps({'caseId': 'synthetic', 'stages': {'native-frozen': 'passed'}}))
+            (directory / 'native-frozen-99.png').write_bytes(b'stale')
+            with patch.object(module, 'inspect', return_value=self.facts([['A'], ['B']])), patch('builtins.print'):
+                module.run(directory)
+            output = (directory / 'comparison.html').read_text()
+            self.assertIn('native-frozen-1.png', output)
+            self.assertIn('native-frozen-2.png', output)
+            self.assertNotIn('native-frozen-99.png', output)
+            self.assertIn('native-frozen.pdf', output)
 
 if __name__ == '__main__':
     unittest.main()

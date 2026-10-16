@@ -9,6 +9,9 @@ function MustReject([scriptblock]$Action, [string]$Message) {
     try { & $Action } catch { $rejected=$true }
     Assert $rejected $Message
 }
+$connectionString=New-CaseConnectionString 'localhost,1234' 'Synthetic;Database'
+$connectionBuilder=[Data.SqlClient.SqlConnectionStringBuilder]::new($connectionString)
+Assert ($connectionBuilder['Data Source'] -eq 'localhost,1234' -and $connectionBuilder['Initial Catalog'] -eq 'Synthetic;Database' -and $connectionBuilder['Integrated Security'] -eq $true) 'SQL builder did not preserve canonical keywords/authentication.'
 $data=[Data.DataSet]::new()
 $table=[Data.DataTable]::new('Report')
 [void]$table.Columns.Add('StudentID',[int]); [void]$table.Columns.Add('Text',[string]); [void]$table.Columns.Add('Amount',[decimal]); [void]$table.Columns.Add('Image',[byte[]])

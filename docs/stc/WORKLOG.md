@@ -60,3 +60,17 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   record actual native export, frozen replay, Rust diagnostics and all-page visual findings.
 - Details: [surfaces](coverage/parent-surfaces.md), [SQL](coverage/sql-eligibility.md),
   [runner](coverage/case-runner.md).
+
+## 2026-10-16 - Checkpoint 3a: live harness corrections
+
+- The first case attempt stopped before SQL: PowerShell treated SqlConnectionStringBuilder property
+  assignment as an unsupported dictionary keyword. Switched to canonical connection-string keys
+  and added a synthetic round-trip regression, including a semicolon-bearing database name.
+- Confirmed actual timeout behavior with a disposable network-disabled container: the client timed
+  out, the owned container was removed, and no background renderer survived.
+- Independent review found that HTML reruns could include stale trailing PNGs. The viewer now
+  selects exactly the current page range; an injected stale-image regression covers this. Empty
+  extracted words are filtered and each engine pane links its PDF.
+- Validation: 13 harness checks in PowerShell 5.1 and 7; four Python comparison tests in Docker.
+  The three representative live case runs then completed capture/native-live/native-frozen/Rust
+  successfully. Actual PDF and visual results are recorded in the following checkpoint.
