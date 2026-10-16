@@ -58,6 +58,19 @@ jobs:
       - name: Build (all features, all targets)
         run: cargo build --all-features --all-targets
 
+  # The experimental STC adapter has a separate .NET contract surface; it must also build/test
+  # in Linux Docker. The Rust worker is included in the normal workspace test sweep.
+  stc-bridge-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Typed and legacy bridge contracts in Linux Docker
+        run: |
+          docker run --rm --volume "$PWD:/src" --workdir /src/bridge/Stc.CrystalBridge.Tests mcr.microsoft.com/dotnet/sdk:10.0 dotnet run --nologo
+
   # Every OS we publish a binary for. Host path and line-ending rules differ enough to break decoding
   # outright: a Windows misreading of the OLE root once left every stream unclassified, decoding
   # nothing at all, while a Linux-only CI stayed green.

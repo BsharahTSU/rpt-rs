@@ -1,0 +1,12 @@
+# Experimental local adapter harness. Build Dockerfile.stc-dev first.
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS dotnet
+FROM stc-rpt-rs:dev
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libicu72 python3-xlwt python3-xlrd \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=dotnet /usr/share/dotnet/dotnet /usr/share/dotnet/dotnet
+COPY --from=dotnet /usr/share/dotnet/host /usr/share/dotnet/host
+COPY --from=dotnet /usr/share/dotnet/shared /usr/share/dotnet/shared
+ENV DOTNET_ROOT=/usr/share/dotnet PATH=/usr/share/dotnet:$PATH
+WORKDIR /src
+CMD ["dotnet", "/src/bridge/Stc.CrystalBridge/bin/Debug/net10.0/stc-crystal-bridge.dll"]

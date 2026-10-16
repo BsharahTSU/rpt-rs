@@ -199,10 +199,33 @@ pub(crate) fn load_embedding_contents(
         .map(clean)
         .chain([format!("Embedding {ordinal}"), "CONTENTS".to_owned()])
         .collect();
-    container.streams().iter().find_map(|s| {
+    let contents = container.streams().iter().find_map(|s| {
         let parts: Vec<String> = ole_components(&s.path).into_iter().map(clean).collect();
         (parts == want).then(|| s.bytes.clone())
+    });
+    if contents.is_some() {
+        return contents;
+    }
+    // Paintbrush and other OLE1-converted pictures can store their native image in
+    // \1Ole10Native instead of CONTENTS (MS-OLEDS 2.3.6). Never follow embedded paths.
+    // https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-oleds/cc825ec3-f0ed-4023-97f6-13c323ac1172
+    let mut native_path = want;
+    *native_path.last_mut()? = "Ole10Native".into();
+    container.streams().iter().find_map(|s| {
+        let parts: Vec<String> = ole_components(&s.path).into_iter().map(clean).collect();
+        if parts != native_path {
+            return None;
+        }
+        native_image(&s.bytes).map(<[u8]>::to_vec)
     })
+}
+
+/// MS-OLEDS OLENativeStream: DWORD NativeDataSize followed by exactly that payload.
+/// Only a recognized image payload is accepted; package/executable/native-server data stays opaque.
+fn native_image(stream: &[u8]) -> Option<&[u8]> {
+    let size = u32_le(stream, 0)? as usize;
+    let data = stream.get(4..4usize.checked_add(size)?)?;
+    (crate::model::ImageFormat::sniff(data) != crate::model::ImageFormat::Unknown).then_some(data)
 }
 
 /// The common, human-meaningful fields of the MS-OLEPS `SummaryInformation` property set.
@@ -446,6 +469,71 @@ fn read_string_property(sect: &[u8], off: usize) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn native_bitmap() -> Vec<u8> {
+        let mut bmp = vec![0; 58];
+        bmp[..2].copy_from_slice(b"BM");
+        bmp[2..6].copy_from_slice(&58u32.to_le_bytes());
+        bmp[10..14].copy_from_slice(&54u32.to_le_bytes());
+        bmp[14..18].copy_from_slice(&40u32.to_le_bytes());
+        bmp[18..22].copy_from_slice(&1u32.to_le_bytes());
+        bmp[22..26].copy_from_slice(&1u32.to_le_bytes());
+        bmp[26..28].copy_from_slice(&1u16.to_le_bytes());
+        bmp[28..30].copy_from_slice(&24u16.to_le_bytes());
+        let mut stream = (bmp.len() as u32).to_le_bytes().to_vec();
+        stream.extend(bmp);
+        stream
+    }
+    #[test]
+    fn native_picture_uses_only_its_declared_bounded_image_payload() {
+        let stream = native_bitmap();
+        assert_eq!(native_image(&stream), Some(&stream[4..]));
+        for end in 0..stream.len() {
+            assert!(native_image(&stream[..end]).is_none());
+        }
+        let mut unknown = 4u32.to_le_bytes().to_vec();
+        unknown.extend_from_slice(b"MZxx");
+        assert!(
+            native_image(&unknown).is_none(),
+            "native executable data is not an image"
+        );
+    }
+    #[test]
+    fn native_picture_fallback_keeps_embedding_ordinal_and_subreport_scope() {
+        let stream = native_bitmap();
+        let container = Container {
+            streams: vec![LoadedStream {
+                id: StreamId::Embedding("Subdocument 2/Embedding 52/Ole10Native".into()),
+                path: "Subdocument 2/Embedding 52/\u{1}Ole10Native".into(),
+                bytes: stream.clone(),
+            }],
+        };
+        assert_eq!(
+            load_embedding_contents(&container, "Subdocument 2", 52),
+            Some(stream[4..].to_vec())
+        );
+        assert!(load_embedding_contents(&container, "", 52).is_none());
+        assert!(load_embedding_contents(&container, "Subdocument 2", 51).is_none());
+    }
+    #[test]
+    fn contents_remains_preferred_when_native_image_also_exists() {
+        let mut container = Container {
+            streams: vec![LoadedStream {
+                id: StreamId::Embedding("Embedding 1/Ole10Native".into()),
+                path: "Embedding 1/\u{1}Ole10Native".into(),
+                bytes: native_bitmap(),
+            }],
+        };
+        container.streams.push(LoadedStream {
+            id: StreamId::Embedding("Embedding 1/CONTENTS".into()),
+            path: "Embedding 1/CONTENTS".into(),
+            bytes: b"existing representation".to_vec(),
+        });
+        assert_eq!(
+            load_embedding_contents(&container, "", 1),
+            Some(b"existing representation".to_vec())
+        );
+    }
 
     /// The scrubber blanks exactly the two identity properties, leaves every other property
     /// readable, and does not change the stream's length — the same-length claim the whole

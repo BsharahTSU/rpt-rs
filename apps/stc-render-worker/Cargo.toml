@@ -1,0 +1,24 @@
+[package]
+name = "stc-render-worker"
+publish = false
+description = "Experimental prepared-data worker for the STC Linux bridge"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+[[bin]]
+name = "stc-rpt-worker"
+path = "src/main.rs"
+[dependencies]
+rpt-render = { workspace = true }
+rpt-reader = { workspace = true, features = ["serde"] }
+rpt-data = { workspace = true }
+rpt-formula = { workspace = true }
+rpt-pages = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+[lints]
+workspace = true

@@ -20,3 +20,7 @@ LICENSE
 # every dependency and both bundled font families with it, and owes their notices.
 !LICENSE
 !THIRD-PARTY-NOTICES.md
+
+# Local portable bridge build output.
+bridge/**/bin/
+bridge/**/obj/

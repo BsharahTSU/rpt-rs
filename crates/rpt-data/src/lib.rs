@@ -35,8 +35,8 @@ pub use pipeline::{
 pub use running_total::RunningTotals;
 pub use schedule::{EvalSchedule, ScheduledValues};
 pub use source::{
-    cell_to_value, rows_from_cells, Cell, Column, DbError, EmptySource, Row, RowData, RowSource,
-    SavedDataSource, ScopeData,
+    cell_to_value, cell_to_value_reporting, rows_from_cells, Cell, Coercion, Column, DbError,
+    EmptySource, Row, RowData, RowSource, SavedDataSource, ScopeData,
 };
 pub use summary::SummaryAccumulator;
 pub use value_order::{compare_values, value_key};

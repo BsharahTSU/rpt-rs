@@ -22,6 +22,7 @@ members = [
     "crates/rpt-render-util",
     "crates/rpt-test-support",
     "apps/meridian-seed",
+    "apps/stc-render-worker",
 ]
 
 [workspace.package]
