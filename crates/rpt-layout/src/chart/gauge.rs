@@ -96,6 +96,7 @@ pub(crate) fn gauge_chart(cx: &ChartCtx, series: &[(String, f64)]) -> Vec<DrawOp
         }));
         let lp = at(a, radius * 1.12);
         ops.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(lp.x.0 - 500),
                 top: Twips(lp.y.0 - 100),
@@ -150,6 +151,7 @@ pub(crate) fn gauge_chart(cx: &ChartCtx, series: &[(String, f64)]) -> Vec<DrawOp
     // The aggregate value printed under the dial (gated on "show value").
     if show_labels {
         ops.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(rl),
                 top: Twips(cy + radius as i32 / 2),

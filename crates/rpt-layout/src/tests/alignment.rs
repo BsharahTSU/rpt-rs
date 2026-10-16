@@ -272,3 +272,38 @@ fn a_heading_over_a_missing_field_takes_the_reading_order_default() {
         TextAlign::Right
     );
 }
+
+#[test]
+fn stored_rtl_direction_survives_pagination_into_the_page_ir() {
+    let mut caption = text_object("Arabic", "الطالب ABC 123", 0);
+    if let ReportObjectKind::Text(text) = &mut caption.kind {
+        text.reading_order = ReadingOrder::RightToLeft;
+    }
+    let mut report = Report::default();
+    report.print_options.content_width = Twips(12240);
+    report.print_options.content_height = Twips(15840);
+    report.report_definition.areas = vec![area(
+        AreaSectionKind::ReportHeader,
+        vec![section(
+            AreaSectionKind::ReportHeader,
+            "Header",
+            400,
+            vec![caption],
+        )],
+    )];
+    let saved = empty_saved();
+    let dataset = build_dataset(&SavedDataSource::new(&saved), &report.data_definition);
+    let formulas = rpt_data::compile_formulas(&report.data_definition);
+    let document = layout(&report, &dataset, &formulas);
+    let runs: Vec<_> = document
+        .pages
+        .iter()
+        .flat_map(|page| &page.ops)
+        .filter_map(|op| match op {
+            DrawOp::Text(run) => Some(run),
+            _ => None,
+        })
+        .collect();
+    assert!(!runs.is_empty());
+    assert!(runs.iter().all(|run| run.rtl));
+}

@@ -104,6 +104,7 @@ pub(crate) fn radar_chart(cx: &ChartCtx, series: &[(String, f64)]) -> Vec<DrawOp
         let lx = cx + (radius * 1.12 * a.cos()) as i32;
         let ly = cy + (radius * 1.12 * a.sin()) as i32;
         ops.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(lx - 700),
                 top: Twips(ly - 100),

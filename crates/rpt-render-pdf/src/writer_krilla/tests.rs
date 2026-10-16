@@ -94,6 +94,7 @@ fn the_content_stream_carries_the_spacing_between_glyphs() {
     // No kern pair in the string, so the only `TJ` adjustment a viewer sees is the spacing.
     let text = "nun";
     page.push(DrawOp::Text(TextRun {
+        rtl: false,
         bounds: Rect {
             left: Twips(720),
             top: Twips(720),
@@ -129,4 +130,61 @@ fn the_content_stream_carries_the_spacing_between_glyphs() {
         listing.contains("-41.667"),
         "no per-scalar TJ adjustment in:\n{listing}"
     );
+}
+
+#[test]
+fn arabic_clusters_keep_valid_logical_ranges_and_per_scalar_spacing() {
+    let text = "اللغة العربية";
+    let mut fonts = FontCache::new(FontSource::Bundled);
+    let face = face_of(&mut fonts, "DejaVu Sans", text);
+    let shaper = Shaper::new(&face).expect("Arabic-capable bundled font");
+    let natural = shaper.shape(text, SIZE, 0.0).1;
+    let spaced = shaper.shape(text, SIZE, SPACING_PT).1;
+    assert!((spaced - natural - SPACING_PT * text.chars().count() as f32).abs() < 0.001);
+}
+
+#[test]
+fn mixed_arabic_and_latin_runs_follow_the_stored_paragraph_direction() {
+    let fonts = FontCache::new(FontSource::Bundled);
+    let run = TextRun {
+        rtl: true,
+        bounds: Rect {
+            left: Twips(0),
+            top: Twips(0),
+            width: Twips(8000),
+            height: Twips(400),
+        },
+        text: "العربية ABC 123".into(),
+        font: FontSpec {
+            family: "DejaVu Sans".into(),
+            size_pt: SIZE,
+            ..Default::default()
+        },
+        color: Color {
+            r: 0,
+            g: 0,
+            b: 0,
+            a: 255,
+        },
+        align: TextAlign::Right,
+        rotation: 0.0,
+        metrics: None,
+        character_spacing: Twips(10),
+        source: None,
+    };
+    let segments = fonts.db.segment_by_coverage(&run.font, &run.text);
+    let visual = visual_face_runs(&run, &segments);
+    assert!(run.text[visual.first().unwrap().0.range.clone()].contains("ABC"));
+    assert!(!visual.first().unwrap().1);
+    assert!(visual.last().unwrap().1);
+    let mut page = Page::new(
+        1,
+        PageSize {
+            width: Twips(12240),
+            height: Twips(15840),
+        },
+    );
+    page.push(DrawOp::Text(run));
+    let pdf = crate::try_render_pages(&[page]).expect("mixed RTL PDF serializes");
+    assert!(pdf.starts_with(b"%PDF-"));
 }

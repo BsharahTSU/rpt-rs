@@ -79,6 +79,7 @@ pub(crate) fn gantt_chart(cx: &ChartCtx, bars: &[GanttBar]) -> Vec<DrawOp> {
     // Title, centered on top.
     if !title.is_empty() {
         ops.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(rl),
                 top: Twips(rt + pad / 2),
@@ -126,6 +127,7 @@ pub(crate) fn gantt_chart(cx: &ChartCtx, bars: &[GanttBar]) -> Vec<DrawOp> {
             }));
         }
         ops.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(x - 600),
                 top: Twips(plot_bottom + 30),
@@ -150,6 +152,7 @@ pub(crate) fn gantt_chart(cx: &ChartCtx, bars: &[GanttBar]) -> Vec<DrawOp> {
     // Optional date-axis title, centered below the tick labels.
     if !axis_titles.category.is_empty() {
         ops.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(plot_left),
                 top: Twips(plot_bottom + axis_h + 30),
@@ -204,6 +207,7 @@ pub(crate) fn gantt_chart(cx: &ChartCtx, bars: &[GanttBar]) -> Vec<DrawOp> {
         }));
         if i % stride == 0 {
             ops.push(DrawOp::Text(TextRun {
+                rtl: false,
                 bounds: Rect {
                     left: Twips(rl + pad),
                     top: Twips(by + (bar_h - MIN_ROW_LABEL_H.min(bar_h)) / 2),

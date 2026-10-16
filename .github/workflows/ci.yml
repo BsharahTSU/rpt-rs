@@ -84,9 +84,10 @@ jobs:
       # gate reports ok in 0.00s, so RPT_REQUIRE_QPDF turns a missing reader into a failure instead of
       # a silent pass. It is packaged only on the Linux runner, so that layer is required there and
       # skipped elsewhere; every layer below it runs on both.
-      - name: Install the PDF reader the artifact layer reads back with
+      # Chinese PDF round-trip tests also require real CJK faces and Poppler on Linux.
+      - name: Install PDF readers and multilingual fonts
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qpdf
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qpdf poppler-utils fonts-noto-core fonts-noto-cjk
       # Two steps, not a conditional env: the gate checks the variable is *present*, so an empty
       # value would still demand the reader.
       - name: Test

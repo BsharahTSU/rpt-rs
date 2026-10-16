@@ -328,6 +328,7 @@ impl Formatter<'_> {
                     line.character_spacing,
                 ) as i32);
                 emitted = self.push_op(DrawOp::Text(TextRun {
+                    rtl: plan.rtl,
                     bounds: line_rect,
                     text: line.text.clone(),
                     font: line.font.clone(),
@@ -1056,6 +1057,7 @@ impl Formatter<'_> {
         let line_height = Twips(self.text_layout.line_height_twips(&font) as i32);
         let advance = Twips(self.text_layout.width_twips(&sr_obj.subreport_name, &font) as i32);
         self.push_op(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: rect,
             text: sr_obj.subreport_name.clone(),
             font,

@@ -33,6 +33,7 @@ fn src(section: &str, name: &str, kind: ObjectKind, instance: u32) -> Option<Obj
 
 fn text(section: &str, name: &str, instance: u32, top: i32, left: i32, s: &str) -> DrawOp {
     DrawOp::Text(TextRun {
+        rtl: false,
         bounds: Rect {
             left: Twips(left),
             top: Twips(top),
@@ -203,6 +204,7 @@ fn a_picture_or_chart_is_one_figure_however_many_marks_it_draws() {
             source: src("Detail", "Graph1", ObjectKind::Chart, 1),
         })),
         chart(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(100),
                 top: Twips(100),
@@ -453,6 +455,7 @@ fn artifacts_are_left_out_of_the_reading_order() {
 #[test]
 fn a_wrapped_line_declares_the_space_the_wrapper_consumed() {
     let run = |text: &str, align| TextRun {
+        rtl: false,
         bounds: Rect {
             left: Twips(0),
             top: Twips(0),

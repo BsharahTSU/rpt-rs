@@ -18,7 +18,7 @@ use fontdb::{Database, Family, Query, Stretch, Style, Weight, ID};
 use rpt_pages::FontSpec;
 
 /// A maximal run of `text` that a single face covers: the byte `range` (a slice of the original
-/// string) drawn with `face`. `substituted` marks a run served by the bundled symbol fallback
+/// string) drawn with `face`. `substituted` marks a run served by a fallback face
 /// because the requested family lacked those glyphs — the signal behind `FontSubstituted`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FaceRun {
@@ -26,7 +26,7 @@ pub struct FaceRun {
     pub face: ID,
     /// Byte range of this run within the segmented text.
     pub range: Range<usize>,
-    /// True when `face` is the symbol fallback (the primary family lacked these glyphs).
+    /// True when `face` is a fallback (the primary family lacked these glyphs).
     pub substituted: bool,
 }
 
@@ -74,6 +74,16 @@ pub struct FontDb {
     primary_cache: RefCell<HashMap<(String, bool, bool), Option<ID>>>,
     /// The bundled symbol fallback id, resolved lazily once (its query never varies).
     symbol_cache: RefCell<Option<Option<ID>>>,
+    /// Coverage fallback for glyphs absent from both the primary and bundled symbol face.
+    coverage_cache: RefCell<HashMap<CoverageKey, Option<ID>>>,
+}
+
+#[derive(PartialEq, Eq, Hash)]
+struct CoverageKey {
+    family: String,
+    bold: bool,
+    italic: bool,
+    character: char,
 }
 
 impl std::fmt::Debug for FontDb {
@@ -279,6 +289,7 @@ impl FontDb {
             db,
             primary_cache: RefCell::new(HashMap::new()),
             symbol_cache: RefCell::new(None),
+            coverage_cache: RefCell::new(HashMap::new()),
         }
     }
 
@@ -336,6 +347,48 @@ impl FontDb {
         }
         let id = self.symbol_face();
         *self.symbol_cache.borrow_mut() = Some(id);
+        id
+    }
+
+    /// Find an installed face for a glyph that neither normal fallback covers. Prefer a known
+    /// CJK family in the requested generic class; never accept a family query without checking
+    /// its cmap. Cache misses too, so an unsupported character does not rescan every font per row.
+    fn covering_fallback(&self, spec: &FontSpec, c: char) -> Option<ID> {
+        let key = CoverageKey {
+            family: spec.family.clone(),
+            bold: spec.bold,
+            italic: spec.italic,
+            character: c,
+        };
+        if let Some(&id) = self.coverage_cache.borrow().get(&key) {
+            return id;
+        }
+        let family = match generic_for(&spec.family) {
+            GenericFamily::SansSerif => "Noto Sans CJK SC",
+            GenericFamily::Serif => "Noto Serif CJK SC",
+            GenericFamily::Monospace => "Noto Sans Mono CJK SC",
+        };
+        let preferred = self.db.query(&Query {
+            families: &[Family::Name(family)],
+            weight: if spec.bold {
+                Weight::BOLD
+            } else {
+                Weight::NORMAL
+            },
+            stretch: Stretch::Normal,
+            style: if spec.italic {
+                Style::Italic
+            } else {
+                Style::Normal
+            },
+        });
+        let id = preferred.filter(|&id| self.face_covers(id, c)).or_else(|| {
+            self.db
+                .faces()
+                .find(|face| self.face_covers(face.id, c))
+                .map(|face| face.id)
+        });
+        self.coverage_cache.borrow_mut().insert(key, id);
         id
     }
 
@@ -400,11 +453,10 @@ impl FontDb {
     }
 
     /// Split `text` into maximal `FaceRun`s each covered by a single face: the resolved primary
-    /// face for `spec` where it has the glyph, else the bundled symbol fallback for the runs it
-    /// lacks. Adjacent chars sharing a face coalesce into one run. Returns an empty vec for empty
-    /// text; if no primary face resolves at all, the whole string maps to the symbol face (or, if
-    /// even that is absent, to a single non-substituted run on [`first_face`] so callers still draw
-    /// something).
+    /// face for `spec` where it has the glyph, then the bundled symbol fallback, then a covering
+    /// installed face (including CJK). Adjacent chars sharing a face coalesce into one run. Returns
+    /// an empty vec for empty text. If no loaded face covers a character, keep it on the primary
+    /// face so its .notdef advance is preserved. Bundled-only databases do not acquire OS fonts.
     ///
     /// [`first_face`]: FontDb::first_face
     pub fn segment_by_coverage(&self, spec: &FontSpec, text: &str) -> Vec<FaceRun> {
@@ -435,12 +487,14 @@ impl FontDb {
             };
             let mut runs: Vec<FaceRun> = Vec::new();
             for (offset, c) in text.char_indices() {
-                // The primary if it covers this char, else the symbol fallback if that does, else
-                // stay on the primary (draw its .notdef rather than lose the char's advance).
+                // Preserve the established primary/symbol policy; search other loaded faces only
+                // for characters that would otherwise render as .notdef (notably Chinese).
                 let (face, substituted) = if primary.is_some() && covers(pface, c) {
                     (primary, false)
                 } else if symbol.is_some() && covers(sface, c) {
                     (symbol, true)
+                } else if let Some(face) = self.covering_fallback(spec, c) {
+                    (Some(face), true)
                 } else {
                     (primary, false)
                 };

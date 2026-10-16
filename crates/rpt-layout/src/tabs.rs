@@ -98,6 +98,7 @@ mod tests {
 
     fn run(text: &str) -> TextRun {
         TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(1000),
                 top: Twips(500),

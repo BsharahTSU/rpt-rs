@@ -122,6 +122,7 @@ mod tests {
     #[test]
     fn baseline_offset_prefers_measured_ascent_over_the_em_fallback() {
         let mut run = TextRun {
+            rtl: false,
             bounds: Rect::default(),
             text: "x".to_string(),
             font: FontSpec {

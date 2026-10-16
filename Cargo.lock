@@ -1247,6 +1247,7 @@ dependencies = [
  "rpt-render-util",
  "rpt-test-support",
  "rpt-text",
+ "unicode-bidi",
  "thiserror",
 ]
 

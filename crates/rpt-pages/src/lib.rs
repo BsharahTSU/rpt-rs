@@ -290,6 +290,9 @@ pub struct TextMetrics {
 /// produces multiple runs). This is the leaf the native engine draws via `ExtTextOutW`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TextRun {
+    /// The stored paragraph base direction. False preserves the historical LTR default.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub rtl: bool,
     /// The run's layout box in twips (printable-relative); text is aligned and clipped within it.
     pub bounds: Rect,
     /// The shaped run's text (one line).
@@ -963,6 +966,7 @@ mod tests {
             source: Some(ObjectRef::new("Details", ObjectKind::Box).named("Box1")),
         }));
         page.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(150),
                 top: Twips(150),
@@ -1117,6 +1121,7 @@ mod tests {
 
         // A run that carries metrics round-trips them.
         let with = TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(0),
                 top: Twips(0),

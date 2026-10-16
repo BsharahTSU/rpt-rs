@@ -102,6 +102,7 @@ pub(crate) fn funnel_chart(cx: &ChartCtx, series: &[(String, f64)]) -> Vec<DrawO
             label.clone()
         };
         ops.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(cx - 1400),
                 top: Twips(mid_y - 100),

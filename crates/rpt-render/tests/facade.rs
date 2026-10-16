@@ -162,6 +162,7 @@ fn render_backend_seam_matches_free_functions() {
         },
     );
     page.push(DrawOp::Text(TextRun {
+        rtl: false,
         bounds: Rect {
             left: Twips(200),
             top: Twips(200),

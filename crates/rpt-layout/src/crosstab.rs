@@ -252,6 +252,7 @@ pub(crate) fn grid_ops(
                 );
                 inst += 1;
                 ops.push(DrawOp::Text(TextRun {
+                    rtl: false,
                     bounds: Rect {
                         left: Twips(cell_x(c) + CELL_PAD),
                         top: Twips(cell_y(r) + CELL_PAD + li as i32 * line_h),

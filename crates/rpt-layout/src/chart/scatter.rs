@@ -85,6 +85,7 @@ pub(crate) fn scatter_chart(
             }));
         }
         ops.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(x - 400),
                 top: Twips(f.plot_bottom + 30),

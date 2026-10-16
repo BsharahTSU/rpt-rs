@@ -1,0 +1,9 @@
+# Linux development and verification only. The production image stays separate.
+FROM rust:1.92-slim-bookworm
+RUN rustup component add rustfmt clippy
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-noto-core fonts-noto-cjk python3 poppler-utils qpdf \
+    && rm -rf /var/lib/apt/lists/*
+ENV CARGO_TARGET_DIR=/target CARGO_BUILD_JOBS=4
+WORKDIR /src
+CMD ["cargo", "test", "--locked", "--workspace"]

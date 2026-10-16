@@ -214,6 +214,7 @@ impl MetafileSink for PageSink {
         let n_chars = text.chars().count() as i32;
         let width = (n_chars * em / 2).max(em);
         self.ops.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: origin.x,
                 top: origin.y,

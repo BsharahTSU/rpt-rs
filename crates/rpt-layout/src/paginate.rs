@@ -324,6 +324,7 @@ impl<'a> Formatter<'a> {
             });
         }
         Some(TextPlan {
+            rtl: matches!(reading_order, ReadingOrder::RightToLeft),
             lines,
             color,
             kind,

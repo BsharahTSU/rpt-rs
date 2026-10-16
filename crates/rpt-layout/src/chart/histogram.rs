@@ -90,6 +90,7 @@ pub(crate) fn histogram_chart(cx: &ChartCtx, values: &[f64], bins: usize) -> Vec
     // bin count is dense).
     let boundary = |i: usize| -> DrawOp {
         DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(f.plot_left + i as i32 * f.slot - f.slot / 2),
                 top: Twips(f.plot_bottom + 30),

@@ -23,6 +23,7 @@ krilla = { workspace = true, default-features = false, features = ["raster-image
 # Shaping every run ourselves, per single-face segment, so font fallback (⚠ etc.) and the per-word
 # pen of a justified line both work off advances we can see.
 harfrust = { workspace = true }
+unicode-bidi = { workspace = true }
 fontdb = { workspace = true }
 # Shared face resolution (FontSpec → OS face); `default-features = false` takes only the fontdb-based
 # resolver, not the cosmic-text shaping stack.

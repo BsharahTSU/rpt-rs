@@ -20,6 +20,7 @@ use rpt_pages::{
 use rpt_text::{FontDb, FontSource};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::rc::Rc;
+use unicode_bidi::{BidiInfo, Level};
 
 use krilla::configure::{Accessibility, Archival, ConfigurationBuilder, ValidationError};
 use krilla::error::KrillaError;
@@ -100,6 +101,7 @@ fn failure_page(message: &str) -> Page {
     }
     for (i, line) in lines.iter().enumerate() {
         page.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(1440),
                 top: Twips(1440 + i as i32 * 360),
@@ -916,6 +918,43 @@ fn draw_text(surface: &mut Surface, fonts: &mut FontCache, t: &TextRun) {
     }
 }
 
+/// Split font runs by bidi level, then arrange them in visual left-to-right order. The
+/// original UTF-8 slices are kept intact: harfrust shapes each directional slice and the
+/// PDF keeps its logical text for Unicode mappings.
+fn visual_face_runs(t: &TextRun, segments: &[rpt_text::FaceRun]) -> Vec<(rpt_text::FaceRun, bool)> {
+    let base = if t.rtl { Level::rtl() } else { Level::ltr() };
+    let bidi = BidiInfo::new(&t.text, Some(base));
+    if !bidi.has_rtl() {
+        return segments
+            .iter()
+            .cloned()
+            .map(|segment| (segment, false))
+            .collect();
+    }
+    let mut visual = Vec::new();
+    for paragraph in &bidi.paragraphs {
+        let (levels, runs) = bidi.visual_runs(paragraph, paragraph.range.clone());
+        for run in runs {
+            let rtl = levels[run.start].is_rtl();
+            let mut covered = Vec::new();
+            for segment in segments {
+                let start = segment.range.start.max(run.start);
+                let end = segment.range.end.min(run.end);
+                if start < end {
+                    let mut part = segment.clone();
+                    part.range = start..end;
+                    covered.push((part, rtl));
+                }
+            }
+            if rtl {
+                covered.reverse();
+            }
+            visual.extend(covered);
+        }
+    }
+    visual
+}
+
 /// Place a run's glyphs from `origin` (its anchor on the baseline): every segment shaped here and
 /// handed to krilla's `draw_glyphs`, which places glyphs a caller has already positioned. `draw_text`
 /// is not used — it shapes with a single face and no BIDI, which a fallback-capable renderer is
@@ -939,8 +978,10 @@ fn place_glyphs(
 ) {
     // The one face a justified line needs — its words share a single pen, so the whole line must be
     // one non-substituted segment. `None` for any other run, which flows its segments instead.
+    let visual = visual_face_runs(t, segments);
+    let has_rtl = visual.iter().any(|(_, rtl)| *rtl);
     let justified = match segments {
-        [seg] if extra > 0.0 && !seg.substituted => fonts.face(seg.face),
+        [seg] if extra > 0.0 && !seg.substituted && !has_rtl => fonts.face(seg.face),
         _ => None,
     };
     if let Some(face) = justified {
@@ -950,7 +991,7 @@ fn place_glyphs(
         return;
     }
     let mut pen_x = origin.x;
-    for seg in segments {
+    for (seg, rtl) in &visual {
         let Some(face) = fonts.face(seg.face) else {
             continue;
         };
@@ -958,7 +999,7 @@ fn place_glyphs(
             continue;
         };
         let seg_text = &t.text[seg.range.clone()];
-        let (glyphs, advance) = shaper.shape(seg_text, size, spacing);
+        let (glyphs, advance) = shaper.shape_directed(seg_text, size, spacing, Some(*rtl), extra);
         if !glyphs.is_empty() {
             surface.draw_glyphs(
                 Point::from_xy(pen_x, origin.y),
@@ -1135,8 +1176,8 @@ impl<'a> Shaper<'a> {
 
     /// Shape one single-face string into krilla glyphs, returning them and the string's total advance
     /// in points. Advances are normalised by the face's units-per-em (as `KrillaGlyph` expects) then
-    /// scaled by `size` for the returned pen advance. LTR/auto direction — each segment is one face
-    /// and, in practice, one script; RTL visual order is deferred.
+    /// scaled by `size` for the returned pen advance. Directional segments are ordered by
+    /// `visual_face_runs`; cluster ranges always refer to logical UTF-8 text.
     ///
     /// `spacing` is [`TextRun::character_spacing`] in points, charged **per Unicode scalar** and added
     /// after the last glyph of each shaped cluster — so a cluster that shapes several scalars into one
@@ -1147,36 +1188,58 @@ impl<'a> Shaper<'a> {
     /// is the per-glyph rule. The extra therefore rides in the glyph advances, which krilla writes as
     /// the run's `TJ` adjustments.
     fn shape(&self, text: &str, size: f32, spacing: f32) -> (Vec<KrillaGlyph>, f32) {
+        self.shape_directed(text, size, spacing, None, 0.0)
+    }
+
+    fn shape_directed(
+        &self,
+        text: &str,
+        size: f32,
+        spacing: f32,
+        rtl: Option<bool>,
+        word_extra: f32,
+    ) -> (Vec<KrillaGlyph>, f32) {
         let mut buffer = harfrust::UnicodeBuffer::new();
         buffer.push_str(text);
         buffer.guess_segment_properties();
+        if let Some(rtl) = rtl {
+            buffer.set_direction(if rtl {
+                harfrust::Direction::RightToLeft
+            } else {
+                harfrust::Direction::LeftToRight
+            });
+        }
         let output = self.shaper.shape(buffer, &[]);
         let positions = output.glyph_positions();
         let infos = output.glyph_infos();
         let upem = self.face.upem;
         // Glyph advances are em fractions, so the per-scalar extra converts into the same space once.
         let spacing_norm = if size > 0.0 { spacing / size } else { 0.0 };
+        let mut cluster_bounds: Vec<usize> =
+            infos.iter().map(|info| info.cluster as usize).collect();
+        cluster_bounds.push(text.len());
+        cluster_bounds.sort_unstable();
+        cluster_bounds.dedup();
         let mut glyphs = Vec::with_capacity(output.len());
         let mut advance_norm = 0.0f32;
         for i in 0..output.len() {
             let pos = positions[i];
             let info = infos[i];
-            // Cluster → byte range in `text`: this glyph's cluster start up to the next differing
-            // cluster (LTR). harfrust clusters are byte offsets into the pushed string, so the range
-            // is always on a UTF-8 boundary — correct for the ToUnicode mapping krilla derives from
-            // it.
+            // RTL output has descending logical cluster offsets. Find the next greater
+            // logical boundary, rather than the next glyph's offset, for a valid UTF-8 range.
             let start = info.cluster as usize;
-            let end = infos[i + 1..]
-                .iter()
-                .map(|n| n.cluster as usize)
-                .find(|&c| c != start)
-                .unwrap_or(text.len());
+            let end = cluster_bounds[cluster_bounds.partition_point(|offset| *offset <= start)];
             let mut x_adv = pos.x_advance as f32 / upem;
             // Charge the cluster's spacing once, on its last glyph, so it lands between clusters
             // rather than inside one (a mark would otherwise drift off its base).
             let cluster_end = infos.get(i + 1).map(|n| n.cluster as usize) != Some(start);
-            if cluster_end && spacing_norm != 0.0 {
-                x_adv += spacing_norm * text[start..end].chars().count() as f32;
+            if cluster_end {
+                let logical_cluster = &text[start..end];
+                x_adv += spacing_norm * logical_cluster.chars().count() as f32;
+                if size > 0.0 && word_extra > 0.0 {
+                    x_adv += word_extra / size
+                        * logical_cluster.chars().filter(|ch| *ch == ' ').count() as f32;
+                }
             }
             glyphs.push(KrillaGlyph::new(
                 GlyphId::new(info.glyph_id),

@@ -224,6 +224,7 @@ fn axis_text(
     src: &dyn Fn() -> Option<ObjectRef>,
 ) -> DrawOp {
     DrawOp::Text(TextRun {
+        rtl: false,
         bounds: Rect {
             left: Twips(left),
             top: Twips(top),
@@ -254,6 +255,7 @@ fn rotated_axis_text(
     src: &dyn Fn() -> Option<ObjectRef>,
 ) -> DrawOp {
     DrawOp::Text(TextRun {
+        rtl: false,
         bounds,
         text: text.to_string(),
         font: FontSpec {

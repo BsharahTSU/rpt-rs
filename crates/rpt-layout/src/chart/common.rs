@@ -241,6 +241,7 @@ pub(crate) fn chart_text_op(
     src: &dyn Fn() -> Option<ObjectRef>,
 ) -> DrawOp {
     DrawOp::Text(TextRun {
+        rtl: false,
         bounds,
         text: text.to_string(),
         font: style.font(element),
@@ -298,6 +299,7 @@ pub(super) fn disc_label(
     src: &dyn Fn() -> Option<ObjectRef>,
 ) -> DrawOp {
     DrawOp::Text(TextRun {
+        rtl: false,
         bounds: Rect {
             left: Twips(x - 700),
             top: Twips(y - 100),
@@ -459,6 +461,7 @@ pub(crate) fn series_legend(
     let text_left = box_left + SERIES_PAD_LEAD + SERIES_SWATCH_W + SERIES_SWATCH_GAP;
     let line_h = style.label_line_h();
     ops.push(DrawOp::Text(TextRun {
+        rtl: false,
         bounds: Rect {
             left: Twips(text_left),
             top: Twips(box_top + (box_h - line_h) / 2),
@@ -524,6 +527,7 @@ pub(crate) fn legend(
     let label_op =
         |ops: &mut Vec<DrawOp>, x: i32, y: i32, w: i32, size_pt: f32, label: &str, align| {
             ops.push(DrawOp::Text(TextRun {
+                rtl: false,
                 bounds: Rect {
                     left: Twips(x),
                     top: Twips(y),
@@ -832,6 +836,7 @@ pub(super) fn emit_value_axis(
     // Title.
     if !title.is_empty() {
         ops.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(rl),
                 top: Twips(rt + pad / 2),
@@ -854,6 +859,7 @@ pub(super) fn emit_value_axis(
     // (`plot_h`) up the axis, so the center-aligned text sits at the vertical middle reading upward.
     if !axis_titles.value.is_empty() {
         ops.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(rl + pad),
                 top: Twips(f.plot_bottom),
@@ -874,6 +880,7 @@ pub(super) fn emit_value_axis(
     // Category-axis (X) title, horizontal and centered below the category labels.
     if !axis_titles.category.is_empty() {
         ops.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(f.plot_left),
                 top: Twips(f.plot_bottom + f.cat_h + 30),
@@ -918,6 +925,7 @@ pub(super) fn emit_value_axis(
             }));
         }
         ops.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(rl + vtitle_w),
                 top: Twips(y - 110),
@@ -1011,6 +1019,7 @@ pub(super) fn value_label(
     src: &dyn Fn() -> Option<ObjectRef>,
 ) -> DrawOp {
     DrawOp::Text(TextRun {
+        rtl: false,
         bounds: Rect {
             left: Twips(x - 500),
             top: Twips(y),
@@ -1151,6 +1160,7 @@ pub(super) fn category_label(
         }
     };
     DrawOp::Text(TextRun {
+        rtl: false,
         bounds,
         text: label.to_string(),
         font: style.font(ChartText::GroupLabel),

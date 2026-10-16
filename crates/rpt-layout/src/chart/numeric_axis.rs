@@ -86,6 +86,7 @@ pub(crate) fn numeric_axis_chart(cx: &ChartCtx, series: &[(String, f64)]) -> Vec
             continue;
         }
         ops.push(DrawOp::Text(TextRun {
+            rtl: false,
             bounds: Rect {
                 left: Twips(px - f.slot / 2),
                 top: Twips(f.plot_bottom + 30),

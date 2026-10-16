@@ -159,6 +159,7 @@ impl SubreportRender {
 /// A resolved text/field object's display: its wrapped lines and rendering attributes, computed
 /// once per band so the grown height and the emitted runs stay consistent.
 pub(crate) struct TextPlan {
+    rtl: bool,
     pub(crate) lines: Vec<LayoutLine>,
     pub(crate) color: Color,
     pub(crate) kind: ObjectKind,
