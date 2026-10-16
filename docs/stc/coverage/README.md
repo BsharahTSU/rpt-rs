@@ -45,4 +45,4 @@ Source and SQL discovery are complete for the documented local scope: 38 AAJ cas
 ready evaluation groups and 98 candidate students. Other local copies are metadata-only evidence;
 external Gradebook and authenticated API/UI delivery remain open. Read the [surface inventory](parent-surfaces.md),
 [SQL findings](sql-eligibility.md), [isolated runner](case-runner.md), and [clock fix](clock-parity.md).
-Actual case exports and parity are separate subsequent checkpoints.
+[Initial actual comparisons](initial-comparisons.md) now record three passing native/Rust representative exports, identical native live/replay images, matching ordered ratings and the remaining visual defects. The other 95 eligible students remain SQL-only evidence.

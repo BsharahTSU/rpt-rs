@@ -220,3 +220,7 @@ boxes and ordered ratings. The latest PNGs were reviewed for all three pages. Or
 formulas remain in print order; direct TotalPageCount visibility is deferred. Count-dependent
 footer formulas with mutable print-time side effects or indirect formula dependencies still need
 broader compatibility tests before production use.
+
+## Expanded Parent coverage checkpoint (2026-10-16)
+
+The local fork now has a read-only SQL inventory and reproducible per-case comparison runner. See [initial comparisons](coverage/initial-comparisons.md) for three actually printed evaluation templates, same-data evidence, verified remaining differences and the next repair queue. [WORKLOG](WORKLOG.md) records local commits and all findings/fixes. This extends the earlier single-template sample without claiming full compatibility.

@@ -74,3 +74,18 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Validation: 13 harness checks in PowerShell 5.1 and 7; four Python comparison tests in Docker.
   The three representative live case runs then completed capture/native-live/native-frozen/Rust
   successfully. Actual PDF and visual results are recorded in the following checkpoint.
+
+## 2026-10-16 - Checkpoint 3b: three real evaluation comparisons
+
+- Each ready template representative passed reviewed SQL capture, original typed native printing,
+  native DataSet replay and Docker Rust replay. Nine PDFs passed qpdf; every export has three pages.
+- Native-live/replay PNG hashes are identical for all nine pages. Native/Rust ratings match in order:
+  CR-001 17/17/0; CR-003 18/21/13; CR-005 16/12/7. Dates and paper boxes match.
+- All nine comparison page pairs were inspected, with independent agent checks. Confirmed open
+  differences: CR-001 orphan page-boundary heading; CR-003 line wrapping; shared baseline/row metrics.
+  A suspected missing-label defect was disproved by bbox/raster checks and withdrawn.
+- All case requests/partial files were cleaned up and no owned case container remains. No live
+  standard procedure ran, and no school/grade/publication/template/configuration data was changed.
+- Private comparison index and PDFs are ready. Shared results and the next one-case-at-a-time repair
+  queue are in [initial comparisons](coverage/initial-comparisons.md). Three representatives are
+  tested; the other 95 eligible students remain SQL-only evidence. No visual parity acceptance yet.
