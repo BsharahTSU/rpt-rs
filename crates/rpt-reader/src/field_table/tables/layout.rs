@@ -299,7 +299,8 @@ pub(crate) const TEXT_OBJECT_FORMAT: Table = Table {
         Field::new("run_count", Kind::U16Be),
         Field::new("line_spacing_type", Kind::VarU16),
         Field::new("line_spacing", Kind::U32Be),
-        Field::new("_u0", Kind::VarU16),
+        // SDK Paragraph.ReadingOrder: a native RTL/LTR minimal pair changes only this value.
+        Field::new("reading_order", Kind::VarU16),
     ],
 };
 

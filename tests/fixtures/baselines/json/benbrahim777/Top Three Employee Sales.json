@@ -669,6 +669,7 @@
                             },
                             "right_indent": 0
                           },
+                          "reading_order": "LeftToRight",
                           "runs": [
                             {
                               "character_spacing": 0,
@@ -1091,6 +1092,7 @@
                             },
                             "right_indent": 0
                           },
+                          "reading_order": "LeftToRight",
                           "runs": [
                             {
                               "character_spacing": 0,
@@ -1813,6 +1815,7 @@
                             },
                             "right_indent": 0
                           },
+                          "reading_order": "LeftToRight",
                           "runs": [
                             {
                               "character_spacing": 0,
@@ -2170,6 +2173,7 @@
                             },
                             "right_indent": 0
                           },
+                          "reading_order": "LeftToRight",
                           "runs": [
                             {
                               "character_spacing": 0,

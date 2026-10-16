@@ -408,6 +408,7 @@ fn render_with_fonts(
             images: &mut images,
             interpolate,
             disable_latin_kerning: opts.disable_latin_kerning,
+            legacy_arabic_mark_offsets: opts.legacy_arabic_mark_offsets,
         };
         if tagged {
             tag_and_draw(
@@ -464,6 +465,7 @@ struct DrawCtx<'a> {
     images: &'a mut HashMap<u64, Option<Image>>,
     interpolate: bool,
     disable_latin_kerning: bool,
+    legacy_arabic_mark_offsets: bool,
 }
 
 /// Paint one draw-op onto the surface.
@@ -473,7 +475,13 @@ fn draw_op(surface: &mut Surface, ctx: &mut DrawCtx, op: &DrawOp) {
         DrawOp::Ellipse(e) => draw_ellipse(surface, e),
         DrawOp::Line(l) => draw_line(surface, l),
         DrawOp::Polygon(p) => draw_polygon(surface, p),
-        DrawOp::Text(t) => draw_text(surface, ctx.fonts, t, ctx.disable_latin_kerning),
+        DrawOp::Text(t) => draw_text(
+            surface,
+            ctx.fonts,
+            t,
+            ctx.disable_latin_kerning,
+            ctx.legacy_arabic_mark_offsets,
+        ),
         DrawOp::Image(i) => draw_image(surface, ctx.assets, ctx.images, i, ctx.interpolate),
     }
 }
@@ -866,6 +874,7 @@ fn draw_text(
     fonts: &mut FontCache,
     t: &TextRun,
     disable_latin_kerning: bool,
+    legacy_arabic_mark_offsets: bool,
 ) {
     if t.text.is_empty() {
         return;
@@ -926,6 +935,7 @@ fn draw_text(
         extra,
         spacing_pt as f32,
         disable_latin_kerning,
+        legacy_arabic_mark_offsets,
     );
     draw_text_decoration(surface, t, x, baseline_y, ascent_pt, size, text_w);
     if rotated {
@@ -991,6 +1001,7 @@ fn place_glyphs(
     extra: f32,
     spacing: f32,
     disable_latin_kerning: bool,
+    legacy_arabic_mark_offsets: bool,
 ) {
     // The one face a justified line needs — its words share a single pen, so the whole line must be
     // one non-substituted segment. `None` for any other run, which flows its segments instead.
@@ -1001,7 +1012,9 @@ fn place_glyphs(
         _ => None,
     };
     if let Some(face) = justified {
-        if let Some(shaper) = Shaper::new(&face, disable_latin_kerning) {
+        if let Some(shaper) = Shaper::new(&face, disable_latin_kerning)
+            .map(|shaper| shaper.with_legacy_arabic_mark_offsets(legacy_arabic_mark_offsets))
+        {
             draw_justified_words(surface, &shaper, size, &t.text, origin, extra, spacing);
         }
         return;
@@ -1011,7 +1024,9 @@ fn place_glyphs(
         let Some(face) = fonts.face(seg.face) else {
             continue;
         };
-        let Some(shaper) = Shaper::new(&face, disable_latin_kerning) else {
+        let Some(shaper) = Shaper::new(&face, disable_latin_kerning)
+            .map(|shaper| shaper.with_legacy_arabic_mark_offsets(legacy_arabic_mark_offsets))
+        else {
             continue;
         };
         let seg_text = &t.text[seg.range.clone()];
@@ -1193,6 +1208,7 @@ struct Shaper<'a> {
     face: &'a LoadedFace,
     shaper: harfrust::Shaper<'a>,
     disable_latin_kerning: bool,
+    legacy_arabic_mark_offsets: bool,
 }
 
 impl<'a> Shaper<'a> {
@@ -1203,7 +1219,13 @@ impl<'a> Shaper<'a> {
             face,
             shaper: face.shaper_data.shaper(&font).build(),
             disable_latin_kerning,
+            legacy_arabic_mark_offsets: false,
         })
+    }
+
+    fn with_legacy_arabic_mark_offsets(mut self, enabled: bool) -> Self {
+        self.legacy_arabic_mark_offsets = enabled;
+        self
     }
 
     /// The krilla font shaped glyphs from this face must be drawn with.
@@ -1282,11 +1304,23 @@ impl<'a> Shaper<'a> {
                         * logical_cluster.chars().filter(|ch| *ch == ' ').count() as f32;
                 }
             }
+            // Native Crystal reverses Arabic ScriptPlace vertical offsets; its
+            // 1440-grid values were verified independently. Keep standard signs
+            // by default and preserve advances, including y_advance, in both modes.
+            let y_offset = pos.y_offset as f32 / upem;
+            // A directional face run can also contain Hebrew or another script.
+            // Restrict the legacy quirk to Arabic clusters within that run.
+            let reverse_mark = self.legacy_arabic_mark_offsets && pos.y_offset != 0 && {
+                let mut cluster = harfrust::UnicodeBuffer::new();
+                cluster.push_str(&text[start..end]);
+                cluster.guess_segment_properties();
+                cluster.script() == harfrust::script::ARABIC
+            };
             glyphs.push(KrillaGlyph::new(
                 GlyphId::new(info.glyph_id),
                 x_adv,
                 pos.x_offset as f32 / upem,
-                pos.y_offset as f32 / upem,
+                if reverse_mark { -y_offset } else { y_offset },
                 pos.y_advance as f32 / upem,
                 start..end,
                 None,

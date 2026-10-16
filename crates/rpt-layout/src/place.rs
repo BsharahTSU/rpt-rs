@@ -329,7 +329,7 @@ impl Formatter<'_> {
                     line.character_spacing,
                 ) as i32);
                 emitted = self.push_op(DrawOp::Text(TextRun {
-                    rtl: plan.rtl,
+                    rtl: line.rtl,
                     bounds: line_rect,
                     text: line.text.clone(),
                     font: line.font.clone(),

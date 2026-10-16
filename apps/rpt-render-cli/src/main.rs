@@ -408,6 +408,7 @@ impl Cli {
         rpt_render::PdfOptions {
             fonts: self.fonts(),
             disable_latin_kerning: false,
+            legacy_arabic_mark_offsets: false,
             conformance: self.conformance,
             created: None,
             producer: rpt_render::Producer::default(),

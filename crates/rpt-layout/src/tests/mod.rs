@@ -655,6 +655,7 @@ fn multi_para_object(name: &str, paras: &[(rpt_model::LineSpacing, f32, &str)]) 
                         line_spacing: *ls,
                         ..Default::default()
                     },
+                    ..Default::default()
                 }
             })
             .collect();

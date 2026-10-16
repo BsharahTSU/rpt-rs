@@ -288,6 +288,89 @@ fn rtl_default_align_reads_right() {
 }
 
 #[test]
+fn wrapped_lines_keep_each_paragraphs_direction_and_default_alignment() {
+    use rpt_model::{Paragraph, ReadingOrder};
+    let content = "مرحبا بالعالم مرحبا بالعالم\nEnglish words English words\nمرحبا بالعالم";
+    let mut obj = text_object("MixedDirections", content, 0);
+    obj.bounds.width = Twips(650);
+    obj.format.can_grow = true;
+    if let ReportObjectKind::Text(t) = &mut obj.kind {
+        t.reading_order = ReadingOrder::RightToLeft;
+        t.paragraphs = [
+            ReadingOrder::RightToLeft,
+            ReadingOrder::LeftToRight,
+            ReadingOrder::RightToLeft,
+        ]
+        .map(|order| Paragraph {
+            reading_order: Some(order),
+            ..Default::default()
+        })
+        .into();
+    }
+    let runs = runs_for_object(obj);
+    assert!(
+        runs.len() > 3,
+        "the test must exercise wrapped continuation lines"
+    );
+    assert!(runs.iter().filter(|r| r.text.is_ascii()).count() > 1);
+    assert!(runs.iter().filter(|r| !r.text.is_ascii()).count() > 2);
+    for run in &runs {
+        let expected_rtl = !run.text.is_ascii();
+        assert_eq!(run.rtl, expected_rtl, "{:?}", run.text);
+        assert_eq!(
+            run.align,
+            if expected_rtl {
+                rpt_pages::TextAlign::Right
+            } else {
+                rpt_pages::TextAlign::Left
+            }
+        );
+    }
+}
+
+#[test]
+fn explicit_paragraph_direction_preserves_authored_center_alignment() {
+    use rpt_model::{Alignment, Paragraph, ReadingOrder};
+    let mut obj = text_object("CenteredDirections", "مرحبا.\nEnglish.", 0);
+    obj.format.horizontal_alignment = Alignment::HorizontalCenterAlign;
+    if let ReportObjectKind::Text(t) = &mut obj.kind {
+        t.paragraphs = [ReadingOrder::RightToLeft, ReadingOrder::LeftToRight]
+            .map(|order| Paragraph {
+                reading_order: Some(order),
+                ..Default::default()
+            })
+            .into();
+    }
+    let runs = runs_for_object(obj);
+    assert_eq!(runs.len(), 2);
+    assert_eq!(
+        runs.iter().map(|r| r.rtl).collect::<Vec<_>>(),
+        [true, false]
+    );
+    assert!(runs.iter().all(|r| r.align == rpt_pages::TextAlign::Center));
+}
+
+#[test]
+fn paragraphs_without_direction_keep_the_constructed_objects_default() {
+    use rpt_model::{Paragraph, ReadingOrder};
+    for order in [ReadingOrder::LeftToRight, ReadingOrder::RightToLeft] {
+        let mut obj = text_object("InheritedDirection", "first.\nsecond.", 0);
+        if let ReportObjectKind::Text(t) = &mut obj.kind {
+            t.reading_order = order;
+        }
+        let without_paragraphs = runs_for_object(obj.clone());
+        if let ReportObjectKind::Text(t) = &mut obj.kind {
+            t.paragraphs = vec![Paragraph::default(), Paragraph::default()];
+        }
+        assert_eq!(
+            runs_for_object(obj),
+            without_paragraphs,
+            "old paragraph models must preserve the complete emitted runs"
+        );
+    }
+}
+
+#[test]
 fn multi_column_flows_records_across_columns() {
     use rpt_model::MultiColumn;
     // A detail band with one object at left=100, laid out in 3 columns of pitch 3000.

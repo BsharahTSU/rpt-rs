@@ -155,3 +155,27 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Deeper outline review found actual remaining Arabic punctuation/shadda positioning
   differences; these are not dismissed as extraction artifacts. Investigation continues
   from this committed checkpoint. Uniform corner-radius rounding retains a 0.05-pt residual.
+
+## 2026-10-17 - Checkpoint 4e: paragraph RTL and Arabic marks
+
+- Native metadata and a controlled saved-copy byte probe established the omitted
+  paragraph reading-order slot. Retain optional per-paragraph direction, project the
+  first paragraph for older object-level consumers, and carry direction per wrapped
+  line. Preserve old serialized-model inheritance and orphan field-heading direction.
+- Windows Uniscribe independently established the native exporter's reversed Arabic
+  vertical-offset convention. Added an opt-in PDF policy, enabled by the STC worker,
+  restricted to Arabic logical clusters; glyph selection, joining, advances and other
+  scripts remain unchanged. Library defaults retain standard Krilla placement.
+- Focused Docker checks: 325 reader, 354 layout, 64 model, 79 PDF unit + 1 integration.
+  Tests cover mixed directions, missing/widened values, serde compatibility, actual
+  Arabic marks, a positioned Latin accent, mixed Hebrew clusters and serialized PDFs.
+- Strict JSON refresh audited 154 reports: 106 files receive 364 explicit LTR paragraph
+  fields, with no object direction changes or unrelated edits. Git confirms 364 added
+  lines and zero removed lines. No private report/text/data was added to the corpus.
+- [Arabic evidence](coverage/cr-001-arabic.md) records native probes, implementation
+  limits, negative-fixture correction and baseline audit. Final workspace checks and
+  fresh all-page comparison are the next acceptance gate; no SQL or deployment ran.
+- Final workspace sweep passed 1,590 tests and reused the 40 just-passed unchanged
+  decoder parity tests: 1,630 total, zero failed/ignored. Includes all five Chinese
+  PDF tests, JSON/KDL checks and public PDF reference fixtures. No live DB configured.
+- Strict workspace Clippy (all targets/features, warnings denied) and formatting pass.

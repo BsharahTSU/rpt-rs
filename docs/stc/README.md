@@ -1,6 +1,9 @@
 # STC Linux Crystal compatibility work
 
-See [local fork provenance](FORK.md), [checkpoint ledger](WORKLOG.md), and [Parent coverage](coverage/README.md). Sections below preserve successive checkpoints; the latest evaluation parity section supersedes the initial comparison defects.
+See [local fork provenance](FORK.md), [checkpoint ledger](WORKLOG.md), and [Parent coverage](coverage/README.md).
+The current repair is [CR-001](coverage/cr-001-parity.md); its final fresh-pair verification is
+pending. Sections below preserve earlier checkpoints and their own datasets/counts. They do not
+establish acceptance of CR-001 or the other Parent cases.
 
 Target agreed on 2026-10-16: full current bridge compatibility, including PDF, BIFF/XLS Excel,
 typed Parent Reports and legacy SQL/procedure/DataSet callers. This is experimental work in a
@@ -20,8 +23,10 @@ separate checkout. No current Parent App or backend deployment/configuration has
 ## Current implementation
 
 The Page IR now carries a backward-compatible `rtl` flag (false is omitted and is the default
-when reading older JSON). Pagination preserves the stored paragraph reading order. PDF rendering
-orders bidi runs, intersects them with font fallback runs and shapes each in its actual direction.
+when reading older JSON). The reader now retains explicit text-paragraph reading order from the
+stored format record, and pagination carries each paragraph's direction onto its wrapped lines.
+Older constructed/serialized paragraphs inherit the object's direction. PDF rendering orders bidi
+runs, intersects them with font fallback runs and shapes each in its actual direction.
 RTL glyph clusters use increasing logical UTF-8 boundaries for Unicode mappings and scalar spacing;
 the old next-glyph calculation could produce a reversed slice for Arabic.
 
@@ -156,7 +161,7 @@ The production backend dependency files were not changed.
 | SQL | SQL Server text/procedures, strict selectors and legacy defaults | One live evaluation procedure passes; other templates/procedures pending |
 | DataSet | Schema/multiple-table transport; first-table main/subreport binding | Chinese/null/binary transport checks pass; broad subreport/schema parity pending |
 | Parameters | All RPT aliases, linked/range/default values and precedence | Initial declared binding; complex and embedded-query cases pending |
-| PDF | Content, pagination, repeated headers, borders, footers, dates and fonts | Evaluation sample has matching pagination/content and close visual parity; small text/row metric differences remain; other reports pending |
+| PDF | Content, pagination, repeated headers, borders, footers, dates and fonts | Three evaluation cases export; CR-001 repair awaits final comparison; CR-003, CR-005 and other reports remain open |
 | Excel | Actual BIFF/XLS preserving current callers | Not implemented; rejected before executing SQL |
 | Lifecycle | Owned paths, cleanup, cancellation and caller logging | Owned paths/scratch cleanup covered; cancellation/integration pending |
 | Deployment | Standalone Docker runtime and explicit opt-in bridge selection | Local development harness only; production unchanged |
@@ -198,8 +203,8 @@ References: [OpenType VDMX](https://learn.microsoft.com/en-us/typography/opentyp
 Host culture and its potentially customized short-date pattern are passed by the Docker launcher.
 The fonts were mounted read-only from the existing Windows installation; they are not redistributed.
 
-Current private outputs are under `research/stc-verification/student-793/` with the suffix
-`evaluation-crystal-current.pdf` / `evaluation-rust-current.pdf`. The comparison records page
+The earlier private outputs used the suffixes `evaluation-crystal-current.pdf` and
+`evaluation-rust-current.pdf` beneath ignored research. The comparison records page
 counts, ordered ratings by page, paper boxes, PDF integrity and current page renders. Both have
 three pages and the same 35 ratings distributed 16 / 12 / 7. English continues on page 2 and
 Science starts page 3; the logo, signatures, legends, date and page labels are present. This is
@@ -224,3 +229,32 @@ broader compatibility tests before production use.
 ## Expanded Parent coverage checkpoint (2026-10-16)
 
 The local fork now has a read-only SQL inventory and reproducible per-case comparison runner. See [initial comparisons](coverage/initial-comparisons.md) for three actually printed evaluation templates, same-data evidence, verified remaining differences and the next repair queue. [WORKLOG](WORKLOG.md) records local commits and all findings/fixes. This extends the earlier single-template sample without claiming full compatibility.
+
+## CR-001 repair checkpoint (2026-10-17)
+
+The current repair uses CR-001's captured DataSet and the original template. Rust rendering and
+verification run in bounded Docker Linux containers; the reference exporter remains Windows Crystal.
+No new SQL query, report-publication change or Parent deployment is part of the repair.
+
+- [Printer metrics](coverage/cr-001-metrics.md): saved printer DPI controls multiline pitch;
+  PDF font-cell sizing and first baselines retain their existing contract. This removes cumulative
+  row drift and restores the page-boundary subgroup heading in the intermediate replay.
+- [Basic-Latin spacing](coverage/cr-001-spacing.md): the worker selects matching unkerned
+  measurement/wrapping and PDF shaping. Ordinary library defaults and non-ASCII shaping remain.
+- [Border, rule and rounded-frame geometry](coverage/cr-001-geometry.md): measured ordinary
+  SingleLine borders extend selected sides outward; axis-aligned rules and supported unfilled
+  circular rounded boxes account for half-stroke centerlines, including page-spanning fragments.
+  Unverified frame styles and flags remain outside the correction.
+- [Paragraph RTL](coverage/cr-001-arabic.md): decode the proven final paragraph-format value;
+  retain optional per-paragraph overrides and carry direction through wrapping. The native note
+  explicitly requests RTL; no language-based direction heuristic is introduced.
+- Arabic mark offsets: an opt-in PDF compatibility setting reproduces the native exporter's
+  reversed vertical mark offsets while preserving glyph selection, joining and advances.
+  The general PDF default retains standard HarfRust/Krilla positioning.
+
+The [CR-001 comparison record](coverage/cr-001-parity.md) owns final test counts, fresh native/Rust
+exports and all-page visual evidence. Those final gates are pending; intermediate geometry/text
+improvements are not a claim of pixel identity. CR-003 and CR-005 require separate reruns and
+comparisons, and the remaining eligible students are still inventory evidence. BIFF/XLS,
+template-owned SQL, broader legacy/subreport compatibility and authenticated Parent delivery remain
+open. Chinese and Arabic synthetic regressions remain required alongside the affected case.

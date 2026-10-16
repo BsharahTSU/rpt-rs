@@ -398,3 +398,157 @@ fn pdf_options_select_unkerned_latin_without_changing_arabic_content_stream() {
         "an Arabic-only PDF must retain identical shaping and bytes"
     );
 }
+
+#[test]
+fn legacy_arabic_marks_reverse_offsets_without_changing_shaping_or_advances() {
+    assert!(!PdfOptions::default().legacy_arabic_mark_offsets);
+    let mut fonts = FontCache::new(FontSource::Bundled);
+    let mut moved_marks = 0;
+    for text in ["يحقّق", "التوقّعات", "التّوقعات", "التطّوير", "السَّلَامُ"]
+    {
+        let face = face_of(&mut fonts, "DejaVu Sans", text);
+        let ordinary = Shaper::new(&face, false).unwrap();
+        let compatibility = Shaper::new(&face, false)
+            .unwrap()
+            .with_legacy_arabic_mark_offsets(true);
+        let (normal, normal_width) = ordinary.shape(text, SIZE, SPACING_PT);
+        let (legacy, legacy_width) = compatibility.shape(text, SIZE, SPACING_PT);
+        assert_eq!(normal_width, legacy_width);
+        assert_eq!(normal.len(), legacy.len());
+        for (a, b) in normal.iter().zip(&legacy) {
+            assert_eq!(a.glyph_id, b.glyph_id);
+            assert_eq!(a.text_range, b.text_range);
+            assert_eq!(a.x_offset, b.x_offset);
+            assert_eq!(a.x_advance, b.x_advance);
+            assert_eq!(
+                a.y_advance, b.y_advance,
+                "vertical advances are not part of the measured quirk"
+            );
+            assert_eq!(a.y_offset, -b.y_offset);
+            moved_marks += usize::from(a.y_offset != 0.0);
+        }
+    }
+    assert!(
+        moved_marks >= 4,
+        "fixtures must exercise actual positioned marks"
+    );
+    let mut positioned_non_arabic_marks = 0;
+    for text in ["Q\u{301}", "A\u{301}", "AV ffi 123", "שָׁלוֹם"] {
+        let face = face_of(&mut fonts, "DejaVu Sans", text);
+        let (normal, width) = Shaper::new(&face, false)
+            .unwrap()
+            .shape(text, SIZE, SPACING_PT);
+        let (legacy, legacy_width) = Shaper::new(&face, false)
+            .unwrap()
+            .with_legacy_arabic_mark_offsets(true)
+            .shape(text, SIZE, SPACING_PT);
+        assert_eq!(width, legacy_width);
+        assert_same_shaped_glyphs(&normal, &legacy);
+        positioned_non_arabic_marks += normal.iter().filter(|g| g.y_offset != 0.0).count();
+    }
+    assert!(
+        positioned_non_arabic_marks > 0,
+        "exercise unchanged positioned marks"
+    );
+}
+
+#[test]
+fn legacy_arabic_mark_option_reaches_pdf_and_preserves_other_text_bytes() {
+    let render = |text: &str, enabled: bool| {
+        let mut page = Page::new(
+            1,
+            PageSize {
+                width: Twips(12240),
+                height: Twips(15840),
+            },
+        );
+        page.push(DrawOp::Text(TextRun {
+            rtl: true,
+            bounds: Rect {
+                left: Twips(720),
+                top: Twips(720),
+                width: Twips(6000),
+                height: Twips(400),
+            },
+            text: text.into(),
+            font: FontSpec {
+                family: "DejaVu Sans".into(),
+                size_pt: SIZE,
+                ..Default::default()
+            },
+            color: Color {
+                r: 0,
+                g: 0,
+                b: 0,
+                a: 255,
+            },
+            align: TextAlign::Left,
+            rotation: 0.0,
+            metrics: None,
+            character_spacing: Twips(0),
+            source: None,
+        }));
+        crate::try_render_pages_with_options(
+            &[page],
+            &BTreeMap::new(),
+            &PdfOptions {
+                legacy_arabic_mark_offsets: enabled,
+                ..Default::default()
+            },
+        )
+        .unwrap()
+    };
+    assert_ne!(
+        operator_listing(&render("التوقّعات", false)),
+        operator_listing(&render("التوقّعات", true)),
+        "the compatibility setting must affect actual mark placement in the PDF"
+    );
+    for text in ["لا", "Plain English.", "q\u{301}", "שלום"] {
+        assert_eq!(render(text, false), render(text, true), "{text}");
+    }
+}
+
+#[test]
+fn legacy_arabic_marks_do_not_change_hebrew_clusters_in_a_shared_rtl_face_run() {
+    let mut fonts = FontCache::new(FontSource::Bundled);
+    let text = "التوقّعات שָׁלוֹם";
+    let face = face_of(&mut fonts, "DejaVu Sans", text);
+    let (normal, width) =
+        Shaper::new(&face, false)
+            .unwrap()
+            .shape_directed(text, SIZE, SPACING_PT, Some(true), 0.0);
+    let (legacy, legacy_width) = Shaper::new(&face, false)
+        .unwrap()
+        .with_legacy_arabic_mark_offsets(true)
+        .shape_directed(text, SIZE, SPACING_PT, Some(true), 0.0);
+    assert_eq!(width, legacy_width);
+    assert_eq!(normal.len(), legacy.len());
+    let hebrew_start = text.find('ש').unwrap();
+    let mut hebrew_glyphs = 0;
+    let mut reversed_arabic_marks = 0;
+    for (a, b) in normal.iter().zip(&legacy) {
+        assert_eq!(a.glyph_id, b.glyph_id);
+        assert_eq!(a.text_range, b.text_range);
+        assert_eq!(a.x_offset, b.x_offset);
+        assert_eq!(a.x_advance, b.x_advance);
+        assert_eq!(a.y_advance, b.y_advance);
+        if a.text_range.start >= hebrew_start {
+            assert_eq!(
+                a.y_offset, b.y_offset,
+                "Hebrew marks must retain their standard offset"
+            );
+            hebrew_glyphs += 1;
+        } else {
+            assert_eq!(a.y_offset, -b.y_offset);
+            reversed_arabic_marks += usize::from(a.y_offset != 0.0);
+        }
+    }
+    assert!(
+        hebrew_glyphs > 0,
+        "exercise Hebrew clusters in the shared face run"
+    );
+    assert!(
+        reversed_arabic_marks > 0,
+        "exercise a nonzero Arabic offset"
+    );
+}

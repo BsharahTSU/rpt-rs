@@ -46,3 +46,30 @@ ready evaluation groups and 98 candidate students. Other local copies are metada
 external Gradebook and authenticated API/UI delivery remain open. Read the [surface inventory](parent-surfaces.md),
 [SQL findings](sql-eligibility.md), [isolated runner](case-runner.md), and [clock fix](clock-parity.md).
 [Initial actual comparisons](initial-comparisons.md) now record three passing native/Rust representative exports, identical native live/replay images, matching ordered ratings and the remaining visual defects. The other 95 eligible students remain SQL-only evidence.
+
+
+## Current repair checkpoint: CR-001 (2026-10-17)
+
+The [CR-001 repair and comparison record](cr-001-parity.md) is the current acceptance ledger.
+The original case is replayed from captured data, with Windows Crystal as the reference and Linux
+Docker as the Rust renderer. Final fresh-pair verification and the final regression summary are
+pending; successful intermediate replays do not close the case.
+
+| Repair area | Detailed evidence and scope |
+| --- | --- |
+| Saved printer DPI and multiline row pitch | [Printer metrics](cr-001-metrics.md); retain the ordinary library default and PDF glyph-cell sizing |
+| Matching Basic-Latin measurement and drawing | [Spacing](cr-001-spacing.md); opt-in unkerned ASCII ranges, with advanced shaping preserved |
+| Signature borders, standalone rules and rounded frames | [Geometry](cr-001-geometry.md); measured guards and per-fragment half-stroke handling |
+| Explicit text-paragraph RTL, including mixed paragraphs | [Arabic direction](cr-001-arabic.md); decode stored metadata, preserve old-model inheritance |
+| Native Arabic mark-offset convention | [Current comparison record](cr-001-parity.md); opt-in PDF compatibility, ordinary positioning unchanged |
+
+CR-003 and CR-005 remain open and need their own comparisons after shared renderer fixes.
+The other 95 eligible students remain SQL-only evidence. Unpublished standard/second-term cases,
+missing authoritative databases/templates, external Gradebook, authenticated API/UI delivery,
+BIFF/XLS and broad legacy/subreport coverage retain the gaps recorded in
+[initial comparisons](initial-comparisons.md), [SQL findings](sql-eligibility.md) and
+the [surface inventory](parent-surfaces.md). Do not infer their success from CR-001.
+
+Keep the current resource controls in the CR-001 record: sequential bounded containers, one Cargo
+build/test thread, private evidence and additional temporary files on the designated D: paths.
+No new branches, worktrees, hosted fork or deployment are part of this checkpoint.

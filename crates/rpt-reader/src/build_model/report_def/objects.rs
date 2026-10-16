@@ -78,6 +78,7 @@ pub(super) fn demote_orphan_headings(areas: &mut [Area]) {
                     text: h.text.clone(),
                     max_lines: h.max_lines,
                     font_color: h.font_color.clone(),
+                    reading_order: h.reading_order,
                     ..Default::default()
                 });
             }

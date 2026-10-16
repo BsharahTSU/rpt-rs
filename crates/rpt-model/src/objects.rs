@@ -175,6 +175,14 @@ pub struct TextRun {
 #[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Paragraph {
+    /// Explicit SDK paragraph reading order from the final `0x00c0` format value.
+    /// `None` inherits the text object's reading order, preserving older constructed/serialized
+    /// models whose paragraphs carried only indentation and runs.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
+    pub reading_order: Option<ReadingOrder>,
     /// The literal-text and embedded-field runs that make up this line, in document order.
     pub runs: Vec<TextRun>,
     /// The paragraph's indentation (SDK `IParagraphFormat.IndentAndSpacingFormat`), in twips.
@@ -253,7 +261,10 @@ pub struct TextObject {
     pub max_lines: i32,
     /// The object's default font and color (runs may override it).
     pub font_color: FontColor,
-    /// The text's reading order (left-to-right or right-to-left).
+    /// The text's default reading order (left-to-right or right-to-left).
+    /// The binary reader projects its first paragraph's explicit direction here; each paragraph
+    /// retains its own override. This projection is a compatibility default, not a claim that
+    /// differently directed paragraphs have one native aggregate direction.
     pub reading_order: ReadingOrder,
     /// Embedded field/formula/parameter references: `alias.name` for database fields, `@name` for
     /// formulas, `?name` for parameters.
@@ -677,6 +688,28 @@ mod tests {
             field_ref: Some(raw.to_string()),
             font: None,
             character_spacing: Twips(0),
+        }
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn paragraph_direction_is_optional_in_old_json_and_round_trips_when_explicit() {
+        let old = serde_json::to_value(Paragraph::default()).unwrap();
+        assert!(old.get("reading_order").is_none());
+        let decoded: Paragraph = serde_json::from_value(old).unwrap();
+        assert_eq!(decoded.reading_order, None);
+        for direction in [
+            ReadingOrder::LeftToRight,
+            ReadingOrder::RightToLeft,
+            ReadingOrder::Other(129),
+        ] {
+            let para = Paragraph {
+                reading_order: Some(direction),
+                ..Default::default()
+            };
+            let json = serde_json::to_value(&para).unwrap();
+            let decoded: Paragraph = serde_json::from_value(json).unwrap();
+            assert_eq!(decoded, para);
         }
     }
 

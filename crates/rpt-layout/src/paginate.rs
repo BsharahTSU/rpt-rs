@@ -148,8 +148,8 @@ impl<'a> Formatter<'a> {
         // Set by the `Field` arm below when the field prints one currency symbol per page; the plan
         // carries it so the emit path can record a fixup without resolving the value again.
         let mut currency = None;
-        // `reading_order` (Text/FieldHeading only) sets the paragraph's base direction; `paragraphs`
-        // carries per-paragraph indentation for a text object (fields/headings have none).
+        // `reading_order` sets the object's default direction; `paragraphs` carries explicit
+        // per-paragraph direction and indentation for text objects (fields/headings have none).
         let (raw, font, color, kind, reading_order, paragraphs): (
             _,
             _,
@@ -254,6 +254,8 @@ impl<'a> Formatter<'a> {
         let mut lines: Vec<LayoutLine> = Vec::new();
         for (i, seg) in raw.split('\n').enumerate() {
             let para = paragraphs.and_then(|ps| ps.get(i));
+            let para_order = para.and_then(|p| p.reading_order).unwrap_or(reading_order);
+            let para_align = crate::resolved_align(self.report, obj, para_order);
             let indent = para.map(|p| p.indent).unwrap_or_else(|| match &obj.kind {
                 ReportObjectKind::Field(f) => f
                     .format
@@ -304,13 +306,14 @@ impl<'a> Formatter<'a> {
                 let width = (body_w - x_offset - right).max(1);
                 // Justified stretches every wrapped line to both edges except the paragraph's last,
                 // which typography leaves ragged (flush-left).
-                let line_align = if matches!(align, TextAlign::Justified) && j == last_line {
+                let line_align = if matches!(para_align, TextAlign::Justified) && j == last_line {
                     TextAlign::Left
                 } else {
-                    align
+                    para_align
                 };
                 lines.push(LayoutLine {
                     text,
+                    rtl: matches!(para_order, ReadingOrder::RightToLeft),
                     x_offset: Twips(x_offset),
                     width: Twips(width),
                     font: para_font.clone(),
@@ -324,6 +327,7 @@ impl<'a> Formatter<'a> {
         if lines.is_empty() {
             lines.push(LayoutLine {
                 text: String::new(),
+                rtl: matches!(reading_order, ReadingOrder::RightToLeft),
                 x_offset: Twips(0),
                 width: obj.bounds.width,
                 font: font.clone(),
@@ -334,7 +338,6 @@ impl<'a> Formatter<'a> {
             });
         }
         Some(TextPlan {
-            rtl: matches!(reading_order, ReadingOrder::RightToLeft),
             lines,
             color,
             kind,

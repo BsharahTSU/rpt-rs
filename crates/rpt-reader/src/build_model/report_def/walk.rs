@@ -63,6 +63,9 @@ pub(super) struct RdWalk<'a> {
     /// that run's `0x08`, and the first color after an opener likewise wins. Re-armed alongside
     /// [`Self::font_set`].
     color_set: bool,
+    /// Whether an explicit paragraph format has been seen in this object. Only the first
+    /// paragraph supplies the legacy object-level direction; subsequent paragraphs keep overrides.
+    paragraph_seen: bool,
     /// Whether the current field still awaits the first of the two numeric-format records it
     /// streams — the currency slot, which precedes the number slot. Re-armed at every object opener.
     numeric_currency_slot_pending: bool,
@@ -87,6 +90,7 @@ impl<'a> RdWalk<'a> {
             pending_band_kind: None,
             font_set: false,
             color_set: false,
+            paragraph_seen: false,
             numeric_currency_slot_pending: false,
             in_aux_area: false,
         }
@@ -104,6 +108,7 @@ impl<'a> RdWalk<'a> {
             // A new object begins a fresh run of attribute records: re-arm the first-wins captures.
             self.font_set = false;
             self.color_set = false;
+            self.paragraph_seen = false;
             self.numeric_currency_slot_pending = true;
         }
         match rd {
@@ -503,6 +508,23 @@ impl<'a> RdWalk<'a> {
     /// supersedes it; field objects have no `0xc0`.
     fn open_paragraph(&mut self, node: &RecordNode) {
         let row = self.row(&ft::TEXT_OBJECT_FORMAT, node);
+        let reading_order = row
+            .get("reading_order")
+            .and_then(Cell::u)
+            .map(|code| crate::model::ReadingOrder::from_code(code as i32));
+        // The object-level field predates per-paragraph direction. Project the first paragraph
+        // there for consumers of that field, while preserving every explicit override below.
+        // A missing tail inherits the existing default; it must not become an explicit LTR value.
+        if !self.paragraph_seen {
+            if let Some(order) = reading_order {
+                match self.object().map(|obj| &mut obj.kind) {
+                    Some(ReportObjectKind::Text(t)) => t.reading_order = order,
+                    Some(ReportObjectKind::FieldHeading(h)) => h.reading_order = order,
+                    _ => {}
+                }
+            }
+        }
+        self.paragraph_seen = true;
         // The line-spacing value is a 16.16 multiplier when the type says multiple, twips when it
         // says exact.
         let indent = crate::model::IndentAndSpacingFormat {
@@ -523,6 +545,7 @@ impl<'a> RdWalk<'a> {
             }
             t.paragraphs.push(crate::model::Paragraph {
                 indent,
+                reading_order,
                 ..Default::default()
             });
         }
@@ -779,6 +802,22 @@ mod tests {
             )
         }
 
+        fn paragraph_format(&mut self, order: Option<u32>, spacing_type: u32) -> RecordNode {
+            self.record(TEXT_OBJECT_FORMAT, |e| {
+                e.i32_be(17); // left indent
+                e.i32_be(29); // right indent
+                e.i32_be(31); // first-line indent
+                e.narrowing(1, 2); // center alignment
+                e.u16_be(0); // embedded elements
+                e.u16_be(1); // literal runs
+                e.narrowing(1, spacing_type);
+                e.u32_be(360);
+                if let Some(order) = order {
+                    e.narrowing(1, order);
+                }
+            })
+        }
+
         /// An area format record (`0xfe`) — `is_section` is `0`, so it formats the area itself.
         fn area_format(&mut self, visible: bool) -> RecordNode {
             self.record(AREA_SECTION_FORMAT, move |e| {
@@ -829,6 +868,116 @@ mod tests {
             ReportObjectKind::Field(f) => f.format.as_ref().expect("a format block was decoded"),
             _ => panic!("not a field object"),
         }
+    }
+
+    #[test]
+    fn paragraph_reading_order_comes_from_the_final_value_not_line_spacing() {
+        use crate::model::{LineSpacingType, ReadingOrder};
+        for (stored, expected, spacing_type) in [
+            (Some(0), Some(ReadingOrder::LeftToRight), 1),
+            (Some(1), Some(ReadingOrder::RightToLeft), 0),
+            (Some(129), Some(ReadingOrder::Other(129)), 1),
+            (None, None, 1),
+        ] {
+            let mut s = Stream::default();
+            let (area, section) = (s.area("ReportHeaderArea1"), s.section(320));
+            let text = s.record(TEXT_OBJECT_CONTAINER, |_| {});
+            let paragraph = s.paragraph_format(stored, spacing_type);
+            let areas = walk(&s.logical, &[&area, &section, &text, &paragraph]);
+            let obj = only_object(&areas);
+            let ReportObjectKind::Text(text) = &obj.kind else {
+                panic!("text object");
+            };
+            assert_eq!(text.reading_order, expected.unwrap_or_default());
+            assert_eq!(text.paragraphs[0].reading_order, expected);
+            let indent = text.paragraphs[0].indent;
+            assert_eq!(
+                (
+                    indent.left_indent.0,
+                    indent.right_indent.0,
+                    indent.first_line_indent.0
+                ),
+                (17, 29, 31)
+            );
+            assert_eq!(indent.line_spacing.raw, 360);
+            assert_eq!(
+                indent.line_spacing.spacing_type,
+                if spacing_type == 1 {
+                    LineSpacingType::Exact
+                } else {
+                    LineSpacingType::Multiple
+                }
+            );
+            assert_eq!(
+                obj.format.horizontal_alignment,
+                Alignment::HorizontalCenterAlign
+            );
+        }
+    }
+
+    #[test]
+    fn text_keeps_each_paragraph_direction_and_projects_only_the_first() {
+        use crate::model::ReadingOrder;
+        for codes in [[1, 0], [0, 1]] {
+            let mut s = Stream::default();
+            let (area, section) = (s.area("ReportHeaderArea1"), s.section(320));
+            let text = s.record(TEXT_OBJECT_CONTAINER, |_| {});
+            let first = s.paragraph_format(Some(codes[0]), 0);
+            let second = s.paragraph_format(Some(codes[1]), 0);
+            let next_text = s.record(TEXT_OBJECT_CONTAINER, |_| {});
+            let next_para = s.paragraph_format(Some(codes[1]), 0);
+            let areas = walk(
+                &s.logical,
+                &[
+                    &area, &section, &text, &first, &second, &next_text, &next_para,
+                ],
+            );
+            let objects = &areas[0].sections[0].objects;
+            let ReportObjectKind::Text(text) = &objects[0].kind else {
+                panic!("text object");
+            };
+            assert_eq!(text.reading_order, ReadingOrder::from_code(codes[0] as i32));
+            assert_eq!(
+                text.paragraphs
+                    .iter()
+                    .map(|p| p.reading_order)
+                    .collect::<Vec<_>>(),
+                codes.map(|code| Some(ReadingOrder::from_code(code as i32)))
+            );
+            let ReportObjectKind::Text(next) = &objects[1].kind else {
+                panic!("next text object");
+            };
+            assert_eq!(
+                next.reading_order,
+                ReadingOrder::from_code(codes[1] as i32),
+                "the first-paragraph capture resets at the next object"
+            );
+        }
+    }
+
+    #[test]
+    fn a_field_heading_takes_its_first_paragraph_direction_after_promotion() {
+        use crate::model::ReadingOrder;
+        let mut s = Stream::default();
+        let (area, section) = (s.area("ReportHeaderArea1"), s.section(320));
+        let text = s.record(TEXT_OBJECT_CONTAINER, |_| {});
+        let heading = s.record(FIELD_HEADING_LINK, |e| e.string(b"Column"));
+        let first = s.paragraph_format(Some(1), 0);
+        let second = s.paragraph_format(Some(0), 0);
+        let areas = walk(
+            &s.logical,
+            &[&area, &section, &text, &heading, &first, &second],
+        );
+        let ReportObjectKind::FieldHeading(heading) = &only_object(&areas).kind else {
+            panic!("field heading");
+        };
+        assert_eq!(heading.reading_order, ReadingOrder::RightToLeft);
+        let mut orphaned = areas;
+        super::super::objects::demote_orphan_headings(&mut orphaned);
+        let ReportObjectKind::Text(text) = &only_object(&orphaned).kind else {
+            panic!("orphaned heading becomes text");
+        };
+        assert_eq!(text.reading_order, ReadingOrder::RightToLeft);
     }
 
     /// A text object stores one font per run and the object's own font is the FIRST run's, so a

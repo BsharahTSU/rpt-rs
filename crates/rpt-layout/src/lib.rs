@@ -103,6 +103,8 @@ const DEFAULT_PAGE_H: i32 = 15840; // 11in
 /// pre-indent behaviour.
 pub(crate) struct LayoutLine {
     pub(crate) text: String,
+    /// Resolved paragraph direction, retained independently for each wrapped line.
+    pub(crate) rtl: bool,
     /// Left offset from the object's left edge, in twips: `left_indent` plus `first_line_indent` on
     /// the paragraph's first wrapped line.
     pub(crate) x_offset: Twips,
@@ -160,7 +162,6 @@ impl SubreportRender {
 /// A resolved text/field object's display: its wrapped lines and rendering attributes, computed
 /// once per band so the grown height and the emitted runs stay consistent.
 pub(crate) struct TextPlan {
-    rtl: bool,
     pub(crate) lines: Vec<LayoutLine>,
     pub(crate) color: Color,
     pub(crate) kind: ObjectKind,
