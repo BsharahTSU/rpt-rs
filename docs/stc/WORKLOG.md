@@ -210,4 +210,47 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   remains a recoverable checkpoint while committed-source comparison is prepared.
 - Scoped checkpoint verification passes 481 Docker tests (19 Page IR, 27 text, 367 layout,
   56 render, 12 worker), including five Chinese PDF tests. Strict workspace Clippy and
-  formatting pass; worker rebuilt. The earlier minimal-feature text run passed12.
+  formatting pass; worker rebuilt. The earlier minimal-feature text run passed 12.
+
+## 2026-10-17 - Checkpoint 4g: fresh pair at 33f1998
+
+- Regenerated original Windows Crystal and Docker Rust from clean commit `33f1998`
+  at 01:22:32-01:22:58 local, using the same captured schema-bearing DataSet; no SQL.
+- Both PDFs pass integrity checks, have three 595 x 841 pt pages, preserve the date and
+  all 34 ordered ratings (17/17/0). All six page images were reviewed.
+- Independent actual-glyph review matches 4,467 nonblank outlines/sizes, 283 runs and
+  all 216 aligned runs. Ratings match baseline origins within 0.00004 pt; all 63 English
+  line breaks remain, with maximum glyph X error 0.03332 pt. Overall maximum X error 0.05708 pt.
+- Exactly two standard-field runs retain 0.10 pt baseline error. Other ordinary
+  baselines agree within 0.00005 pt; Arabic mark rounding is at most 0.03016 pt.
+  This remains an explicit open comparison, not pixel-identity acceptance.
+- Private final/ holds the fresh pair, six PNGs, HTML comparison, source/input/engine
+  hashes and independent review. Previous evidence is preserved in
+  final-before-text-origins/; no files or Docker volumes were pruned.
+
+## 2026-10-17 - Checkpoint 4h: growing-field content metrics
+
+- Replaced only private copied input strings to isolate the two remaining baseline
+  exceptions. Synthetic ASCII removes the footer's 0.10-pt growth-dependent shift.
+  Independent synthetic Arabic in a different centered field reproduces a 0.05-pt
+  shift across 34 runs / 170 glyphs; its Latin growth control has zero movement.
+  Fonts, glyph outlines, horizontal positions and all other content stay unchanged.
+- Growing plain LTR fields now ask for an ascent selected from the complete resolved
+  content. Windows compatibility inspects actual shaped RTL glyph levels and chooses
+  printer ascent only when present. Fixed fields, English/CJK content, HTML/unknown
+  metadata and ordinary 1440-DPI defaults preserve their previous behavior.
+- Added actual-shaper Arabic/mixed/Chinese/bidi-control tests and layout regressions
+  for metadata guards, fixed footers, complete paragraphs and adapter forwarding.
+  This changes no declared direction, text, wrapping, glyph advances or report data.
+- Docker tests, independent source review and a new actual-PDF comparison are in progress.
+  Original templates/data remain unchanged; no SQL, branches, worktrees or deployment.
+- Final source checks pass: 486 focused Docker tests (19 Page IR, 29 text, 370 layout,
+  56 render, 12 worker), plus 12 minimal-feature text tests. Includes all five Chinese
+  PDF tests and the public reference net. Strict workspace Clippy and formatting
+  pass; worker rebuilt. Independent review found no blocking source issue.
+- Independent candidate replay confirms exactly two footer runs / 36 total glyphs
+  (32 nonblank) move by -0.10 pt in PDF Y. Their baselines now match native exactly.
+  No X/font/code/width changes; Page IR changes only the two ascent values. All 4,467
+  nonblank glyph outlines/sizes match. Other ordinary baselines differ by at most
+  0.00005 pt; remaining mark Y rounding is 0.03016 pt and overall X rounding 0.05708 pt.
+  Fresh original/Rust regeneration from this committed source is the next gate.

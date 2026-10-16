@@ -190,6 +190,15 @@ impl CosmicLayout {
             .fold(0.0, f64::max)
     }
 
+    /// Whether the existing shaper emits any glyph at an RTL bidi level. This inspects the
+    /// actual layout result, including mixed text and bidi controls, without changing the
+    /// buffer's inferred direction, glyph positions, or the public measurement policy.
+    pub(crate) fn has_rtl_glyphs(&self, text: &str, font: &FontSpec) -> bool {
+        self.shaped(text, font, None)
+            .layout_runs()
+            .any(|run| run.glyphs.iter().any(|glyph| glyph.level.is_rtl()))
+    }
+
     /// Convenience: OS fonts only.
     pub fn with_system_fonts() -> CosmicLayout {
         CosmicLayout::new(FontProvider::system())
@@ -469,6 +478,56 @@ mod tests {
             layout.crystal_alignment_width_twips("لَا", &arabic),
             "zero-advance marks must not add alignment width"
         );
+    }
+
+    #[test]
+    fn rtl_glyph_query_handles_mixed_content_and_controls_without_changing_shaping() {
+        let layout = CosmicLayout::new(FontProvider::bundled()).without_latin_kerning();
+        let spec = FontSpec {
+            family: "Liberation Sans".into(),
+            size_pt: 11.0,
+            ..Default::default()
+        };
+        let snapshot = |text: &str| {
+            layout
+                .shaped(text, &spec, None)
+                .layout_runs()
+                .flat_map(|run| run.glyphs.iter())
+                .map(|glyph| {
+                    (
+                        glyph.glyph_id,
+                        glyph.start,
+                        glyph.end,
+                        glyph.x,
+                        glyph.y,
+                        glyph.w,
+                        glyph.x_offset,
+                        glyph.y_offset,
+                        glyph.level,
+                    )
+                })
+                .collect::<Vec<_>>()
+        };
+        for (text, expected) in [
+            ("", false),
+            ("TEST SAMPLE STUDENT", false),
+            ("中文 評量", false),
+            ("مرحبا", true),
+            ("English prefix مرحبا", true),
+            ("שלום", true),
+            ("English\nمرحبا", true),
+            // Overrides act through actual glyph levels, including when the content is Latin.
+            ("\u{202e}ABC\u{202c}", true),
+            ("\u{202d}ABC\u{202c}", false),
+        ] {
+            let before = snapshot(text);
+            assert_eq!(layout.has_rtl_glyphs(text, &spec), expected, "{text:?}");
+            assert_eq!(
+                snapshot(text),
+                before,
+                "inspection must not mutate glyphs or positions"
+            );
+        }
     }
 
     #[test]

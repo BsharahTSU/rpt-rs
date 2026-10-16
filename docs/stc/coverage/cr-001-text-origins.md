@@ -13,7 +13,7 @@ The final review of checkpoint `3683e20` isolated three remaining text-origin er
 | --- | --- | --- |
 | Trailing whitespace in centering width | Controlled field and static-text native probes | Centered LTR Field emission drops terminal U+0020; centered LTR final measurement excludes it while static glyphs remain |
 | Final alignment advance uses a different rounding rule | Actual shaped-glyph positions and native alignment anchors | Worker Center/Right runs with zero character spacing use per-glyph PDF-width then twip rounding |
-| First-line ascent requires a layout-path-dependent metric choice | Blanket 600-DPI ascent regresses fixed StandardText fields; controlled RTL and RTF toggles each change native Y independently | Scope selected-DPI ascent using proven native paths; default and PDF cell conversion remain 1440 DPI |
+| First-line ascent requires a layout-path-dependent metric choice | Blanket 600-DPI ascent regresses fixed StandardText fields; RTL, RTF and content-plus-growth controls distinguish native paths | Scope selected-DPI ascent using proven native paths, including growing standard fields with actual shaped RTL content; default and PDF cell conversion remain 1440 DPI |
 
 No constant X/Y translation explains these causes. They depend on text, shaped glyph
 advances, alignment, font size and the selected printer resolution.
@@ -131,7 +131,7 @@ Positive Y below means upward movement in PDF coordinates.
 | Same fixed standard field: reading order LTR to RTL | All 34 rating baselines move +0.05 pt Y; X unchanged | Direction independently selects a different ascent path |
 | Same fixed standard field: Center to Right alignment, LTR retained | Y unchanged; X changes with alignment | Right alignment alone does not select printer ascent in this control |
 | Same standard field: enable CanGrow while Right alignment is retained | All 34 rating origins remain unchanged | CanGrow plus Right alignment is not a general printer-ascent switch either |
-| Separate LTR/right standard field: CanGrow true to false | Only its two runs / 36 glyphs move +0.10 pt Y | Growth has an effect in this object; the cause remains unresolved after the controls below |
+| Separate nominal-LTR/right standard field: CanGrow true to false | Only its two runs / 36 glyphs move +0.10 pt Y | Growth has an effect in this object; checkpoint `33f1998` left the content interaction unresolved |
 | Grow/right/LTR rating field: authored height 290 to 200 twips, below its 228-twip line pitch | No glyph position changes anywhere; all 34 ratings unchanged | Height below line pitch alone does not explain the exception |
 | Centered LTR RTF field: RTF to StandardText, CanGrow true retained | All 15 single-line headings / 175 glyphs move +0.05 pt Y; X unchanged; no other glyph coordinates change | Formatting independently selects a different ascent path |
 | RTL/right-aligned RTF field: RTF to StandardText | No glyph position changes | RTL remains an independent path, so this case cannot isolate formatting |
@@ -147,20 +147,61 @@ These controls reject universal CanGrow, right-alignment, CanGrow-plus-Right,
 height-below-line-pitch and selected-DPI rules.
 They positively establish separate RTL and RTF paths within the measured native
 cases. They do not prove HTML behavior or every font/size/wrapping combination.
-The bounded investigation stops with the standard LTR field's growth-dependent
-two-twip change unresolved. Do not infer a language/content rule, adjust a named
-object, or claim that all fields follow printer ascent. The evidence supports
-scoped RTL and RTF field paths together with the measured static-text path. The
-unresolved case must remain visible in the checkpoint and fresh-pair comparison.
+At checkpoint `33f1998`, the standard nominal-LTR field's growth-dependent two-twip
+change remained unresolved. The next content controls below establish the missing
+interaction; the rejected CanGrow/alignment/height hypotheses remain useful history.
 
-The scoped source integration is implemented. The default
+The scoped source integration in that checkpoint was implemented. The default
 `TextLayout::field_ascent_twips` delegates to existing ascent behavior, and
-`WindowsLayout` overrides it with the legacy 1440-DPI field metric. Field layout
-uses selected-printer ascent only for explicit RTL or known RTF interpretation;
-all other field formats use the legacy field path. Static-text placement keeps
-the selected-printer metric. This introduces no CanGrow, overflow, language or
-named-object heuristic. Integration and fresh combined verification remain
-pending; the policy does not claim to resolve the isolated standard LTR case.
+`WindowsLayout` overrides it with the legacy 1440-DPI field metric. At that point,
+field layout selected printer ascent only for explicit RTL or known RTF
+interpretation, leaving other field formats on the legacy path. Static-text
+placement retained the selected-printer metric. This is the historical boundary,
+superseded for growing StandardText with actual RTL shaping by the follow-up below.
+
+## Content and growth independently select the remaining path
+
+Two bounded native content controls preserve field settings and the original
+formula/input structure while changing only private schema-bearing DataSet copies.
+Original report, frozen snapshot and copied report hashes remain unchanged. All
+non-target cells and the schema are checked after serialization. No SQL is used.
+
+First, the nominal-LTR, right-aligned standard field receives synthetic ASCII
+`TEST SAMPLE STUDENT` through the same three-component, non-alias formula branch.
+Both growth settings use nominal Arial Bold 11 pt and the same authored bounds.
+With ASCII, the two target runs have identical baselines at 26.15 and 10.15 pt,
+effective Arial Bold 9.65 pt, 19 glyphs per run and X extent 400.85..516.65965 pt.
+With the captured Arabic content, the existing growth-enabled control has baselines
+26.05 and 10.05 pt; disabling growth moves them to 26.15 and 10.15 pt. Replacing
+content alone therefore removes the growth-dependent two-twip difference.
+
+Second, a different standard field receives synthetic Arabic `مرحبا` directly
+through its existing input column. This field remains centered, explicitly LTR,
+nominal Arial regular 10 pt, with identical bounds in its fixed/growing report
+copies. All 34 short single-line runs / 170 glyphs move +0.05 pt in PDF Y when
+growth is enabled. Their effective Arial regular 8.95-pt outlines, all X positions
+and page allocation of 17 / 17 / 0 runs are unchanged. Exactly those 170 glyphs
+change position anywhere in the pair. The earlier Latin control for the same
+field and growth settings changes no glyph positions.
+
+This confirms the interaction across two fields, alignments, font weights/sizes
+and section types. The opposite signs of their baseline changes follow the
+different nominal/printer ascent metrics; no constant offset describes both.
+Nominal LTR metadata does not imply that the shaped text contains only LTR runs.
+
+The generic source extension is implemented. In addition to the existing explicit
+RTL and known-RTF paths, a **growing StandardText field with actual shaped RTL
+glyphs** selects printer ascent. The shaping backend inspects glyph bidi levels;
+the rule uses no report/object names, font constants, language labels or manually
+maintained Unicode-block ranges. Fixed StandardText fields with nominal LTR and
+growing English fields keep the legacy 1440-DPI ascent. Stored reading order,
+painted glyph advances, wrapping and the separate PDF font-cell calculation are
+not rewritten by this ascent selection.
+
+These controls establish the two measured content interactions. They do not prove
+every complex script, mixed-content case or multiline combination. Synthetic
+regressions and fresh native/Rust replay must verify the implementation, including
+the fixed/English guards; neither is claimed complete here.
 
 Private saved reports, PDFs and numeric comparisons are retained under
 `ascent-grow-probe/`, `ascent-direction-probe/`, `ascent-format-probe/` and
@@ -168,6 +209,10 @@ Private saved reports, PDFs and numeric comparisons are retained under
 The additional controls are in `ascent-student-grow-probe/` and
 `ascent-grow-right-probe/`, with the last height control in
 `ascent-grow-height-probe/`.
+The content controls and their sanitized private findings are in
+`ascent-content-probe/` and `ascent-rating-content-probe/`; independent operator
+evidence is `native-ascii-content-comparison.json` and
+`native-arabic-rating-content-comparison.json`, respectively.
 The centered-format comparison is `native-centered-format-comparison.json`;
 its adjacent `metadata.json` proves the one persisted format change and retained
 CanGrow, reading order, alignment, rotation and authored bounds. Captured text is
@@ -188,13 +233,20 @@ review and actual text-operator comparison, with page allocation, line breaks,
 rating order and default-profile/Chinese regressions checked. Record those results
 in the coordinating parity checkpoint once available; this document makes no
 claim that the new combined output has already passed. Horizontal origin improvement
-has been measured; the controlled native ascent evidence must now be applied to a
-scoped implementation and verified in the combined output. The isolated standard
-LTR growth-dependent baseline difference remains an explicit open issue, even if
-the proven paths pass their focused checks.
+has been measured; the content-plus-growth ascent extension is in progress and
+must be verified in the combined output. Its native cause is now independently
+confirmed, but correcting the Rust residual remains an implementation/replay gate.
 
 
-Focused verification after integration: 481 Docker tests pass across Page IR, text,
+Historical focused verification for checkpoint `33f1998`: 481 Docker tests pass across Page IR, text,
 layout, render and worker packages; this includes the five actual Chinese PDF tests
 and the public reference net. Strict all-target/all-feature workspace Clippy and
-formatting pass. The committed-source fresh pair remains the next comparison gate.
+formatting pass. These results predate the content-plus-growth extension and do not
+validate its source or output. Final verification for that extension is pending.
+
+Final source verification for the content-plus-growth extension passes 486 focused
+Docker tests (19 Page IR, 29 text, 370 layout, 56 render, 12 worker), including all
+five Chinese PDF tests and the public PDF reference net. Twelve minimal-feature text
+tests also pass. Strict all-target/all-feature workspace Clippy and formatting pass;
+the worker is rebuilt. Independent source review found no blocking issue. Fresh
+actual-PDF verification is the remaining gate at this implementation checkpoint.

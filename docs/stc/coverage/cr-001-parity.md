@@ -17,6 +17,7 @@ uses the previously captured, schema-bearing DataSet; no SQL is executed during 
 | Arabic shadda marks vertically mirrored | Native Crystal reverses ScriptPlace vertical offsets | Opt-in Arabic-cluster offset sign compatibility, preserving other scripts and all glyph advances |
 | Centered Arabic field about 1.025 pt left of Crystal | Rust includes a trailing ASCII space in its centering width; native omits it | Opt-in centered-LTR field preparation; preserve leading/internal spaces and unverified field directions |
 | First-line offsets in static, RTL and RTF text up to 0.25 pt | Native uses a separate printer-ascent path for these objects | Use selected-printer ascent for measured paths; preserve prior nominal ascent for other fields and preserve PDF cell sizing |
+| Two repeated growing-field baselines 0.10 pt from Crystal | Native uses printer ascent when a growing plain LTR field actually shapes RTL glyphs | Inspect shaped glyph levels for the complete resolved field; preserve fixed, English/CJK and unknown-format paths |
 | Remaining centered/right text-origin offsets | Native rounds each shaped advance through PDF thousandths and whole twips before summing | Measure alignment after effective font selection; nominal wrapping and painted advances stay unchanged |
 | Rounded outer frames 0.25 / 0.50 pt outside native centers | Native box bounds contain the full stroke | Inset ordinary unfilled circular rounded frames by half the stroke width, including spanning fragments |
 
@@ -53,12 +54,14 @@ through actual PDF generation/extraction as well as printer/Arabic compatibility
 
 The first universal printer-ascent attempt regressed 54 field runs and was rejected.
 Controlled native copies prove separate RTL and RTF paths; growth, alignment, their
-conjunction and a short box do not provide a universal rule. The narrow implementation
-retains the prior ascent for other fields, with explicit regressions for these guards.
-Two repeated standard-field runs (36 glyphs) still have a 0.10-pt baseline difference;
-their CanGrow-dependent native behavior remains unexplained. Do not hide it with an
-object name, language guess or blanket translation. Details and rejected hypotheses
-are recorded in [final text origins](cr-001-text-origins.md).
+conjunction and a short box do not provide a universal rule. Synthetic ASCII in the
+remaining footer removes its growth-dependent difference. An independent Arabic
+rating control reproduces the interaction across 34 runs / 170 glyphs, while its
+Latin control does not move. The final rule inspects actual shaped RTL glyph levels
+for growing StandardText fields; it preserves fixed fields, English/CJK metrics,
+unknown formats, declared direction and all glyph advances. No report/object/font
+constant is used. Details and rejected hypotheses are recorded in
+[final text origins](cr-001-text-origins.md). Final verification of this last repair follows.
 
 The scoped integration passes 481 focused Docker tests across Page IR, text, layout, render and worker packages, including all five Chinese tests and the public PDF reference net. Strict all-target/all-feature workspace Clippy and formatting pass. The minimal-feature text suite previously passed 12 tests. Regenerated committed-source
 PDFs and all-page review follow at the next checkpoint. CR-001 acceptance remains open.

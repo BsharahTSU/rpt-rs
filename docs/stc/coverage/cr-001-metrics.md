@@ -139,22 +139,52 @@ Native copied-template controls now distinguish several paths:
   readback, so that attempted toggle is excluded from conclusions.
 
 The RTF result does not prove HTML behavior, handling of arbitrary rich-text markup,
-or every font/wrapping combination. The bounded investigation stops with the
-standard LTR field's growth-dependent two-twip change unresolved. A universal
-CanGrow, Right, their conjunction, or height-below-pitch heuristic is unsupported
-and must not be used to hide that residual. The evidence supports scoped RTL and
-RTF field paths together with the measured static-text path. Font, size and DPI
-alone do not determine native ascent; implementation and acceptance must retain
-these proven boundaries.
+or every font/wrapping combination. Checkpoint `33f1998` stopped with the standard
+nominal-LTR field's growth-dependent two-twip change unresolved. A universal
+CanGrow, Right, their conjunction, or height-below-pitch heuristic remains
+unsupported. These rejected explanations are preserved; the content controls
+below establish the missing interaction.
 
-The scoped integration is implemented: `TextLayout::field_ascent_twips` delegates
+The scoped integration at that checkpoint is implemented:
+`TextLayout::field_ascent_twips` delegates
 to the existing ascent by default, while `WindowsLayout` supplies the legacy
-1440-DPI field ascent. Field layout selects printer ascent only for explicit RTL
-or known RTF interpretation; other field formats retain 1440 DPI. Static-text
-placement retains the selected-printer path. No CanGrow, overflow, language or
-object-name heuristic is part of that boundary. Source integration and fresh
-verification are pending; this paragraph records the agreed implementation scope,
-not a passed replay.
+1440-DPI field ascent. At that point, field layout selected printer ascent only
+for explicit RTL or known RTF interpretation, while other field formats retained
+1440 DPI. Static text retained the selected-printer path. That blanket treatment
+of other nominal-LTR fields is superseded by the following measured content case.
+
+## Follow-up: actual RTL shaping interacts with growing standard fields
+
+The first private content control preserves the existing three-component formula
+branch and replaces its input with synthetic ASCII `TEST SAMPLE STUDENT`. The
+same nominal Arial Bold 11-pt, right-aligned, explicit-LTR StandardText field now
+has identical native fixed/growing baselines: 26.15 and 10.15 pt on the two pages.
+Both use effective Arial Bold 9.65 pt, 19 glyphs per run and X extent
+400.85..516.65965 pt. With captured Arabic content, growth enabled gives 26.05
+and 10.05 pt, while growth disabled gives 26.15 and 10.15 pt. Content alone
+therefore removes the two-twip growth-dependent difference.
+
+An independent second field receives synthetic Arabic `مرحبا` in its existing
+rating column, keeping centered alignment, explicit LTR, StandardText, nominal
+Arial regular 10 pt and authored bounds. Enabling growth shifts all 34 runs /
+170 glyphs by +0.05 pt in PDF Y. The effective 8.95-pt font outlines, X positions
+and page allocation (17 / 17 / 0 runs) remain identical. No other glyph coordinate
+changes. The earlier Latin fixed/growing control for that same field changes no
+glyph positions. Both synthetic values fit without an actual wrapping change.
+
+The interaction is confirmed across distinct fields, alignments, font weights,
+sizes and sections. Nominal LTR metadata can still produce shaped RTL glyph runs.
+The source extension is implemented: growing **StandardText** fields select
+printer ascent when the shaping backend finds actual RTL glyph bidi levels.
+Explicit RTL and known RTF retain their already established printer paths.
+Fixed nominal-LTR StandardText and growing English fields retain the legacy
+1440-DPI field metric. There are no report/object names, font constants, language
+labels, Unicode-block heuristics or constant position corrections in the rule.
+
+The content controls establish native behavior; final source tests and fresh PDF
+verification for this extension remain pending. Fixed/English guards and default
+profiles must be checked along with the corrected Arabic case. They are not
+evidence for every complex script or multiline configuration.
 
 `WindowsLayout::new` still selects 1440 DPI, preserving the general constructor's
 default behavior. The positive-height PDF glyph-cell conversion remains the separate
@@ -175,13 +205,24 @@ under sibling `ascent-grow-probe/`, `ascent-direction-probe/`, `ascent-format-pr
 and `ascent-centered-format-probe/`; later growth controls are in
 `ascent-student-grow-probe/`, `ascent-grow-right-probe/` and
 `ascent-grow-height-probe/`.
-These probes use only private copied templates
-and the frozen DataSet. Original template and snapshot hashes remain unchanged;
+The subsequent content controls are in `ascent-content-probe/` and
+`ascent-rating-content-probe/`, including metadata and independent numeric glyph
+comparisons. They change only the relevant columns in private schema-bearing
+snapshot copies; all other cells remain equal. These probes use read-only original
+or private copied templates. Original template and snapshot hashes remain unchanged;
 no SQL was executed.
 Only sanitized metrics are recorded in this document; font binaries and report data
 remain private.
 
-Focused verification after integration: 481 Docker tests pass across Page IR, text,
+Historical focused verification for checkpoint `33f1998`: 481 Docker tests pass across Page IR, text,
 layout, render and worker packages; this includes the five actual Chinese PDF tests
 and the public reference net. Strict all-target/all-feature workspace Clippy and
-formatting pass. The committed-source fresh pair remains the next comparison gate.
+formatting pass. These results predate the content-plus-growth extension and do not
+validate its source or output. Final verification for that extension is pending.
+
+Final source verification for the content-plus-growth extension passes 486 focused
+Docker tests (19 Page IR, 29 text, 370 layout, 56 render, 12 worker), including all
+five Chinese PDF tests and the public PDF reference net. Twelve minimal-feature text
+tests also pass. Strict all-target/all-feature workspace Clippy and formatting pass;
+the worker is rebuilt. Independent source review found no blocking issue. Fresh
+actual-PDF verification is the remaining gate at this implementation checkpoint.

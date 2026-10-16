@@ -252,16 +252,24 @@ impl<'a> Formatter<'a> {
             obj.bounds.width.0
         };
         // Controlled native copies prove separate baseline paths for explicit RTL and RTF
-        // fields. Keep other fields on their previous nominal metrics: neither CanGrow,
-        // RightAlign, nor a box shorter than one line independently selected printer ascent.
-        // HTML/unknown formats are intentionally unverified and retain the field path.
+        // fields, plus a content-dependent path for growing plain LTR fields. Growth, alignment,
+        // and short bounds alone do not select printer ascent. HTML/unknown metadata keeps its
+        // previous field path. Use complete resolved content so all wrapped lines agree.
         let nominal_field_ascent = matches!(kind, ObjectKind::Field)
             && !matches!(reading_order, ReadingOrder::RightToLeft)
             && !matches!(&obj.kind, ReportObjectKind::Field(f)
                 if f.format.as_ref().is_some_and(|format|
                     matches!(format.string.text_format, rpt_model::TextFormat::RTFText)));
+        let growing_plain_field = nominal_field_ascent
+            && obj.format.can_grow
+            && matches!(reading_order, ReadingOrder::LeftToRight)
+            && matches!(&obj.kind, ReportObjectKind::Field(f)
+                if f.format.as_ref().is_none_or(|format|
+                    matches!(format.string.text_format, rpt_model::TextFormat::StandardText)));
         let ascent_for = |font: &FontSpec| {
-            let ascent = if nominal_field_ascent {
+            let ascent = if growing_plain_field {
+                self.text_layout.growing_field_ascent_twips(&raw, font)
+            } else if nominal_field_ascent {
                 self.text_layout.field_ascent_twips(font)
             } else {
                 self.text_layout.ascent_twips(font)

@@ -271,6 +271,15 @@ impl TextLayout for WindowsLayout {
             .map(|metrics| f64::from(metrics.ascent))
             .unwrap_or_else(|| self.inner.ascent_twips(font))
     }
+    // Native controlled ASCII/Arabic copies select printer ascent only when growing
+    // plain-field content shapes at RTL levels. The caller guards field format and CanGrow.
+    fn growing_field_ascent_twips(&self, text: &str, font: &FontSpec) -> f64 {
+        if self.inner.has_rtl_glyphs(text, font) {
+            self.ascent_twips(font)
+        } else {
+            self.field_ascent_twips(font)
+        }
+    }
     fn substituted_chars(&self, text: &str, font: &FontSpec) -> String {
         self.inner.substituted_chars(text, font)
     }
@@ -568,5 +577,53 @@ fn trailing_ascii_space_preparation_is_opt_in_and_keeps_fragment_metrics() {
     assert_eq!(
         ordinary.ascent_twips(&font),
         compatibility.ascent_twips(&font)
+    );
+}
+
+#[cfg(all(test, feature = "cosmic"))]
+#[test]
+fn growing_field_ascent_uses_shaped_rtl_content_and_preserves_other_metrics() {
+    let ordinary = WindowsLayout::new(crate::FontSource::Bundled).without_latin_kerning();
+    let printer =
+        WindowsLayout::with_printer_dpi(crate::FontSource::Bundled, NonZeroU32::new(600).unwrap())
+            .without_latin_kerning();
+    let mut distinct_paths = 0;
+    for size_pt in [9.0, 10.0, 11.0, 12.0, 16.0] {
+        let font = FontSpec {
+            family: "Liberation Sans".into(),
+            size_pt,
+            ..Default::default()
+        };
+        let nominal = printer.field_ascent_twips(&font);
+        let device = printer.ascent_twips(&font);
+        if nominal != device {
+            distinct_paths += 1;
+        }
+        for (text, rtl) in [
+            ("TEST SAMPLE STUDENT", false),
+            ("中文 評量", false),
+            ("مرحبا", true),
+            ("English مرحبا", true),
+            ("", false),
+        ] {
+            let width = printer.width_twips(text, &font);
+            let wrapped = printer.wrap(text, 100000.0, &font);
+            assert_eq!(
+                printer.growing_field_ascent_twips(text, &font),
+                if rtl { device } else { nominal },
+                "{text:?} at {size_pt}pt"
+            );
+            assert_eq!(
+                ordinary.growing_field_ascent_twips(text, &font),
+                ordinary.field_ascent_twips(&font),
+                "1440-DPI default stays unchanged"
+            );
+            assert_eq!(printer.width_twips(text, &font), width);
+            assert_eq!(printer.wrap(text, 100000.0, &font), wrapped);
+        }
+    }
+    assert!(
+        distinct_paths > 0,
+        "at least one font size must distinguish the two metric paths"
     );
 }

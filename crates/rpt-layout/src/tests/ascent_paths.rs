@@ -157,7 +157,7 @@ fn fixed_footer_preserves_format_dispatch_even_when_growing_is_disabled() {
     ] {
         let mut obj = field("Footer", Some(format), order);
         obj.format.can_grow = true;
-        obj.bounds.height = Twips(239); // Below one line's pitch, matching the unresolved boundary.
+        obj.bounds.height = Twips(239); // Below one line's pitch; height alone must not select a metric path.
         let doc = render(
             vec![obj],
             AreaSectionKind::PageFooter,
@@ -233,4 +233,132 @@ fn spacing_adapter_forwards_both_ascent_contracts() {
     let font = FontSpec::default();
     assert_eq!(spaced.ascent_twips(&font), 193.0);
     assert_eq!(spaced.field_ascent_twips(&font), 177.0);
+}
+
+/// The content hook has a deliberately different result from both font-only hooks. It asserts
+/// that planning passes complete display content; real bidi classification is tested in rpt-text.
+#[derive(Debug)]
+struct ContentMetrics {
+    expected: String,
+}
+impl TextLayout for ContentMetrics {
+    fn width_twips(&self, text: &str, font: &FontSpec) -> f64 {
+        PathMetrics.width_twips(text, font)
+    }
+    fn line_height_twips(&self, font: &FontSpec) -> f64 {
+        PathMetrics.line_height_twips(font)
+    }
+    fn ascent_twips(&self, font: &FontSpec) -> f64 {
+        PathMetrics.ascent_twips(font)
+    }
+    fn field_ascent_twips(&self, font: &FontSpec) -> f64 {
+        PathMetrics.field_ascent_twips(font)
+    }
+    fn growing_field_ascent_twips(&self, text: &str, _font: &FontSpec) -> f64 {
+        assert_eq!(
+            text, self.expected,
+            "use complete resolved content, not a truncated line"
+        );
+        211.0
+    }
+    fn wrap(&self, text: &str, _width: f64, _font: &FontSpec) -> Vec<String> {
+        vec![text.into()]
+    }
+}
+
+#[test]
+fn only_growing_known_plain_ltr_fields_ask_for_content_aware_metrics() {
+    use ReadingOrder::{LeftToRight as Ltr, RightToLeft as Rtl};
+    let cases = [
+        (None, Ltr, true, 211),
+        (Some(TextFormat::StandardText), Ltr, true, 211),
+        (Some(TextFormat::StandardText), Ltr, false, 177),
+        (Some(TextFormat::RTFText), Ltr, true, 193),
+        (Some(TextFormat::StandardText), Rtl, true, 193),
+        (Some(TextFormat::HTMLText), Ltr, true, 177),
+        (Some(TextFormat::Other(99)), Ltr, true, 177),
+        (
+            Some(TextFormat::StandardText),
+            ReadingOrder::Other(99),
+            true,
+            177,
+        ),
+    ];
+    for kind in [AreaSectionKind::ReportHeader, AreaSectionKind::PageFooter] {
+        for text in ["TEST SAMPLE STUDENT", "مرحبا", "English مرحبا", "中文 評量"] {
+            for (format, order, grow, expected) in cases {
+                let mut obj = field("Content", format, order);
+                obj.format.can_grow = grow;
+                obj.bounds.height = Twips(239);
+                let doc = render(
+                    vec![obj],
+                    kind,
+                    text,
+                    Box::new(ContentMetrics {
+                        expected: text.into(),
+                    }),
+                );
+                let runs = text_runs(&doc);
+                assert_eq!(runs.len(), 1);
+                let run = runs[0];
+                assert_eq!(
+                    run.text, text,
+                    "content selection must not change emitted text"
+                );
+                assert_eq!(run.rtl, matches!(order, Rtl));
+                assert_eq!(run.metrics.as_ref().unwrap().ascent, Twips(expected));
+                assert_eq!(
+                    run.metrics.as_ref().unwrap().advance,
+                    Twips(text.chars().count() as i32 * 100)
+                );
+                assert_eq!(run.metrics.as_ref().unwrap().line_height, Twips(240));
+            }
+        }
+    }
+}
+
+#[test]
+fn growing_fields_choose_one_content_metric_for_all_paragraphs() {
+    let text = "English\nمرحبا";
+    let mut obj = field(
+        "Paragraphs",
+        Some(TextFormat::StandardText),
+        ReadingOrder::LeftToRight,
+    );
+    obj.format.can_grow = true;
+    let doc = render(
+        vec![obj],
+        AreaSectionKind::ReportHeader,
+        text,
+        Box::new(ContentMetrics {
+            expected: text.into(),
+        }),
+    );
+    let runs = text_runs(&doc);
+    assert_eq!(runs.len(), 2);
+    assert_eq!(runs[0].text, "English");
+    assert_eq!(runs[1].text, "مرحبا");
+    assert!(runs
+        .iter()
+        .all(|run| run.metrics.as_ref().unwrap().ascent == Twips(211)));
+    assert!(
+        runs.iter().all(|run| !run.rtl),
+        "content detection must not change declared direction"
+    );
+    assert_eq!(runs[1].bounds.top.0 - runs[0].bounds.top.0, 240);
+}
+
+#[test]
+fn spacing_adapter_forwards_content_without_changing_metric_defaults() {
+    let inner = ContentMetrics {
+        expected: "English مرحبا".into(),
+    };
+    let spaced = crate::text::SpacedLayout::new(&inner, Twips(7));
+    let font = FontSpec::default();
+    assert_eq!(spaced.ascent_twips(&font), 193.0);
+    assert_eq!(spaced.field_ascent_twips(&font), 177.0);
+    assert_eq!(
+        spaced.growing_field_ascent_twips("English مرحبا", &font),
+        211.0
+    );
 }

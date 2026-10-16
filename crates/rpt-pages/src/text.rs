@@ -50,6 +50,14 @@ pub trait TextLayout: std::fmt::Debug {
         self.ascent_twips(font)
     }
 
+    /// Baseline offset for a growing plain-text field, given its complete resolved display text.
+    /// The default keeps ordinary field metrics. A compatibility stack may use shaped content
+    /// to choose a different ascent without changing text, bidi direction, or advances. The caller
+    /// limits this hook to supported field formats; band growth may still be disabled.
+    fn growing_field_ascent_twips(&self, _text: &str, font: &FontSpec) -> f64 {
+        self.field_ascent_twips(font)
+    }
+
     /// Break `text` into display lines that each fit `max_width` twips in `font`. Explicit newlines
     /// always break. The default is greedy and **space-based** (no mid-word or CJK breaking); a
     /// script-aware impl overrides this. Returns at least one line (possibly empty).
@@ -154,6 +162,12 @@ mod tests {
                 layout.field_ascent_twips(&font(size)),
                 layout.ascent_twips(&font(size))
             );
+            for text in ["English", "مرحبا", "中文", "English مرحبا"] {
+                assert_eq!(
+                    layout.growing_field_ascent_twips(text, &font(size)),
+                    layout.field_ascent_twips(&font(size))
+                );
+            }
         }
     }
 

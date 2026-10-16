@@ -66,6 +66,10 @@ impl TextLayout for SpacedLayout<'_> {
         self.inner.field_ascent_twips(font)
     }
 
+    fn growing_field_ascent_twips(&self, text: &str, font: &FontSpec) -> f64 {
+        self.inner.growing_field_ascent_twips(text, font)
+    }
+
     fn is_approximate(&self) -> bool {
         self.inner.is_approximate()
     }
