@@ -52,16 +52,33 @@ external Gradebook and authenticated API/UI delivery remain open. Read the [surf
 
 The [CR-001 repair and comparison record](cr-001-parity.md) is the current acceptance ledger.
 The original case is replayed from captured data, with Windows Crystal as the reference and Linux
-Docker as the Rust renderer. Final fresh-pair verification and the final regression summary are
-pending; successful intermediate replays do not close the case.
+Docker as the Rust renderer. The repair is implemented through clean commit `be022bd`; both
+PDFs have been regenerated and pass integrity, page/date and rating checks. Independent final
+all-page/operator review passes without blockers. The captured CR-001 case is accepted within
+the measured tolerances below; this status does not extend to other students or templates.
 
 | Repair area | Detailed evidence and scope |
 | --- | --- |
-| Saved printer DPI and multiline row pitch | [Printer metrics](cr-001-metrics.md); retain the ordinary library default and PDF glyph-cell sizing |
+| Saved printer DPI, multiline pitch and scoped first ascent | [Printer metrics](cr-001-metrics.md); printer ascent for static/explicit RTL/known RTF and growing StandardText with actual shaped RTL; fixed/English, library-default and PDF-cell guards remain |
 | Matching Basic-Latin measurement and drawing | [Spacing](cr-001-spacing.md); opt-in unkerned ASCII ranges, with advanced shaping preserved |
 | Signature borders, standalone rules and rounded frames | [Geometry](cr-001-geometry.md); measured guards and per-fragment half-stroke handling |
 | Explicit text-paragraph RTL, including mixed paragraphs | [Arabic direction](cr-001-arabic.md); decode stored metadata, preserve old-model inheritance |
 | Native Arabic mark-offset convention | [Current comparison record](cr-001-parity.md); opt-in PDF compatibility, ordinary positioning unchanged |
+| Trailing-space centering and emitted text | [Whitespace](cr-001-whitespace.md); narrow centered-LTR field trim, with static trailing glyphs retained |
+| Final shaped alignment width | [Text origins](cr-001-text-origins.md); integer PDF-width then per-glyph twip rounding for centered/right zero-spacing runs |
+
+Current focused Docker verification passes 486 tests plus 12 minimal-feature text tests,
+including five Chinese PDF tests, strict workspace Clippy and formatting. The prior full
+workspace run of 1,630 tests is recorded separately; it is not a new full run for these changes.
+The fresh pair has three 595 x 841 pt pages, the same date and 34 ordered ratings allocated
+17 / 17 / 0. Independent final measurements match all 4,467 glyph outlines and sizes in 283 runs,
+including 216 aligned runs, with maximum differences 0.05708 pt X and 0.03016 pt Y at existing
+marks. Ordinary baselines are within 0.00005 pt; both formerly displaced footer runs match.
+All 63 English line breaks are preserved. The CR-001 tolerance is below 0.06 pt X / 0.031 pt Y;
+the remaining curve-endpoint difference is at most 0.05005 pt, and 42 CMap differences map to
+identical outlines. The coordinator and independent reviewer inspected all six fresh page PNGs;
+fresh per-engine pixels, glyph data and geometry reproduce the reviewed candidate, as does Rust IR.
+This is accepted captured-case parity with documented residuals, not pixel identity.
 
 CR-003 and CR-005 remain open and need their own comparisons after shared renderer fixes.
 The other 95 eligible students remain SQL-only evidence. Unpublished standard/second-term cases,

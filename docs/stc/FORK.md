@@ -17,11 +17,16 @@ request validation and the Rust worker for rendering. Rust builds and candidates
 Linux; original Crystal baselines require the existing Windows Crystal installation.
 
 PDF support is experimental. Three representative evaluation cases have native/Rust exports.
-The current [CR-001 repair](coverage/cr-001-parity.md) addresses saved-printer line pitch,
-Basic-Latin spacing, ordinary border/rule/rounded-frame geometry, stored paragraph RTL and native
-Arabic mark-offset behavior. Final fresh-pair verification is pending; CR-003 and CR-005 remain
-separate open comparisons. Intermediate improvements do not establish full template or student
-coverage, pixel identity or authenticated Parent delivery.
+The [CR-001 repair](coverage/cr-001-parity.md), implemented through clean commit `be022bd`,
+addresses saved-printer pitch and scoped ascent, Basic-Latin spacing, trailing-space centering,
+shaped alignment-width rounding, ordinary border/rule/rounded-frame geometry, stored paragraph
+RTL and native Arabic mark offsets. The growing StandardText ascent path follows actual shaped
+RTL glyphs, preserving fixed/English guards without report-specific constants.
+Both native/Rust PDFs have been regenerated and pass integrity, page/date and ordered-rating
+checks. Independent final all-page/operator review passes, and the captured CR-001 comparison
+is accepted below 0.06 pt X / 0.031 pt Y, with remaining differences documented in its acceptance
+record. CR-003 and CR-005 remain separate open comparisons. This case
+does not establish full template/student coverage, pixel identity or authenticated Parent delivery.
 
 Template-owned SQL and BIFF/XLS are explicitly unsupported. Multiple-table transport exists,
 but main/subreport binding currently uses the first table. Full caller integration, production
@@ -38,7 +43,7 @@ packaging and broad template parity remain open. Production Parent configuration
 | Checkpoint ledger | [WORKLOG](WORKLOG.md) |
 | Parent case discovery and comparison protocol | [coverage/README](coverage/README.md) |
 | Current CR-001 repair and acceptance evidence | [coverage/cr-001-parity](coverage/cr-001-parity.md) |
-| Detailed CR-001 findings and fixes | [metrics](coverage/cr-001-metrics.md), [spacing](coverage/cr-001-spacing.md), [geometry](coverage/cr-001-geometry.md), [Arabic](coverage/cr-001-arabic.md) |
+| Detailed CR-001 findings and fixes | [metrics](coverage/cr-001-metrics.md), [spacing](coverage/cr-001-spacing.md), [geometry](coverage/cr-001-geometry.md), [Arabic](coverage/cr-001-arabic.md), [whitespace](coverage/cr-001-whitespace.md), [text origins](coverage/cr-001-text-origins.md) |
 | Private inputs, logs and outputs (untracked) | `research/stc-verification/` |
 
 Canonical Parent behavior is documented in the sibling backend repository

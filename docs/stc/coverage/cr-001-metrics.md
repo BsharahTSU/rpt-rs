@@ -181,10 +181,10 @@ Fixed nominal-LTR StandardText and growing English fields retain the legacy
 1440-DPI field metric. There are no report/object names, font constants, language
 labels, Unicode-block heuristics or constant position corrections in the rule.
 
-The content controls establish native behavior; final source tests and fresh PDF
-verification for this extension remain pending. Fixed/English guards and default
-profiles must be checked along with the corrected Arabic case. They are not
-evidence for every complex script or multiline configuration.
+The content controls establish native behavior. Final source tests cover fixed/English
+guards, CJK, mixed content and default profiles; the actual candidate replay corrects
+the two Arabic footer baselines. These controls are not native proof for every
+complex script or multiline configuration.
 
 `WindowsLayout::new` still selects 1440 DPI, preserving the general constructor's
 default behavior. The positive-height PDF glyph-cell conversion remains the separate
@@ -192,13 +192,13 @@ default behavior. The positive-height PDF glyph-cell conversion remains the sepa
 a new line-pitch formula or a new wrapping algorithm. Font resolution and the existing
 fallback path remain in place.
 
-The initial replay and test counts above are historical results for their checkpoint,
-not validation of this follow-up. Fresh output must still verify page allocation,
-line breaks and actual text origins after combining ascent with the horizontal
-measurement changes. See [final text origins](cr-001-text-origins.md) and the
-[parity record](cr-001-parity.md); no final parity result is asserted here.
+The initial replay and test counts above are historical results for their checkpoint.
+The final source and candidate verification below cover this follow-up. Both engines
+were freshly regenerated from clean `be022bd` at 01:38:46-01:39:09 local; page allocation,
+ordered ratings, date and integrity checks pass. See [final text origins](cr-001-text-origins.md)
+and the [parity record](cr-001-parity.md) for the final visual acceptance boundary.
 
-Numeric evidence is in ignored `cr-001-parity/final/review/` under
+Historical numeric evidence is in ignored `cr-001-parity/final-before-text-origins/review/` under
 `printer-ascent-evidence.json` and `remaining-residual-classification.md`.
 The controlled exports, saved-property readback and glyph comparisons are retained
 under sibling `ascent-grow-probe/`, `ascent-direction-probe/`, `ascent-format-probe/`
@@ -218,11 +218,14 @@ Historical focused verification for checkpoint `33f1998`: 481 Docker tests pass 
 layout, render and worker packages; this includes the five actual Chinese PDF tests
 and the public reference net. Strict all-target/all-feature workspace Clippy and
 formatting pass. These results predate the content-plus-growth extension and do not
-validate its source or output. Final verification for that extension is pending.
+validate its source or output. The newer results below supersede that validation boundary.
 
 Final source verification for the content-plus-growth extension passes 486 focused
 Docker tests (19 Page IR, 29 text, 370 layout, 56 render, 12 worker), including all
 five Chinese PDF tests and the public PDF reference net. Twelve minimal-feature text
 tests also pass. Strict all-target/all-feature workspace Clippy and formatting pass;
-the worker is rebuilt. Independent source review found no blocking issue. Fresh
-actual-PDF verification is the remaining gate at this implementation checkpoint.
+the worker is rebuilt. Independent source review found no blocking issue. The last
+correction moves only the expected two footer runs / 36 glyphs by -0.10 pt, aligning
+their baselines exactly with native. Other ordinary baselines match within 0.00005 pt.
+All 4,467 nonblank outlines/sizes, line breaks, glyph widths and geometry are preserved.
+The final fresh pair and all-page review are owned by the parity record.

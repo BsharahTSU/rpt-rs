@@ -87,4 +87,4 @@ changing right alignment alone changes X without changing Y. Thus the alignment-
 correction must remain independent from vertical metric selection. CanGrow alone
 also leaves the tested rating baselines unchanged; it is not a universal switch
 for printer ascent. See [final text origins](cr-001-text-origins.md) for all controls,
-the formula, known tradeoff and pending combined acceptance boundary.
+the formula, known tradeoff and final combined acceptance boundary.

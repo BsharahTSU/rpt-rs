@@ -192,4 +192,5 @@ tests, all nine public PDF fixtures / 15 pages, strict workspace Clippy and form
 No additional PDF reference changes were required. Rebuilt the worker with one build
 job in a 2-GiB-limited container. Detailed glyph review also found two pre-existing
 Arabic placement differences (sentence-final punctuation and a footer shadda); those
-are separate from the completed box inset and remain under investigation.
+are separate from the completed box inset. Their subsequent measured fixes and
+final bounds are recorded in [the comparison](cr-001-parity.md).

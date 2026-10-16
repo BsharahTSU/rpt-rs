@@ -254,3 +254,33 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   nonblank glyph outlines/sizes match. Other ordinary baselines differ by at most
   0.00005 pt; remaining mark Y rounding is 0.03016 pt and overall X rounding 0.05708 pt.
   Fresh original/Rust regeneration from this committed source is the next gate.
+
+## 2026-10-17 - Checkpoint 4i: final CR-001 comparison accepted
+
+- Fresh original Windows Crystal and Linux Docker Rust exports ran at 01:38:46-01:39:09
+  local from clean implementation commit `be022bd`, the unchanged original template
+  and the same frozen schema-bearing DataSet. No SQL was executed.
+- Both PDFs pass integrity checks, have three 595 x 841 pt pages and the same print
+  date. All 34 ordered ratings (17/17/0), 63 English line breaks, 283 text runs and
+  4,467 nonblank glyph outlines/sizes match. The restored boundary heading repeats
+  correctly. Both previously offset footer baselines now match native exactly.
+- Root and independent reviewer inspected all six final PNGs. The fresh glyph/outline
+  data, Page IR, run geometry and horizontal paths equal the verified candidate;
+  each engine's fresh page PNGs also equal its candidate PNGs. No blocker remains.
+- Accepted for this captured case with explicit numerical tolerances: maximum glyph
+  X error 0.05708 pt, ordinary baseline error 0.00005 pt, shadda Y rounding 0.03016 pt,
+  and rounded-curve endpoint rounding about 0.05005 pt. Four rounded stroke bounds
+  match exactly. Forty-two same-outline CMap differences explain extraction changes;
+  this is not byte/pixel identity or evidence for another report case.
+- Latest implementation checks: 486 focused Docker tests plus 12 minimal text tests,
+  including five Chinese PDF tests; strict workspace Clippy and formatting pass.
+  The earlier full 1,630-test checkpoint remains separately recorded.
+- Final private PDFs, six PNGs, HTML comparison, input/source/engine hashes, resource
+  record and independent review live under ignored `cr-001-parity/final/`. Previous
+  comparisons are retained. Public Markdown uses only the opaque case ID.
+- Resource check at 01:40:15: C: 290.38 GiB free, D: 561.49 GiB free, host RAM available
+  6.88 GiB, WSL working set 0.97 GiB; no task container remains. D: holds temp/evidence;
+  reused Docker volumes retain their managed location. No process kill or broad prune.
+- Updated fork overview/coverage and canonical backend references. CR-003, CR-005,
+  other eligible students, standard-report database rehearsal, authenticated delivery,
+  Excel and broader bridge compatibility remain separate work. No Parent code changed.

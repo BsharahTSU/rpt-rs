@@ -32,39 +32,67 @@ not apply a blanket text translation or alter group keep-together semantics.
 
 ## Verification
 
-The corrected intermediate replay preserves three 595 x 841 pt pages and all 34 ordered
-ratings, distributed 17 / 17 / 0. Actual rating baselines agree within 0.00004 pt numerical
-serialization precision. The Songs and Recitals heading appears at page 1's bottom and
-repeats on page 2. All 63 matched English body lines keep their breaks. Maximum English
-glyph deviation falls from 0.64045 to 0.05832 pt. All 2,015 non-ASCII glyphs retain their
-text and positions across the spacing correction alone. Subsequent actual glyph-outline
-review identified and repaired separate Arabic punctuation and mark-placement defects.
+**Accepted for this captured CR-001 case within the measured tolerances below.**
+Independent final operator and all-page visual reviews pass; no unresolved layout
+defect remains in this pair. This is not a claim of byte or pixel identity.
 
-At checkpoint `3683e20`, the full regression sweep covered 1,630 passing Rust tests:
-1,590 workspace tests plus the 40 just-passed unchanged reader parity tests. Zero
-failed or ignored; included five Chinese PDF tests, 154-report JSON baselines, KDL
-and the nine-fixture / 15-page PDF reference net. No live database was configured.
+Both original Windows Crystal and Linux Docker Rust were freshly regenerated at
+01:38:46-01:39:09 local on 2026-10-17 from clean source commit `be022bd` and the same
+captured schema-bearing DataSet. Original template, native bridge and portable
+adapter hashes are unchanged. Both PDFs pass integrity checks and contain three
+595 x 841 pt pages, the same print date and all 34 ordered ratings (17 / 17 / 0).
+The page-boundary subgroup heading is restored and repeated correctly; all 63
+English body line breaks remain. The coordinator reviewed all six final page images.
 
-Independent review then found the final text-origin issues described above. The
-intermediate horizontal fix is measured across all 4,467 nonblank glyphs and all
-216 centered/right-aligned runs: maximum X difference is 0.05708 pt, down from
-1.025 pt. All 63 English line breaks remain, with maximum glyph-X error 0.03332 pt.
-The existing Chinese PDF profile now exercises the final alignment measurement
-through actual PDF generation/extraction as well as printer/Arabic compatibility.
+The final fresh pair's independent actual-PDF audit matches all 4,467 nonblank glyph
+outlines and sizes, 283 nonempty runs and 216 centered/right-aligned runs. Exactly
+two footer runs / 36 glyphs (32 nonblank) moved by -0.10 pt in the last correction;
+their baselines now match native exactly. No other text, X coordinate, font, width,
+line allocation or geometry changed in that correction. Independent final review
+inspected all six PNGs and confirmed the regenerated glyph/outline data, Page IR,
+run geometry and horizontal paths are identical to the verified candidate. Each
+fresh engine PNG is also pixel-identical to its corresponding candidate PNG; this
+does not mean the two different engines produce identical pixels.
+
+Measured residuals are explicitly retained rather than described as exact identity:
+
+| Measurement | Maximum final-pair difference |
+| --- | ---: |
+| All matched glyph X origins | 0.05708 pt |
+| English glyph X origins across 63 lines | 0.03332 pt |
+| Ordinary text baselines | 0.00005 pt |
+| Rating baselines | 0.00004 pt |
+| Arabic shadda Y rounding (12 marks) | 0.03016 pt |
+| Rounded-frame stroke bounds (four frames) | Exact |
+| Rounded-curve endpoint/control-point rounding | Approximately 0.05005 pt |
+
+This captured-case comparison uses a documented envelope below 0.06 pt horizontally,
+0.031 pt for mark vertical rounding and 0.051 pt for the rounded-curve endpoints.
+There are no remaining unexplained ordinary baseline offsets. These are measured
+case tolerances, not a universal promise for other reports, fonts or printer profiles.
+PDF bytes and raster pixels differ. Forty-two non-ASCII glyph mappings differ between
+font ToUnicode tables despite matching outlines; raw extracted-word equality is
+therefore false. Content, glyph geometry and visual checks are recorded separately.
+
+Latest source validation passes 486 focused Docker tests: 19 Page IR, 29 text,
+370 layout, 56 render and 12 worker tests. These include all five Chinese PDF tests,
+actual Arabic/mixed/CJK shaping guards and the public PDF reference net. Twelve
+minimal-feature text tests also pass. Strict all-target/all-feature workspace
+Clippy, formatting and the worker build pass. Independent source review found no
+blocking issue. No public PDF baseline was changed for the final text-origin fixes.
+
+The earlier full regression checkpoint `3683e20` passed 1,630 tests: 1,590 workspace
+tests plus the 40 just-passed unchanged reader parity tests, including 154-report
+JSON baselines, KDL and the nine-fixture / 15-page PDF reference net. Those counts
+belong to that earlier checkpoint and are not added to the latest focused count.
+No live database was configured or executed during this repair.
 
 The first universal printer-ascent attempt regressed 54 field runs and was rejected.
-Controlled native copies prove separate RTL and RTF paths; growth, alignment, their
-conjunction and a short box do not provide a universal rule. Synthetic ASCII in the
-remaining footer removes its growth-dependent difference. An independent Arabic
-rating control reproduces the interaction across 34 runs / 170 glyphs, while its
-Latin control does not move. The final rule inspects actual shaped RTL glyph levels
-for growing StandardText fields; it preserves fixed fields, English/CJK metrics,
-unknown formats, declared direction and all glyph advances. No report/object/font
-constant is used. Details and rejected hypotheses are recorded in
-[final text origins](cr-001-text-origins.md). Final verification of this last repair follows.
-
-The scoped integration passes 481 focused Docker tests across Page IR, text, layout, render and worker packages, including all five Chinese tests and the public PDF reference net. Strict all-target/all-feature workspace Clippy and formatting pass. The minimal-feature text suite previously passed 12 tests. Regenerated committed-source
-PDFs and all-page review follow at the next checkpoint. CR-001 acceptance remains open.
+Controlled native copies distinguish explicit RTL, known RTF and growing plain fields
+with actual shaped RTL content. ASCII and independent Arabic controls establish the
+last interaction. Growth, alignment and short bounds alone do not select the metric.
+Fixed fields, growing English/CJK content and unknown formats retain their prior
+paths. See [final text origins](cr-001-text-origins.md) for evidence and rejected rules.
 
 ## Reproduction and evidence handling
 
@@ -94,7 +122,7 @@ only 0.70 GiB available RAM. No Docker container was running, but WSL held about
 of filesystem cache. Releasing that unused Linux cache recovered about 4 GiB of host RAM
 without deleting files, stopping applications or changing global WSL settings.
 
-Remaining verification runs sequentially with Docker limits of 2 GiB RAM, no additional
+Verification ran sequentially with Docker limits of 2 GiB RAM, no additional
 container swap, two CPUs, one Cargo build job and one Rust test thread. Temporary files
 use the user-provided D:\tmpppppp123\rpt-rs-cr001 directory, mounted as /tmp; private
 report evidence remains on D: beneath ignored research/. Existing Docker image/target
@@ -104,3 +132,27 @@ managed storage; this work does not claim to relocate the Docker disk image.
 The private bounded-Cargo runner checks at least 30 GiB free on C:, 10 GiB on D:, and
 2 GiB available host RAM before starting. Resources are checked between verification
 stages. No broad Docker prune, volume deletion or user-process termination is used.
+
+Final resource checkpoint at 01:40:15 local: C: 290.38 GiB free, D: 561.49 GiB free,
+6.88 GiB available host RAM and 0.97 GiB WSL working set; no Docker container remained.
+The initial C: reading was 294.13 GiB. Reused Docker compilation storage accounts for
+continued C: use; temporary case files and all private evidence use D:.
+
+
+## Final evidence and local commits
+
+Implementation checkpoints are `45266db` (printer pitch), `04e071f` (Latin spacing),
+`b97edfb` (borders/rules), `09debec` (rounded frames), `3683e20` (paragraph RTL and
+Arabic mark convention), `33f1998` (whitespace/alignment/scoped ascent) and `be022bd`
+(growing shaped-RTL ascent). All are local on the existing branch. No branches,
+worktrees, hosted fork, push or deployment were created.
+
+Private final outputs are `final/native.pdf`, `final/rust.pdf`, `final/comparison.html`
+and six page PNGs beneath the parity evidence directory. `final/evidence.json` records
+the clean source commit, snapshot hash, timestamps and no-SQL replay;
+`final/engine-hashes.json` records PDF/template/worker/bridge/image hashes.
+`final/review/final-review.md` and `final-review-summary.json` hold the independent
+review, with underlying glyph, outline, run, mark and geometry measurements.
+Earlier pairs are preserved under `final-before-text-origins/` and
+`final-before-growing-content/`; the isolated final change is in `growing-content/`.
+These private evidence files remain ignored by Git.

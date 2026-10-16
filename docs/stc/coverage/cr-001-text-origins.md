@@ -199,9 +199,10 @@ painted glyph advances, wrapping and the separate PDF font-cell calculation are
 not rewritten by this ascent selection.
 
 These controls establish the two measured content interactions. They do not prove
-every complex script, mixed-content case or multiline combination. Synthetic
-regressions and fresh native/Rust replay must verify the implementation, including
-the fixed/English guards; neither is claimed complete here.
+every complex script, mixed-content case or multiline combination. Synthetic regressions now pass for Arabic, mixed text, CJK, controls and metadata
+guards. Actual CR-001 replay confirms the corrected footer baselines. Native
+evidence for other RTL scripts remains uncollected; software tests are not
+independent native parity proof for those scripts.
 
 Private saved reports, PDFs and numeric comparisons are retained under
 `ascent-grow-probe/`, `ascent-direction-probe/`, `ascent-format-probe/` and
@@ -218,35 +219,33 @@ its adjacent `metadata.json` proves the one persisted format change and retained
 CanGrow, reading order, alignment, rotation and authored bounds. Captured text is
 not copied into this documentation.
 
-## Evidence and remaining validation
+## Evidence and verified implementation
 
-Private numerical evidence is retained under ignored
-`research/stc-verification/cr-001-parity/final/review/`, including
+Historical numerical investigations are retained under ignored
+`research/stc-verification/cr-001-parity/final-before-text-origins/review/`, including
 `remaining-residual-classification.md`, `alignment-quantization-comparison.json`,
 `per-glyph-rounding-probe.json`, `english-quantization-prediction.json` and
 `printer-ascent-evidence.json`. Native whitespace probes are in the sibling
-`trailing-space-probe/` directory. No captured text, identifiers, private templates,
-font binaries or generated reports are committed.
+`trailing-space-probe/` directory. The `33f1998` pair is preserved under
+`final-before-growing-content/`; the final content correction's isolated comparison
+is in `growing-content/review/candidate-vs-checkpoint.json`.
 
-Required acceptance evidence is the regenerated native/Rust pair, all-page visual
-review and actual text-operator comparison, with page allocation, line breaks,
-rating order and default-profile/Chinese regressions checked. Record those results
-in the coordinating parity checkpoint once available; this document makes no
-claim that the new combined output has already passed. Horizontal origin improvement
-has been measured; the content-plus-growth ascent extension is in progress and
-must be verified in the combined output. Its native cause is now independently
-confirmed, but correcting the Rust residual remains an implementation/replay gate.
+The final source checkpoint `be022bd` passes 486 focused Docker tests (19 Page IR,
+29 text, 370 layout, 56 render, 12 worker), including five Chinese PDF tests and the
+public PDF reference net. Twelve minimal-feature text tests, strict all-target /
+all-feature workspace Clippy and formatting pass. Independent source review found
+no blocking issue. The earlier 481-test result belongs to checkpoint `33f1998`.
 
+The candidate operator comparison confirms exactly two footer runs / 36 total glyphs
+(32 nonblank) move -0.10 pt in PDF Y; both baselines now exactly match native. Only
+their two ascent values change in Page IR. All X positions, outlines, font sizes,
+widths, line breaks and geometry are preserved. Across 4,467 matched nonblank glyphs,
+maximum X error is 0.05708 pt and Y error is 0.03016 pt (existing Arabic mark rounding).
+Ordinary baselines agree within 0.00005 pt. No named field/font/report correction is used.
 
-Historical focused verification for checkpoint `33f1998`: 481 Docker tests pass across Page IR, text,
-layout, render and worker packages; this includes the five actual Chinese PDF tests
-and the public reference net. Strict all-target/all-feature workspace Clippy and
-formatting pass. These results predate the content-plus-growth extension and do not
-validate its source or output. Final verification for that extension is pending.
-
-Final source verification for the content-plus-growth extension passes 486 focused
-Docker tests (19 Page IR, 29 text, 370 layout, 56 render, 12 worker), including all
-five Chinese PDF tests and the public PDF reference net. Twelve minimal-feature text
-tests also pass. Strict all-target/all-feature workspace Clippy and formatting pass;
-the worker is rebuilt. Independent source review found no blocking issue. Fresh
-actual-PDF verification is the remaining gate at this implementation checkpoint.
+Both engines were freshly regenerated from clean `be022bd` at 01:38:46-01:39:09 local.
+The coordinator and independent reviewer inspected all six page PNGs; integrity, page
+allocation, ordered ratings and print date pass. Fresh glyph data, Page IR and geometry
+match the verified candidate exactly. Final independent review passes; tolerances are recorded
+in [the parity record](cr-001-parity.md). Evidence is in `final/` and `final/review/`;
+private data, identifiers, fonts, templates and generated reports remain outside Git.

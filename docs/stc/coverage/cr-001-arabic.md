@@ -126,8 +126,11 @@ Chinese PDF profile also enables this option to verify it leaves CJK text intact
 No report identifier, literal label or student selector is used by the implementation.
 
 The measured sign correction does not prove a universal integer-grid rounding rule.
-The footer's 0.10-pt baseline difference and approximately 0.03-pt mark rounding may
-remain; final actual-PDF measurements are recorded in [the comparison](cr-001-parity.md).
+The separate 0.10-pt footer baseline difference is resolved by the verified
+content-plus-growth metric path in [final text origins](cr-001-text-origins.md).
+The maximum remaining mark Y rounding is 0.03016 pt across 12 shadda marks; all
+physical outlines match. Final actual-PDF measurements and tolerances are recorded
+in [the comparison](cr-001-parity.md).
 Focused Docker checks passed: 325 reader, 354 layout, 64 model, 79 PDF unit and
 one Arabic PDF integration test. A positioned non-precomposable Latin capital accent
 verifies that nonzero offsets outside Arabic stay unchanged; mixed Hebrew clusters

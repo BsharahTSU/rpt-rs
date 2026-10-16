@@ -2,7 +2,7 @@
 
 Follow-up: 2026-10-17. The native probes below are complete. The current source
 implementation is narrower than the probe findings; fresh-pair acceptance for the
-combined text-origin changes remains pending in the [parity record](cr-001-parity.md).
+combined text-origin changes is recorded in the [parity record](cr-001-parity.md).
 
 ## Finding
 
