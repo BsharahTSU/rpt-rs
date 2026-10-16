@@ -1,5 +1,7 @@
 # STC Linux Crystal compatibility work
 
+See [local fork provenance](FORK.md), [checkpoint ledger](WORKLOG.md), and [Parent coverage](coverage/README.md). Sections below preserve successive checkpoints; the latest evaluation parity section supersedes the initial comparison defects.
+
 Target agreed on 2026-10-16: full current bridge compatibility, including PDF, BIFF/XLS Excel,
 typed Parent Reports and legacy SQL/procedure/DataSet callers. This is experimental work in a
 separate checkout. No current Parent App or backend deployment/configuration has been switched.
@@ -86,7 +88,7 @@ compatibility layer, not a claim that every Crystal template or legacy input is 
 The first real AAJ evaluation comparison now runs end to end against the local SQL Server 2016
 reporting procedure. Both the unchanged Windows Crystal bridge and Linux Rust pipeline produced
 three-page structurally valid PDFs. All 35 extracted rating values match in order across pages.
-Visual inspection of every page still fails parity: Science moves from page 3 to page 2, the
+At that initial checkpoint, visual inspection failed parity: Science moves from page 3 to page 2, the
 continuation group heading is absent, some borders extend into later bands, and footer conditions
 and date formatting differ. Therefore matching page counts/values is not an acceptance gate.
 The actual student selectors, source model, IR, logs and PDFs remain in ignored local research.

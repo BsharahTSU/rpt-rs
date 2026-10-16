@@ -8,6 +8,8 @@
 
 # rpt-rs
 
+STC local compatibility fork: [provenance and workflow](docs/stc/FORK.md), [implementation status](docs/stc/README.md), and [checkpoint ledger](docs/stc/WORKLOG.md). Upstream documentation follows.
+
 > ⚠️ This project is still experimental and its API is unstable. Expect major refactorings and breaking changes. If you
 > need stability, pin a commit or fork the repository.
 
