@@ -155,7 +155,28 @@ fn unspaced_chinese_wraps_without_losing_or_reordering_characters() {
 
 #[test]
 fn chinese_and_mixed_text_survive_pdf_font_embedding_and_extraction() {
-    let pages = pages();
+    assert_chinese_pdf_round_trip(pages(), "default");
+}
+
+#[test]
+fn printer_line_metrics_preserve_chinese_pdf_text_and_fallbacks() {
+    let report = report();
+    let dataset = rpt_data::build_dataset(&rpt_data::EmptySource, &report.data_definition);
+    let document = rpt_render::render_dataset_with(
+        &report,
+        &dataset,
+        Box::new(rpt_text::WindowsLayout::with_printer_dpi(
+            FontSource::System,
+            std::num::NonZeroU32::new(600).unwrap(),
+        )),
+        Default::default(),
+        None,
+        None,
+    );
+    assert_chinese_pdf_round_trip(document, "printer-600");
+}
+
+fn assert_chinese_pdf_round_trip(pages: rpt_pages::PagedDocument, profile: &str) {
     assert_eq!(
         pages.diagnostics.len(),
         1,
@@ -176,7 +197,8 @@ fn chinese_and_mixed_text_survive_pdf_font_embedding_and_extraction() {
         String::from_utf8_lossy(&bytes).contains("NotoSansCJK"),
         "actual Chinese font must be embedded"
     );
-    let path = std::env::temp_dir().join(format!("stc-chinese-{}.pdf", std::process::id()));
+    let path =
+        std::env::temp_dir().join(format!("stc-chinese-{profile}-{}.pdf", std::process::id()));
     std::fs::write(&path, &bytes).unwrap();
     let result = Command::new("pdftotext")
         .args(["-enc", "UTF-8"])
@@ -214,7 +236,7 @@ fn chinese_and_mixed_text_survive_pdf_font_embedding_and_extraction() {
     if let Ok(directory) = std::env::var("STC_RPT_ARTIFACTS") {
         std::fs::create_dir_all(&directory).unwrap();
         std::fs::write(
-            std::path::Path::new(&directory).join("chinese-probe.pdf"),
+            std::path::Path::new(&directory).join(format!("chinese-{profile}-probe.pdf")),
             bytes,
         )
         .unwrap();

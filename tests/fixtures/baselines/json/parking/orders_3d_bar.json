@@ -369,6 +369,8 @@
       "port_name": null,
       "printer_duplex": "Simplex",
       "printer_name": "",
+      "saved_printer_dpi_x": 300,
+      "saved_printer_dpi_y": 300,
       "saved_printer_name": ""
     },
     "reimport": {

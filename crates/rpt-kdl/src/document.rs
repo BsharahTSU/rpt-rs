@@ -137,6 +137,9 @@ fn page_node(po: &PrintOptions) -> Node {
         printer_name,
         // Saved DEVMODE device name; not projected to KDL.
         saved_printer_name: _,
+        // Saved printer metrics guide rendering, not the curated KDL document projection.
+        saved_printer_dpi_y: _,
+        saved_printer_dpi_x: _,
         driver_name,
         port_name,
         margins,

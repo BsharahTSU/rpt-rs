@@ -8,6 +8,7 @@ param(
     [string]$FontDirectory,
     [switch]$DebugPageIr,
     [string]$AsOfLocal,
+    [ValidateRange(72, 9600)][int]$PrinterDpi,
     [string]$Image = 'stc-rpt-rs:bridge-dev'
 )
 Set-StrictMode -Version Latest
@@ -37,6 +38,7 @@ if ($Build) {
 }
 if ($Test) {
     & (Join-Path $PSScriptRoot 'Test-ClockContract.ps1')
+    & (Join-Path $PSScriptRoot 'Test-PrinterMetricsContract.ps1')
     & docker run --rm --mount "type=bind,source=$repoRoot,target=/src" --mount 'type=volume,source=stc-rpt-bridge-nuget,target=/root/.nuget/packages' -w /src/bridge/Stc.CrystalBridge.Tests mcr.microsoft.com/dotnet/sdk:10.0 dotnet run --nologo
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & (Join-Path $PSScriptRoot 'Invoke-DockerCargo.ps1') -CargoArgs @('test', '--locked', '-p', 'stc-render-worker')
@@ -56,6 +58,7 @@ if ($RequestFile) {
         '-e', 'STC_RPT_WORKER=/target/debug/stc-rpt-worker')
     $localClock = if ($hasClockOverride) { $AsOfLocal } else { [DateTime]::Now.ToString($clockFormat, [Globalization.CultureInfo]::InvariantCulture) }
     $dockerArgs += @('-e', ('STC_RPT_LOCAL_DATETIME=' + $localClock))
+    if ($PSBoundParameters.ContainsKey('PrinterDpi')) { $dockerArgs += @('-e', ('STC_RPT_PRINTER_DPI=' + $PrinterDpi)) }
     $culture = Get-Culture
     $dockerArgs += @('-e', ('STC_RPT_LOCALE=' + $culture.Name), '-e', ('STC_RPT_SHORT_DATE=' + $culture.DateTimeFormat.ShortDatePattern))
     if ($FontDirectory) { $dockerArgs += @('--mount', "type=bind,source=$([IO.Path]::GetFullPath($FontDirectory)),target=/usr/local/share/fonts/windows,readonly") }

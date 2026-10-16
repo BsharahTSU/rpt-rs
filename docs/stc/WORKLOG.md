@@ -89,3 +89,20 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Private comparison index and PDFs are ready. Shared results and the next one-case-at-a-time repair
   queue are in [initial comparisons](coverage/initial-comparisons.md). Three representatives are
   tested; the other 95 eligible students remain SQL-only evidence. No visual parity acceptance yet.
+
+## 2026-10-16 - Checkpoint 4a: CR-001 printer resolution and row pitch
+
+- Reproduced both engines from the frozen snapshot without SQL. The actual first glyph
+  baselines match; earlier bbox offsets mostly reflected differing PDF font descriptors.
+- Recovered stored DEVMODE resolution (600 x 600) despite blank printer names. Retained
+  independent positive X/Y values in the model; quality enum codes do not become DPI.
+- Added opt-in printer-pixel line pitch and selected it in the STC worker, preserving glyph
+  sizing and first baselines. Docker supports an explicit override; the template wins otherwise.
+- Corrected cumulative row drift: all 34 rating baseline origins now agree within 0.00004 pt.
+  The orphan heading is restored at page 1's bottom and repeated on page 2; three pages and
+  17/17/0 ordered ratings are preserved. All page pairs reviewed independently.
+- Added numeric, raw decoder, old JSON, bilingual pagination, launcher and actual Chinese
+  PDF regression coverage. Affected Rust suites: 845 passed; minimal text: 10 passed;
+  Chinese: five passed; launcher: five checks on PS7/5.1 plus seven unchanged clock checks.
+- Details and the correction to earlier bbox conclusions: [CR-001 metrics](coverage/cr-001-metrics.md).
+  Horizontal kerning and remaining small geometric differences are still being investigated.

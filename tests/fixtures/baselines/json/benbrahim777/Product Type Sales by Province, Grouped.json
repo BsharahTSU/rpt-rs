@@ -845,6 +845,8 @@
       "port_name": "Ne00:",
       "printer_duplex": "Simplex",
       "printer_name": "",
+      "saved_printer_dpi_x": 600,
+      "saved_printer_dpi_y": 600,
       "saved_printer_name": "Microsoft XPS Document Writer"
     },
     "reimport": {

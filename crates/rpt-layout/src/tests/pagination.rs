@@ -1658,3 +1658,60 @@ fn ordinary_footer_reads_print_state_at_its_own_page_boundary() {
     );
     assert_eq!(values.last(), Some(&6.0));
 }
+
+#[test]
+fn printer_line_pitch_keeps_boundary_header_and_repeats_it_on_continuation() {
+    // Two 2-line rows at 11.4pt leave exactly one group header on page 1.
+    // A 0.1pt pitch error grows each row by 4 twips and pushes that header off.
+    // KeepGroupTogether is deliberately false; the heading is allowed to be orphaned.
+    #[derive(Debug)]
+    struct PrinterLayout(i32);
+    impl crate::TextLayout for PrinterLayout {
+        fn width_twips(&self, text: &str, _: &rpt_pages::FontSpec) -> f64 {
+            text.chars().count() as f64 * 100.0
+        }
+        fn line_height_twips(&self, _: &rpt_pages::FontSpec) -> f64 {
+            f64::from(self.0)
+        }
+        fn ascent_twips(&self, _: &rpt_pages::FontSpec) -> f64 {
+            179.0 // Line-pitch changes must not move the first glyph baseline.
+        }
+    }
+    let (mut report, saved) = keep_together_report(1512, false);
+    report.report_definition.areas[0]
+        .format
+        .group
+        .as_mut()
+        .unwrap()
+        .repeat_group_header = true;
+    let detail = &mut report.report_definition.areas[1].sections[0];
+    let mut text = text_object("Bilingual", "first line\n第二行", 0);
+    text.format.can_grow = true;
+    text.bounds.height = Twips(228);
+    detail.objects = vec![text];
+    let ds = build_dataset(&SavedDataSource::new(&saved), &report.data_definition);
+    let formulas = rpt_data::compile_formulas(&report.data_definition);
+    let render =
+        |pitch| crate::layout_with(&report, &ds, &formulas, Box::new(PrinterLayout(pitch)));
+    let correct = render(228);
+    let too_tall = render(230);
+    assert_eq!(correct.pages.len(), 2);
+    assert_eq!(page_text_tops(&correct.pages[0], "GH"), vec![0, 1212]);
+    assert_eq!(page_text_tops(&correct.pages[1], "GH"), vec![0]);
+    assert_eq!(page_text_tops(&too_tall.pages[0], "GH"), vec![0]);
+    for page in &correct.pages {
+        assert_eq!(page_text_tops(page, "first line"), vec![300, 756]);
+        assert_eq!(page_text_tops(page, "第二行"), vec![528, 984]);
+    }
+    for doc in [&correct, &too_tall] {
+        let first = doc.pages[0]
+            .ops
+            .iter()
+            .find_map(|op| match op {
+                DrawOp::Text(t) if t.text == "first line" => Some(t),
+                _ => None,
+            })
+            .unwrap();
+        assert_eq!(first.bounds.top.0 + first.metrics.unwrap().ascent.0, 479);
+    }
+}

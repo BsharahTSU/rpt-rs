@@ -14,6 +14,7 @@ use std::{
     cell::RefCell,
     collections::BTreeMap,
     io::{self, Read, Write},
+    num::NonZeroU32,
 };
 
 #[derive(Debug, Deserialize)]
@@ -285,12 +286,49 @@ fn legacy_media_boxes(document: &mut PagedDocument) {
         page.origin.y.0 -= dy;
     }
 }
+// Prefer an explicit device override, then the template DEVMODE, then the STC
+// 600-DPI fallback. Layout line spacing is measured
+// in printer pixels, independently of the PDF exporter's 1440-DPI glyph cells.
+fn parse_printer_dpi(value: Option<&str>) -> Result<NonZeroU32, String> {
+    let value = value.unwrap_or("600");
+    if value.is_empty() || !value.bytes().all(|b| b.is_ascii_digit()) {
+        return Err("Invalid printer DPI; expected an integer from 72 to 9600".into());
+    }
+    let dpi = value
+        .parse::<u32>()
+        .ok()
+        .filter(|v| (72..=9600).contains(v));
+    dpi.and_then(NonZeroU32::new)
+        .ok_or_else(|| "Invalid printer DPI; expected an integer from 72 to 9600".into())
+}
+
+fn resolve_printer_dpi(explicit: Option<&str>, saved: Option<u16>) -> Result<NonZeroU32, String> {
+    if let Some(value) = explicit {
+        return parse_printer_dpi(Some(value));
+    }
+    match saved {
+        Some(dpi) => parse_printer_dpi(Some(&dpi.to_string())),
+        None => parse_printer_dpi(None),
+    }
+}
+
+fn render_printer_dpi(saved: Option<u16>) -> Result<NonZeroU32, String> {
+    match std::env::var("STC_RPT_PRINTER_DPI") {
+        Ok(value) => resolve_printer_dpi(Some(&value), saved),
+        Err(std::env::VarError::NotPresent) => resolve_printer_dpi(None, saved),
+        Err(_) => Err("Invalid printer DPI environment encoding".into()),
+    }
+}
+
 fn run(input: Input) -> Result<Json, String> {
     if !matches!(input.export_format.as_str(), "pdf" | "page_ir") {
         return Err("Unsupported export format".into());
     }
     let as_of = render_clock(input.as_of_local.as_deref())?;
+
     let report = ReportDocument::load(&input.report_path).map_err(|e| e.to_string())?;
+    let print = &report.report().print_options;
+    let printer_dpi = render_printer_dpi(print.saved_printer_dpi_y.or(print.saved_printer_dpi_x))?;
     let source = prepare(report.report(), &input)?;
     let mut model = report.report().clone();
     normalize_driver_paper_rounding(&mut model);
@@ -317,7 +355,10 @@ fn run(input: Input) -> Result<Json, String> {
     let mut document = rpt_render::render_dataset_with(
         &model,
         &dataset,
-        Box::new(rpt_text::WindowsLayout::new(FontSource::System)),
+        Box::new(rpt_text::WindowsLayout::with_printer_dpi(
+            FontSource::System,
+            printer_dpi,
+        )),
         render_locale()?,
         Some(&scope),
         Some(as_of),
@@ -395,6 +436,45 @@ fn main() {
 mod tests {
     use super::*;
     use rpt_pages::{Diagnostic, Page, PageSize};
+    #[test]
+    fn printer_dpi_defaults_to_native_reference_and_accepts_explicit_devices() {
+        assert_eq!(resolve_printer_dpi(None, None).unwrap().get(), 600);
+        assert_eq!(resolve_printer_dpi(None, Some(300)).unwrap().get(), 300);
+        assert_eq!(
+            resolve_printer_dpi(Some("1200"), Some(600)).unwrap().get(),
+            1200
+        );
+        assert!(resolve_printer_dpi(Some("bad"), Some(600)).is_err());
+        for dpi in [72, 300, 600, 1200, 1440, 9600] {
+            assert_eq!(
+                parse_printer_dpi(Some(&dpi.to_string())).unwrap().get(),
+                dpi
+            );
+        }
+    }
+
+    #[test]
+    fn malformed_printer_dpi_is_rejected_without_silent_fallback() {
+        for value in [
+            "",
+            "0",
+            "71",
+            "9601",
+            "-600",
+            "+600",
+            "600.0",
+            " 600",
+            "600 ",
+            "６００",
+            "4294967296",
+        ] {
+            assert!(
+                parse_printer_dpi(Some(value)).is_err(),
+                "accepted {value:?}"
+            );
+        }
+    }
+
     #[test]
     fn captured_local_clock_keeps_next_day_near_midnight_for_formula_specials() {
         // 00:15 in UTC+03 is still 21:15 on the previous UTC date.

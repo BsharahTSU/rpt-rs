@@ -25,7 +25,12 @@ All nine native/Rust page pairs were visually reviewed. Dates agree and appear i
 final-page footer. Logos, signatures, legends and report values are present. Rust emitted no stderr
 warnings for these mounted-font runs. Matching values/page counts do not establish visual parity.
 
-## Confirmed differences and next case order
+## Historical differences and follow-up
+
+CR-001 follow-up: [printer metrics investigation and corrected replay](cr-001-metrics.md).
+The missing boundary heading and cumulative row drift are repaired there. The original bbox-based
+baseline estimate below includes a font-descriptor artifact; actual first baselines already matched.
+Retain these original observations as history, not the current acceptance result.
 
 1. **CR-001, page 1:** native prints an orphan `Songs and Recitals` subgroup heading at y=751.041pt;
    Rust defers it until page 2. The native label rectangle contains 348 dark pixels versus zero

@@ -69,6 +69,8 @@ pub(super) fn build_print_options(tree: &[RecordNode], logical: &[u8]) -> PrintO
         if let Some(d) = dm.duplex {
             opts.printer_duplex = d;
         }
+        opts.saved_printer_dpi_y = dm.dpi_y;
+        opts.saved_printer_dpi_x = dm.dpi_x;
     }
 
     // The page rectangle (0x18e): the paper width then height as big-endian u32 twips.
@@ -159,14 +161,23 @@ pub(crate) struct Devmode {
     pub(crate) paper_size: Option<crate::model::PaperSize>,
     pub(crate) source: Option<crate::model::PaperSource>,
     pub(crate) duplex: Option<crate::model::PrinterDuplex>,
+    pub(crate) dpi_y: Option<u16>,
+    pub(crate) dpi_x: Option<u16>,
 }
 
-/// The four DEVMODE members the SDK exposes, from a `0x0007` reading. A member the record's
+/// Page settings and saved printer resolution from a `0x0007` reading. A member the record's
 /// `dmFields` mask does not select is absent from the row, and stays `None` here.
 fn devmode_of(row: &Row) -> Devmode {
     let member = |name: &str| {
         row.get(name)
             .and_then(super::super::field_table::table::Cell::u)
+    };
+    // The field table preserves raw u16 words, but these Win32 members are signed SHORTs.
+    // In particular, negative dmPrintQuality DMRES_* codes must not become huge DPI.
+    let positive_dpi = |name: &str| {
+        member(name)
+            .filter(|&value| (1..=i16::MAX as u32).contains(&value))
+            .map(|value| value as u16)
     };
     Devmode {
         orientation: member("orientation")
@@ -174,6 +185,8 @@ fn devmode_of(row: &Row) -> Devmode {
         paper_size: member("paper_size").map(|v| crate::model::PaperSize::from_code(v as i32)),
         source: member("default_source").map(|v| crate::model::PaperSource::from_code(v as i32)),
         duplex: member("duplex").map(|v| crate::model::PrinterDuplex::from_code(v as i32)),
+        dpi_y: positive_dpi("y_resolution"),
+        dpi_x: positive_dpi("print_quality"),
     }
 }
 
@@ -196,6 +209,74 @@ pub(crate) fn decode_devmode(b: &[u8]) -> Devmode {
 mod tests {
     //! Decoded against the committed public fixture corpus. Only numeric layout values are
     //! asserted; the printer test asserts shape, never the device string.
+
+    fn raw_devmode(quality: Option<i16>, vertical: Option<i16>) -> Vec<u8> {
+        let fields =
+            (u32::from(quality.is_some()) * 0x0400) | (u32::from(vertical.is_some()) * 0x2000);
+        let mut bytes = fields.to_be_bytes().to_vec();
+        bytes.extend_from_slice(&1u16.to_be_bytes()); // Portrait.
+        bytes.extend_from_slice(&9u16.to_be_bytes()); // A4.
+        if let Some(value) = quality {
+            bytes.extend_from_slice(&value.to_be_bytes());
+        }
+        if let Some(value) = vertical {
+            bytes.extend_from_slice(&value.to_be_bytes());
+        }
+        bytes
+    }
+
+    #[test]
+    fn saved_printer_dpi_preserves_distinct_axes() {
+        let dm = super::decode_devmode(&raw_devmode(Some(300), Some(600)));
+        assert_eq!(dm.dpi_y, Some(600));
+        assert_eq!(dm.dpi_x, Some(300));
+    }
+
+    #[test]
+    fn saved_printer_dpi_keeps_horizontal_only_as_horizontal() {
+        let dm = super::decode_devmode(&raw_devmode(Some(1200), None));
+        assert_eq!(dm.dpi_x, Some(1200));
+        assert_eq!(
+            dm.dpi_y, None,
+            "renderer fallback is not a stored vertical fact"
+        );
+    }
+
+    #[test]
+    fn saved_printer_dpi_rejects_nonpositive_signed_values() {
+        for value in [0, -1, -2, -3, -4, i16::MIN] {
+            let dm = super::decode_devmode(&raw_devmode(Some(value), Some(value)));
+            assert_eq!(dm.dpi_x, None, "dmPrintQuality={value}");
+            assert_eq!(dm.dpi_y, None, "dmYResolution={value}");
+        }
+        let dm = super::decode_devmode(&raw_devmode(Some(-4), Some(600)));
+        assert_eq!(dm.dpi_x, None);
+        assert_eq!(dm.dpi_y, Some(600));
+    }
+
+    #[test]
+    fn saved_printer_dpi_does_not_infer_absent_values() {
+        let dm = super::decode_devmode(&raw_devmode(None, None));
+        assert_eq!(dm.dpi_x, None);
+        assert_eq!(dm.dpi_y, None);
+        let opts = super::build_print_options(&[], &[]);
+        assert_eq!(opts.saved_printer_dpi_x, None);
+        assert_eq!(opts.saved_printer_dpi_y, None);
+    }
+
+    #[test]
+    fn saved_printer_dpi_truncation_never_fabricates_a_word() {
+        let bytes = raw_devmode(Some(300), Some(600));
+        for length in 0..bytes.len() {
+            let dm = super::decode_devmode(&bytes[..length]);
+            assert_eq!(dm.dpi_y, None, "truncated length={length}");
+            assert_eq!(
+                dm.dpi_x,
+                (length >= 10).then_some(300),
+                "only a complete horizontal word survives length={length}"
+            );
+        }
+    }
 
     /// Open a committed fixture under `tests/fixtures/reports/`.
     fn fixture(rel: &str) -> crate::Rpt {

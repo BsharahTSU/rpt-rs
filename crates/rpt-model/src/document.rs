@@ -85,6 +85,21 @@ pub struct PrintOptions {
     /// network printer path. Distinct from the empty live `printer_name`; empty when no printer
     /// record was saved.
     pub saved_printer_name: String,
+    /// The saved DEVMODE's positive vertical resolution (dmYResolution), in dots per inch.
+    /// Absent, zero and negative values stay None; no printer or renderer default is inferred.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
+    pub saved_printer_dpi_y: Option<u16>,
+    /// The saved DEVMODE's positive horizontal resolution (dmPrintQuality), in dots per inch.
+    /// Negative DMRES_* quality codes are not numeric resolutions. Kept separately from the
+    /// vertical value so any renderer fallback does not change the report's stored facts.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
+    pub saved_printer_dpi_x: Option<u16>,
     /// The saved printer driver name, when recorded.
     pub driver_name: Option<String>,
     /// The saved printer port name, when recorded.
@@ -273,4 +288,37 @@ pub struct SubreportLink {
     pub subreport_field: String,
     /// The subreport parameter the linked value is bound to, when the link goes through one.
     pub linked_parameter: Option<String>,
+}
+
+#[cfg(all(test, feature = "serde"))]
+mod tests {
+    use super::PrintOptions;
+
+    #[test]
+    fn printer_dpi_absence_preserves_existing_json_shape() {
+        let options = PrintOptions::default();
+        let json = serde_json::to_value(&options).unwrap();
+        assert!(json.get("saved_printer_dpi_y").is_none());
+        assert!(json.get("saved_printer_dpi_x").is_none());
+        assert_eq!(
+            serde_json::from_value::<PrintOptions>(json).unwrap(),
+            options
+        );
+    }
+
+    #[test]
+    fn printer_dpi_json_preserves_independent_stored_axes() {
+        let options = PrintOptions {
+            saved_printer_dpi_y: Some(600),
+            saved_printer_dpi_x: Some(300),
+            ..Default::default()
+        };
+        let json = serde_json::to_value(&options).unwrap();
+        assert_eq!(json["saved_printer_dpi_y"], 600);
+        assert_eq!(json["saved_printer_dpi_x"], 300);
+        assert_eq!(
+            serde_json::from_value::<PrintOptions>(json).unwrap(),
+            options
+        );
+    }
 }

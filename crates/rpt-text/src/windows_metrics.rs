@@ -5,6 +5,9 @@ use crate::FontDb;
 use rpt_pages::FontSpec;
 #[cfg(feature = "cosmic")]
 use rpt_pages::TextLayout;
+use std::num::NonZeroU32;
+
+const TWIPS_PER_INCH: u32 = 1440;
 
 /// Hinted Windows cell metrics, expressed in twips.
 #[derive(Debug, Clone, Copy)]
@@ -17,6 +20,64 @@ pub struct WindowsFontMetrics {
     pub descent: i32,
     /// External line leading.
     pub leading: i32,
+}
+
+/// Hinted metrics in device pixels. PDF glyph-cell metrics use 1440 DPI; printer
+/// line pitch may use a different resolution and is converted back to twips.
+#[derive(Debug, Clone, Copy)]
+struct DeviceMetrics {
+    em: i32,
+    ascent: i32,
+    descent: i32,
+    leading: i32,
+}
+impl DeviceMetrics {
+    #[cfg(any(feature = "cosmic", test))]
+    fn line_height_twips(self, dpi: NonZeroU32) -> f64 {
+        f64::from(self.ascent + self.descent + self.leading) * f64::from(TWIPS_PER_INCH)
+            / f64::from(dpi.get())
+    }
+}
+
+struct MetricTables<'a> {
+    units: f64,
+    win_ascent: f64,
+    win_descent: f64,
+    line_gap: f64,
+    vdmx: Option<&'a [(i32, i32, i32)]>,
+}
+impl MetricTables<'_> {
+    fn at_dpi(&self, size_pt: f32, cell_height: bool, dpi: NonZeroU32) -> DeviceMetrics {
+        // Preserve the original f32 point-to-twip rounding when dpi is 1440.
+        let wanted = (size_pt * (dpi.get() as f32 / 72.0)).round().max(1.0) as i32;
+        let hinted = self.vdmx.and_then(|rows| {
+            if cell_height {
+                select_cell(rows, wanted)
+            } else {
+                rows.iter().copied().find(|row| row.0 == wanted)
+            }
+        });
+        let (em, ascent, descent) = hinted.unwrap_or_else(|| {
+            let em = if cell_height {
+                (f64::from(wanted) * self.units / (self.win_ascent + self.win_descent)).round()
+                    as i32
+            } else {
+                wanted
+            };
+            (
+                em,
+                (self.win_ascent * f64::from(em) / self.units).round() as i32,
+                (self.win_descent * f64::from(em) / self.units).round() as i32,
+            )
+        });
+        let leading = (self.line_gap * f64::from(em) / self.units).round() as i32;
+        DeviceMetrics {
+            em,
+            ascent,
+            descent,
+            leading: leading.max(0),
+        }
+    }
 }
 fn u16_at(bytes: &[u8], i: usize) -> Option<u16> {
     Some(u16::from_be_bytes(
@@ -66,53 +127,49 @@ fn select_cell(records: &[(i32, i32, i32)], height: i32) -> Option<(i32, i32, i3
 impl FontDb {
     /// `cell_height` selects positive lfHeight (legacy PDF glyph size) versus
     /// negative lfHeight (nominal layout size). No Windows API/runtime is needed.
+    /// These PDF metrics always use 1440 logical DPI, independently of the printer.
     pub fn windows_metrics(
         &self,
         font: &FontSpec,
         cell_height: bool,
     ) -> Option<WindowsFontMetrics> {
+        let metrics = self.device_metrics(font, cell_height, NonZeroU32::new(TWIPS_PER_INCH)?)?;
+        Some(WindowsFontMetrics {
+            em_twips: metrics.em,
+            ascent: metrics.ascent,
+            descent: metrics.descent,
+            leading: metrics.leading,
+        })
+    }
+
+    fn device_metrics(
+        &self,
+        font: &FontSpec,
+        cell_height: bool,
+        dpi: NonZeroU32,
+    ) -> Option<DeviceMetrics> {
         let id = self.query(font)?;
         self.with_face_data(id, |bytes, index| {
             let face = ttf_parser::Face::parse(bytes, index).ok()?;
             let raw = face.raw_face();
             let os2 = raw.table(ttf_parser::Tag::from_bytes(b"OS/2"))?;
             let hhea = raw.table(ttf_parser::Tag::from_bytes(b"hhea"))?;
-            let units = f64::from(face.units_per_em());
-            let win_a = f64::from(u16_at(os2, 74)?);
-            let win_d = f64::from(u16_at(os2, 76)?);
-            if win_a + win_d <= 0.0 {
+            let win_ascent = f64::from(u16_at(os2, 74)?);
+            let win_descent = f64::from(u16_at(os2, 76)?);
+            if win_ascent + win_descent <= 0.0 {
                 return None;
             }
-            let wanted = (font.size_pt * 20.0).round().max(1.0) as i32;
-            let table = raw
+            let vdmx = raw
                 .table(ttf_parser::Tag::from_bytes(b"VDMX"))
                 .and_then(vdmx_records);
-            let hinted = table.as_ref().and_then(|r| {
-                if cell_height {
-                    select_cell(r, wanted)
-                } else {
-                    r.iter().copied().find(|r| r.0 == wanted)
-                }
-            });
-            let (em, ascent, descent) = hinted.unwrap_or_else(|| {
-                let em = if cell_height {
-                    (f64::from(wanted) * units / (win_a + win_d)).round() as i32
-                } else {
-                    wanted
-                };
-                (
-                    em,
-                    (win_a * f64::from(em) / units).round() as i32,
-                    (win_d * f64::from(em) / units).round() as i32,
-                )
-            });
-            let leading = (f64::from(i16_at(hhea, 8)?) * f64::from(em) / units).round() as i32;
-            Some(WindowsFontMetrics {
-                em_twips: em,
-                ascent,
-                descent,
-                leading: leading.max(0),
-            })
+            let tables = MetricTables {
+                units: f64::from(face.units_per_em()),
+                win_ascent,
+                win_descent,
+                line_gap: f64::from(i16_at(hhea, 8)?),
+                vdmx: vdmx.as_deref(),
+            };
+            Some(tables.at_dpi(font.size_pt, cell_height, dpi))
         })?
     }
 }
@@ -124,14 +181,24 @@ impl FontDb {
 pub struct WindowsLayout {
     inner: crate::CosmicLayout,
     fonts: FontDb,
+    printer_dpi: NonZeroU32,
 }
 #[cfg(feature = "cosmic")]
 impl WindowsLayout {
-    /// Load nominal layout metrics and the selected face library.
+    /// Load nominal layout metrics with the original 1440-DPI line pitch.
     pub fn new(source: crate::FontSource) -> Self {
+        Self::with_printer_dpi(source, NonZeroU32::new(TWIPS_PER_INCH).unwrap())
+    }
+
+    /// Use a selected vertical printer resolution for line pitch. This is explicit:
+    /// no host printer is queried. Resolve saved report settings or deployment
+    /// defaults at the caller. Glyph sizing, first-line ascent and wrapping retain
+    /// their existing behavior; only multiline pitch uses printer-pixel rounding.
+    pub fn with_printer_dpi(source: crate::FontSource, printer_dpi: NonZeroU32) -> Self {
         Self {
             inner: crate::CosmicLayout::new(crate::FontProvider::from_source(source)),
             fonts: source.load(),
+            printer_dpi,
         }
     }
 }
@@ -153,8 +220,8 @@ impl TextLayout for WindowsLayout {
     }
     fn line_height_twips(&self, font: &FontSpec) -> f64 {
         self.fonts
-            .windows_metrics(font, false)
-            .map(|m| f64::from(m.ascent + m.descent + m.leading))
+            .device_metrics(font, false, self.printer_dpi)
+            .map(|metrics| metrics.line_height_twips(self.printer_dpi))
             .unwrap_or_else(|| self.inner.line_height_twips(font))
     }
     fn ascent_twips(&self, font: &FontSpec) -> f64 {
@@ -194,6 +261,104 @@ mod tests {
             assert!(vdmx_records(&bytes[..n]).is_none());
         }
     }
+
+    #[test]
+    fn printer_pitch_corrects_opposite_rounding_errors_without_scaling_pdf_cells() {
+        // Synthetic numeric metric tables capture the two opposite rounding cases:
+        // English pitch shrinks from 230 twips; Arabic pitch grows from 226 twips.
+        // No school report, text, or proprietary font file is needed for this test.
+        let regular_rows = [(83, 74, 18), (179, 160, 38), (200, 179, 44)];
+        let regular = MetricTables {
+            units: 2048.0,
+            win_ascent: 1854.0,
+            win_descent: 434.0,
+            line_gap: 67.0,
+            vdmx: Some(&regular_rows),
+        };
+        let arabic_rows = [(83, 77, 18), (200, 184, 42)];
+        let arabic = MetricTables {
+            units: 2048.0,
+            win_ascent: 1888.0,
+            win_descent: 430.0,
+            line_gap: 0.0,
+            vdmx: Some(&arabic_rows),
+        };
+        let pdf_dpi = NonZeroU32::new(1440).unwrap();
+        let printer_dpi = NonZeroU32::new(600).unwrap();
+        assert_eq!(
+            regular
+                .at_dpi(10.0, false, pdf_dpi)
+                .line_height_twips(pdf_dpi),
+            230.0
+        );
+        assert_eq!(
+            arabic
+                .at_dpi(10.0, false, pdf_dpi)
+                .line_height_twips(pdf_dpi),
+            226.0
+        );
+        assert_eq!(
+            regular
+                .at_dpi(10.0, false, printer_dpi)
+                .line_height_twips(printer_dpi),
+            228.0
+        );
+        assert_eq!(
+            arabic
+                .at_dpi(10.0, false, printer_dpi)
+                .line_height_twips(printer_dpi),
+            228.0
+        );
+        // PDF positive-height selection must still choose 8.95pt, not an 83px em.
+        let glyph_cell = regular.at_dpi(10.0, true, pdf_dpi);
+        assert_eq!(
+            (glyph_cell.em, glyph_cell.ascent, glyph_cell.descent),
+            (179, 160, 38)
+        );
+        assert_eq!(regular.at_dpi(10.0, false, pdf_dpi).ascent, 179);
+    }
+
+    #[test]
+    fn default_dpi_preserves_half_twip_rounding() {
+        let tables = MetricTables {
+            units: 2048.0,
+            win_ascent: 1854.0,
+            win_descent: 434.0,
+            line_gap: 67.0,
+            vdmx: None,
+        };
+        // 10.025f32 * 20 rounds to exactly 200.5f32. Widening the point size
+        // before multiplication would instead yield 200.499992... and select 200.
+        let metrics = tables.at_dpi(10.025, false, NonZeroU32::new(1440).unwrap());
+        assert_eq!(metrics.em, 201);
+    }
+    #[test]
+    fn printer_pitch_preserves_fractional_twips_and_has_linear_fallback() {
+        let rows = [(83, 77, 19)];
+        let tables = MetricTables {
+            units: 2048.0,
+            win_ascent: 1854.0,
+            win_descent: 434.0,
+            line_gap: 67.0,
+            vdmx: Some(&rows),
+        };
+        let dpi = NonZeroU32::new(600).unwrap();
+        assert!((tables.at_dpi(10.0, false, dpi).line_height_twips(dpi) - 237.6).abs() < 1e-9);
+        // At 720 DPI the 100px em is outside this synthetic VDMX table. OS/2
+        // ascent/descent and hhea leading still round in printer pixels first.
+        let dpi = NonZeroU32::new(720).unwrap();
+        let fallback = tables.at_dpi(10.0, false, dpi);
+        assert_eq!(
+            (
+                fallback.em,
+                fallback.ascent,
+                fallback.descent,
+                fallback.leading
+            ),
+            (100, 91, 21, 3)
+        );
+        assert_eq!(fallback.line_height_twips(dpi), 230.0);
+    }
 }
 
 #[cfg(all(test, feature = "cosmic"))]
@@ -209,5 +374,34 @@ fn leading_spaces_are_preserved_without_changing_word_fit() {
     assert_eq!(
         l.wrap("  alpha beta gamma", width, &f),
         vec!["  alpha beta", "gamma"]
+    );
+}
+
+#[cfg(all(test, feature = "cosmic"))]
+#[test]
+fn explicit_printer_dpi_preserves_default_layout_and_first_baseline() {
+    let source = crate::FontSource::Bundled;
+    let original = WindowsLayout::new(source);
+    let explicit = WindowsLayout::with_printer_dpi(source, NonZeroU32::new(1440).unwrap());
+    let printer = WindowsLayout::with_printer_dpi(source, NonZeroU32::new(600).unwrap());
+    let font = FontSpec {
+        family: "Liberation Sans".into(),
+        size_pt: 10.0,
+        ..Default::default()
+    };
+    let text = "alpha beta gamma";
+    assert_eq!(
+        original.line_height_twips(&font),
+        explicit.line_height_twips(&font)
+    );
+    assert_eq!(original.ascent_twips(&font), printer.ascent_twips(&font));
+    assert_eq!(
+        original.width_twips(text, &font),
+        printer.width_twips(text, &font)
+    );
+    let width = original.width_twips("alpha beta", &font) + 0.01;
+    assert_eq!(
+        original.wrap(text, width, &font),
+        printer.wrap(text, width, &font)
     );
 }
