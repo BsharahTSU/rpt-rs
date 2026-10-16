@@ -1223,7 +1223,7 @@ impl Formatter<'_> {
             ),
         ];
         for (style, (x1, y1), (x2, y2)) in edges {
-            if let Some(stroke) = stroke_of(style, color, HAIRLINE_W) {
+            if let Some(stroke) = stroke_of(style, color, Twips(20)) {
                 self.push_op(DrawOp::Line(LineOp {
                     from: rpt_pages::Point {
                         x: Twips(x1),
@@ -1373,7 +1373,7 @@ fn stroke_of(style: RptLineStyle, color: Color, thickness: Twips) -> Option<Stro
     };
     Some(Stroke {
         color,
-        width: Twips(thickness.0.max(HAIRLINE_W.0)),
+        width: Twips(thickness.0.max(0)),
         style: s,
     })
 }

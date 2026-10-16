@@ -226,3 +226,36 @@ fn dotted_and_dashed_rules_survive_pdf_serialization() {
     assert!(listing.contains("[ 1 3 ] 0 d"), "{listing}");
     assert!(listing.contains("[ 3 3 ] 0 d"), "{listing}");
 }
+
+#[test]
+fn zero_width_is_a_pdf_device_hairline() {
+    let mut page = Page::new(
+        1,
+        PageSize {
+            width: Twips(4000),
+            height: Twips(4000),
+        },
+    );
+    page.push(DrawOp::Line(LineOp {
+        from: rpt_pages::Point::new(100, 100),
+        to: rpt_pages::Point::new(3000, 100),
+        stroke: rpt_pages::Stroke {
+            color: Color {
+                a: 255,
+                r: 0,
+                g: 0,
+                b: 0,
+            },
+            width: Twips(0),
+            style: rpt_pages::LineStyle::Dotted,
+        },
+        source: None,
+    }));
+    let listing = operator_listing(&crate::render_pages(&[page]));
+    assert!(listing.contains("0 w"), "{listing}");
+    assert!(listing.contains("[ 1 3 ] 0 d"), "{listing}");
+    assert!(
+        listing.contains("150 5 l"),
+        "the hairline must not disappear: {listing}"
+    );
+}

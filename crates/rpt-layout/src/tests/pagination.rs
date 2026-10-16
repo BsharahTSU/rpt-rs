@@ -1494,6 +1494,7 @@ fn bottom_only_field_border_does_not_draw_a_box() {
         .collect();
     assert_eq!(rules.len(), 1);
     assert_eq!(rules[0].from.y, rules[0].to.y);
+    assert_eq!(rules[0].stroke.width, Twips(20));
     assert!(doc.pages[0]
         .ops
         .iter()

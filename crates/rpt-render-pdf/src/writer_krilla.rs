@@ -603,8 +603,8 @@ fn stroke_for(source: rpt_pages::Stroke) -> Stroke {
     .map(|array| StrokeDash { array, offset: 0.0 });
     Stroke {
         paint: rgb.into(),
-        // A stored width of 0 (hairline) still needs to render; clamp to a thin visible line.
-        width: (pt(source.width.0) as f32).max(MIN_STROKE_PT as f32),
+        // PDF width zero is a device hairline, as in the native exporter.
+        width: (pt(source.width.0) as f32).max(0.0),
         opacity,
         dash,
         ..Stroke::default()

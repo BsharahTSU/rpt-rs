@@ -180,7 +180,8 @@ Corrections in this checkpoint:
 - Repeat opted-in group headers on continuation pages and resolve page-footer visibility using
   the final page count. The print date appears on the final page with the caller's short-date pattern.
 - End spanning frames at actual rendered section instances, including repeated details and page
-  breaks. Respect each border edge, round-box ellipse diameters, and dotted/dashed PDF strokes.
+  breaks. Respect each border edge, native one-point field borders, round-box ellipse diameters,
+  dotted/dashed PDF strokes and zero-width device hairlines.
 - Honor field indentation/reading order and resolve missing Arial Unicode MS to Arial when present.
   The compatibility worker uses Windows VDMX font-cell metrics from mounted font files for the
   legacy PDF glyph sizes; nominal metrics still drive wrapping and baselines. Leading paragraph
@@ -208,3 +209,12 @@ repeated headers, final-page footer visibility, edge-only borders, multi-page fr
 and cell selection, whitespace fitting, custom date culture and paper-coordinate preservation.
 The two public decoder JSON baselines changed only to expose formerly omitted area conditions.
 Verification logs remain in ignored `research/stc-verification/parity-*.log`.
+
+Verification completed in Docker: the full workspace run passed 1,585 tests, with two additional
+footer-state/hairline regressions passing in the final affected-crate runs. All 28 portable bridge
+checks, the four Chinese integration tests, Arabic PDF tests, strict workspace Clippy and formatting
+checks passed. Both final PDFs pass qpdf integrity checks and have matching 595 x 841 point page
+boxes and ordered ratings. The latest PNGs were reviewed for all three pages. Ordinary footer
+formulas remain in print order; direct TotalPageCount visibility is deferred. Count-dependent
+footer formulas with mutable print-time side effects or indirect formula dependencies still need
+broader compatibility tests before production use.
