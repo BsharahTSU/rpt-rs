@@ -1908,3 +1908,248 @@ fn non_axis_aligned_line_boxes_keep_their_previous_geometry() {
         assert_eq!((rule.to.x.0, rule.to.y.0), to);
     }
 }
+
+fn rounded_frame_object(thickness: i32) -> ReportObject {
+    let mut object = ReportObject::default();
+    object.name = "RoundedFrame".into();
+    object.bounds = Rect {
+        left: Twips(100),
+        top: Twips(100),
+        width: Twips(1000),
+        height: Twips(200),
+    };
+    object.border.top = LineStyle::SingleLine;
+    object.kind = ReportObjectKind::Box(rpt_model::BoxShape {
+        shape: rpt_model::DrawingShape {
+            line_thickness: Twips(thickness),
+            ..Default::default()
+        },
+        corner_ellipse_width: Twips(225),
+        corner_ellipse_height: Twips(225),
+    });
+    object
+}
+
+#[test]
+fn circular_rounded_box_path_is_inset_by_half_stroke_without_changing_layout() {
+    for thickness in [0, 10, 20, 40] {
+        let mut report = tiny_report(3000);
+        let object = rounded_frame_object(thickness);
+        let authored = object.bounds;
+        report.report_definition.areas[1].sections[0]
+            .objects
+            .push(object);
+        let before = report.clone();
+        let doc = rendered(&report, &numeric_rows(2));
+        let frames: Vec<_> = doc.pages[0]
+            .ops
+            .iter()
+            .filter_map(|op| match op {
+                DrawOp::Rect(frame)
+                    if frame.source.as_ref().and_then(|s| s.object_name.as_deref())
+                        == Some("RoundedFrame") =>
+                {
+                    Some(frame)
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(frames.len(), 2);
+        let inset = thickness / 2;
+        for (index, frame) in frames.iter().enumerate() {
+            let authored_top = 300 + index as i32 * 300 + authored.top.0;
+            assert_eq!(frame.bounds.left.0, authored.left.0 + inset);
+            assert_eq!(frame.bounds.right().0, authored.right().0 - inset);
+            assert_eq!(frame.bounds.top.0, authored_top + inset);
+            assert_eq!(
+                frame.bounds.bottom().0,
+                authored_top + authored.height.0 - inset
+            );
+            assert_eq!(frame.stroke.unwrap().width, Twips(thickness));
+            assert_eq!(
+                frame.corner_radius,
+                Twips(112),
+                "keep existing odd-diameter rounding"
+            );
+            assert!(frame.fill.is_none());
+        }
+        assert_eq!(
+            page_text_tops(&doc.pages[0], "line"),
+            vec![300, 600],
+            "paint inset must not move data rows"
+        );
+        assert_eq!(
+            report, before,
+            "rendering must not rewrite authored object geometry"
+        );
+    }
+}
+
+#[test]
+fn unverified_rounded_box_profiles_keep_authored_path_bounds() {
+    for profile in [
+        "square",
+        "ellipse",
+        "fill",
+        "fill_only",
+        "shadow",
+        "tight",
+        "rotate90",
+        "rotate270",
+        "double",
+        "dashed",
+        "dotted",
+        "mixed",
+        "narrow",
+        "short",
+        "degenerate",
+        "negative",
+    ] {
+        let mut report = tiny_report(3000);
+        let mut object = rounded_frame_object(20);
+        match profile {
+            "square" | "ellipse" => {
+                let ReportObjectKind::Box(shape) = &mut object.kind else {
+                    unreachable!()
+                };
+                shape.corner_ellipse_height = Twips(if profile == "square" { 0 } else { 120 });
+                if profile == "square" {
+                    shape.corner_ellipse_width = Twips(0);
+                }
+            }
+            "fill" | "fill_only" => {
+                object.border.background_color = Some(Color {
+                    r: 20,
+                    g: 40,
+                    b: 60,
+                    a: 255,
+                });
+                if profile == "fill_only" {
+                    object.border.top = LineStyle::NoLine;
+                }
+            }
+            "shadow" => object.border.has_drop_shadow = true,
+            "tight" => object.border.tight_horizontal = true,
+            "rotate90" => object.format.text_rotation = rpt_model::TextRotationAngle::Rotate90,
+            "rotate270" => object.format.text_rotation = rpt_model::TextRotationAngle::Rotate270,
+            "double" => object.border.top = LineStyle::DoubleLine,
+            "dashed" => object.border.top = LineStyle::DashLine,
+            "dotted" => object.border.top = LineStyle::DotLine,
+            "mixed" => object.border.bottom = LineStyle::DoubleLine,
+            "narrow" => object.bounds.width = Twips(10),
+            "short" => object.bounds.height = Twips(10),
+            "degenerate" => object.bounds.width = Twips(0),
+            "negative" => object.bounds.width = Twips(-100),
+            _ => unreachable!(),
+        }
+        let mut authored = object.bounds;
+        authored.top.0 += 300; // page-header band precedes the detail object
+        report.report_definition.areas[1].sections[0].objects = vec![object];
+        let doc = rendered(&report, &numeric_rows(1));
+        let frame = doc.pages[0]
+            .ops
+            .iter()
+            .find_map(|op| match op {
+                DrawOp::Rect(frame)
+                    if frame.source.as_ref().and_then(|s| s.object_name.as_deref())
+                        == Some("RoundedFrame") =>
+                {
+                    Some(frame)
+                }
+                _ => None,
+            })
+            .unwrap();
+        assert_eq!(frame.bounds, authored, "{profile}");
+    }
+}
+
+#[test]
+fn rounded_box_inset_survives_page_fragments_and_final_section_endpoint() {
+    for thickness in [10, 20, 40] {
+        for fill_only in [false, true] {
+            for extend in [false, true] {
+                let mut report = tiny_report(1000);
+                let mut object = rounded_frame_object(thickness);
+                let ReportObjectKind::Box(shape) = &mut object.kind else {
+                    unreachable!()
+                };
+                shape.shape.end_section_index = 2;
+                shape.shape.bottom = Twips(100);
+                shape.shape.extend_to_bottom_of_section = extend;
+                if fill_only {
+                    object.border.top = LineStyle::NoLine;
+                    object.border.background_color = Some(Color {
+                        r: 20,
+                        g: 40,
+                        b: 60,
+                        a: 255,
+                    });
+                }
+                report.report_definition.areas[0] = area(
+                    AreaSectionKind::ReportHeader,
+                    vec![section(
+                        AreaSectionKind::ReportHeader,
+                        "ReportHeader",
+                        300,
+                        vec![object],
+                    )],
+                );
+                report.report_definition.areas.push(area(
+                    AreaSectionKind::ReportFooter,
+                    vec![section(
+                        AreaSectionKind::ReportFooter,
+                        "ReportFooter",
+                        100,
+                        vec![],
+                    )],
+                ));
+                let doc = rendered(&report, &numeric_rows(6));
+                assert_eq!(doc.pages.len(), 3);
+                let inset = if fill_only { 0 } else { thickness / 2 };
+                for (page_index, page) in doc.pages.iter().enumerate() {
+                    let frames: Vec<_> = page
+                        .ops
+                        .iter()
+                        .filter_map(|op| match op {
+                            DrawOp::Rect(frame)
+                                if frame.source.as_ref().and_then(|s| s.object_name.as_deref())
+                                    == Some("RoundedFrame") =>
+                            {
+                                Some(frame)
+                            }
+                            _ => None,
+                        })
+                        .collect();
+                    assert_eq!(frames.len(), 1, "one frame fragment per page");
+                    let frame = frames[0];
+                    assert_eq!(frame.bounds.left.0, 100 + inset);
+                    assert_eq!(frame.bounds.right().0, 1100 - inset);
+                    assert_eq!(
+                        frame.bounds.top.0,
+                        if page_index == 0 { 100 + inset } else { inset }
+                    );
+                    assert_eq!(
+                        frame.bounds.bottom().0,
+                        if page_index == 2 {
+                            400 - inset
+                        } else {
+                            1000 - inset
+                        },
+                        "page={}, thickness={thickness}, fill_only={fill_only}, extend={extend}",
+                        page_index + 1
+                    );
+                    assert_eq!(frame.corner_radius, Twips(112));
+                    assert_eq!(frame.fill.is_some(), fill_only);
+                    assert_eq!(frame.stroke.is_none(), fill_only);
+                }
+                assert_eq!(
+                    doc.pages
+                        .iter()
+                        .map(|page| page_text_tops(page, "line").len())
+                        .collect::<Vec<_>>(),
+                    vec![2, 3, 1]
+                );
+            }
+        }
+    }
+}

@@ -424,18 +424,59 @@ impl Formatter<'_> {
         let border_color = crate::resolve::cond_color(conds, cond::FORE_COLOR, ctx)
             .or(obj.border.border_color)
             .unwrap_or_default();
+        let stroke = stroke_of(
+            border_line_style(&obj.border).unwrap_or(RptLineStyle::NoLine),
+            border_color,
+            b.shape.line_thickness,
+        );
+        // Verified circular, unfilled SingleLine boxes store their outer stroke
+        // edges. Move only the painted path inward; authored layout extents and
+        // corner diameter remain unchanged. Other box profiles keep their prior
+        // geometry until separately measured against the native renderer.
+        let verified_frame = b.corner_ellipse_width.0 > 0
+            && b.corner_ellipse_width == b.corner_ellipse_height
+            && obj.bounds.width.0 > b.shape.line_thickness.0.max(0)
+            && obj.bounds.height.0 > b.shape.line_thickness.0.max(0)
+            && fill.is_none()
+            && !obj.border.has_drop_shadow
+            && !obj.border.tight_horizontal
+            && obj.format.text_rotation.degrees() == 0
+            && [
+                obj.border.top,
+                obj.border.bottom,
+                obj.border.left,
+                obj.border.right,
+            ]
+            .iter()
+            .all(|style| matches!(style, RptLineStyle::NoLine | RptLineStyle::SingleLine));
+        let frame_inset = if verified_frame {
+            stroke.as_ref().map_or(0, |stroke| stroke.width.0 / 2)
+        } else {
+            0
+        };
+        let bounds = if frame_inset > 0 {
+            Rect {
+                left: Twips(rect.left.0 + frame_inset),
+                top: Twips(rect.top.0 + frame_inset),
+                width: Twips(rect.width.0.saturating_sub(frame_inset * 2).max(0)),
+                height: Twips(rect.height.0.saturating_sub(frame_inset * 2).max(0)),
+            }
+        } else {
+            rect
+        };
         self.push_op(DrawOp::Rect(RectOp {
-            bounds: rect,
+            bounds,
             fill: fill.map(Into::into),
-            stroke: stroke_of(
-                border_line_style(&obj.border).unwrap_or(RptLineStyle::NoLine),
-                border_color,
-                b.shape.line_thickness,
-            ),
+            stroke,
             corner_radius: Twips(b.corner_ellipse_width.0.max(b.corner_ellipse_height.0) / 2),
             source: at.src(obj, ObjectKind::Box),
         }));
-        self.register_span(at.section_name, &b.shape, self.cur.ops.len() - 1);
+        self.register_span(
+            at.section_name,
+            &b.shape,
+            self.cur.ops.len() - 1,
+            frame_inset,
+        );
         // Drop shadow: two filled bars offset to the bottom-right in the border color (the
         // engine draws the shadow as edge rectangles, not a CSS shadow).
         if obj.border.has_drop_shadow {
@@ -475,7 +516,7 @@ impl Formatter<'_> {
                 stroke,
                 source: at.src(obj, ObjectKind::Line),
             }));
-            self.register_span(at.section_name, &l.shape, self.cur.ops.len() - 1);
+            self.register_span(at.section_name, &l.shape, self.cur.ops.len() - 1, 0);
         }
     }
 

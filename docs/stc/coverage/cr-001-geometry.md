@@ -120,3 +120,76 @@ Standalone offsets are likewise restricted to authored lines with exactly one po
 dimension and the other dimension zero. Two-dimensional and zero-length boxes retain their
 previous geometry, with an explicit regression for each orientation and the degenerate case.
 Every CR-001 standalone line meets the verified axis-aligned contract.
+
+## Rounded box stroke anchoring
+
+A follow-up on 2026-10-17 isolated the remaining ordinary rounded-box offset. The
+existing final native/Rust PDFs were inspected with host Python/pypdf. One additional
+native probe changed a representative outer box from 10-twip (0.5-point) to 40-twip
+(2-point) thickness and colored its stroke for identification. It reused the frozen
+DataSet, saved only a private report copy, and verified the original RPT hash before
+and after export. No SQL, Cargo or Docker execution was needed for this investigation.
+
+For the original 0.5-point box, the native page-one path-center rectangle is
+[38.55, 75.00, 569.80, 621.80] versus Rust [38.30, 74.75, 570.05, 622.05], in
+[left, bottom, right, top] PDF points. The thicker native probe yields
+[39.30, 75.75, 569.05, 621.05]. Each edge therefore moves inward by precisely
+0.75 point when the stroke grows by 1.50 points. Both page-two instances follow
+the same rule. A second existing box with a 1-point stroke independently shows
+a 0.50-point inset on all sides.
+
+The supported generic rule is **centerline rectangle = final placed outer rectangle
+inset by half the stroke width**: add half-width to left/top in page-down coordinates
+and subtract the full stroke width from width/height. Resolve section-spanning and
+page-continuation bounds before applying the inset. Preserve authored model bounds;
+this is a paint-coordinate correction. Ordinary unfilled stroked rounded boxes were
+measured. The unstroked filled rounded box already has matching native/Rust bounds
+and must not receive this stroke inset. Filled-and-stroked, shadowed, unusually narrow
+or square-corner boxes were not separately probed.
+
+The corner diameter is independent of stroke thickness. The stored 225-twip diameter
+produces alternating 112/113-twip distances to arc endpoints in the native output at
+both tested thicknesses. The current layout truncates it to a uniform 112-twip radius.
+For example, after the correct inset, the native bottom straight segment runs
+X=[44.20, 564.20] at Y=75.00, while a uniform 112-twip radius would give
+X=[44.15, 564.20]. Thus the inset resolves the 0.25-point centerline offset but alone
+does not remove the separate 0.05-point odd-diameter endpoint difference.
+
+All measured native 225-twip corner paths fit the following integer-twip construction.
+Let r=floor(diameter/2)=112, R=ceil(diameter/2)=113 and k=62. In page-down coordinates
+the top-right arc begins at (right-R, top), has controls (right-R+k, top) and
+(right, top+r-k), and ends at (right, top+r). Subsequent corners rotate this pattern;
+the top-left starting point is (left+r, top) and the bottom straight endpoints are
+(left+R, bottom) and (right-r, bottom). The observed k equals round(r*KAPPA). The
+existing fill-only 150-twip corner also fits r=R=75 and k=41. This is evidence for
+the measured diameters, not a claim that arbitrary elliptical, clipped or degenerate
+corners have been characterized.
+
+Private evidence beneath the ignored verification directory:
+
+- `cr-001-parity/inspect-rounded-boxes.py`: transformed curved-path extraction.
+- `cr-001-parity/final/native-rounded-geometry.json` and `rust-rounded-geometry.json`:
+  existing final PDF path coordinates, with no extracted text.
+- `cr-001-parity/probe-native-box.ps1`: one controlled copied-report thickness probe.
+- `cr-001-parity/box-probe-thick/native-rounded-geometry.json`: resulting native path
+  coordinates; the private directory also retains the copied RPT and small probe PDF.
+
+This section records findings only. Root-owned implementation and regression evidence
+must state which box and corner corrections are actually integrated.
+
+## Rounded-frame integration checkpoint
+
+The layout now insets only circular rounded boxes with an ordinary SingleLine stroke,
+no fill/shadow/tight/rotation, and authored dimensions greater than the stroke width.
+Excluded profiles retain their previous bounds exactly. Span metadata carries the inset
+through final-section endpoints, page-bottom closure and continuation tops; authored
+layout extents, row positions and model data remain unchanged. Odd-diameter corner
+rounding is unchanged and retains the separately measured maximum 0.05-point endpoint
+residual; this checkpoint does not claim pixel-identical corner curves.
+
+Docker verification passed: 351 layout tests, 12 worker tests, all five Chinese PDF
+tests, all nine public PDF fixtures / 15 pages, strict workspace Clippy and formatting.
+No additional PDF reference changes were required. Rebuilt the worker with one build
+job in a 2-GiB-limited container. Detailed glyph review also found two pre-existing
+Arabic placement differences (sentence-final punctuation and a footer shadda); those
+are separate from the completed box inset and remain under investigation.

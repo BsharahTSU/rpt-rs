@@ -140,3 +140,18 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - [Geometry evidence](coverage/cr-001-geometry.md) records probes, limitations, review
   guards and reference audit. The fresh final pair and independent review follow in
   [the CR-001 comparison record](coverage/cr-001-parity.md).
+
+## 2026-10-17 - Checkpoint 4d: rounded outer frames
+
+- A controlled native thickness probe confirmed that ordinary unfilled rounded-box
+  stroke centerlines sit half a stroke width inside the final outer bounds.
+- Added the verified inset with explicit scope guards and span metadata; continuation
+  fragments and final endpoints preserve it without moving rows or authored model data.
+- Docker checks: 351 layout and 12 worker tests, five Chinese PDF tests, nine PDF fixtures
+  / 15 pages, strict workspace Clippy and formatting all passed. No new public reference
+  changes. Worker rebuilt with the bounded resource policy; host RAM recovered to 7.9 GiB.
+- All three page pairs were inspected. Text, heading, signature and footer fixes remain
+  confirmed. A suspected page-2 footer omission was disproved by identical line pixels.
+- Deeper outline review found actual remaining Arabic punctuation/shadda positioning
+  differences; these are not dismissed as extraction artifacts. Investigation continues
+  from this committed checkpoint. Uniform corner-radius rounding retains a 0.05-pt residual.

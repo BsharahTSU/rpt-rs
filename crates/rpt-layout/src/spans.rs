@@ -10,16 +10,24 @@ pub(crate) struct SpanShape {
     extend: bool,
     op_index: usize,
     prototype: DrawOp,
+    /// Inward offset from authored box edges to the painted stroke centerline.
+    frame_inset: i32,
 }
-fn set_bottom(op: &mut DrawOp, bottom: i32) {
+fn set_bottom(op: &mut DrawOp, bottom: i32, frame_inset: i32) {
     match op {
-        DrawOp::Rect(r) => r.bounds.height = Twips((bottom - r.bounds.top.0).max(0)),
+        DrawOp::Rect(r) => r.bounds.height = Twips((bottom - frame_inset - r.bounds.top.0).max(0)),
         DrawOp::Line(l) => l.to.y = Twips(bottom.max(l.from.y.0)),
         _ => {}
     }
 }
 impl Formatter<'_> {
-    pub(crate) fn register_span(&mut self, section: &str, shape: &DrawingShape, op_index: usize) {
+    pub(crate) fn register_span(
+        &mut self,
+        section: &str,
+        shape: &DrawingShape,
+        op_index: usize,
+        frame_inset: i32,
+    ) {
         let flat: Vec<_> = self
             .report
             .report_definition
@@ -55,6 +63,7 @@ impl Formatter<'_> {
             extend: shape.extend_to_bottom_of_section,
             op_index,
             prototype,
+            frame_inset,
         });
     }
     pub(crate) fn end_section_spans(&mut self, name: &str, top: i32, height: i32, design: i32) {
@@ -68,7 +77,7 @@ impl Formatter<'_> {
                 s.bottom + (height - design).max(0)
             };
             if let Some(op) = self.cur.ops.get_mut(s.op_index) {
-                set_bottom(op, top + offset);
+                set_bottom(op, top + offset, s.frame_inset);
             }
             false
         });
@@ -76,7 +85,7 @@ impl Formatter<'_> {
     pub(crate) fn finish_spanning_page(&mut self) {
         for s in &mut self.shape_spans {
             if let Some(op) = self.cur.ops.get_mut(s.op_index) {
-                set_bottom(op, self.body_bottom);
+                set_bottom(op, self.body_bottom, s.frame_inset);
             }
         }
     }
@@ -85,7 +94,7 @@ impl Formatter<'_> {
             let mut op = s.prototype.clone();
             match &mut op {
                 DrawOp::Rect(r) => {
-                    r.bounds.top = Twips(self.cursor_y);
+                    r.bounds.top = Twips(self.cursor_y + s.frame_inset);
                     r.bounds.height = Twips(0);
                 }
                 DrawOp::Line(l) => {
