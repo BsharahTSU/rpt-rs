@@ -407,6 +407,7 @@ fn render_with_fonts(
             assets,
             images: &mut images,
             interpolate,
+            disable_latin_kerning: opts.disable_latin_kerning,
         };
         if tagged {
             tag_and_draw(
@@ -462,6 +463,7 @@ struct DrawCtx<'a> {
     assets: &'a BTreeMap<String, ImageAsset>,
     images: &'a mut HashMap<u64, Option<Image>>,
     interpolate: bool,
+    disable_latin_kerning: bool,
 }
 
 /// Paint one draw-op onto the surface.
@@ -471,7 +473,7 @@ fn draw_op(surface: &mut Surface, ctx: &mut DrawCtx, op: &DrawOp) {
         DrawOp::Ellipse(e) => draw_ellipse(surface, e),
         DrawOp::Line(l) => draw_line(surface, l),
         DrawOp::Polygon(p) => draw_polygon(surface, p),
-        DrawOp::Text(t) => draw_text(surface, ctx.fonts, t),
+        DrawOp::Text(t) => draw_text(surface, ctx.fonts, t, ctx.disable_latin_kerning),
         DrawOp::Image(i) => draw_image(surface, ctx.assets, ctx.images, i, ctx.interpolate),
     }
 }
@@ -859,7 +861,12 @@ fn draw_justified_words(
     }
 }
 
-fn draw_text(surface: &mut Surface, fonts: &mut FontCache, t: &TextRun) {
+fn draw_text(
+    surface: &mut Surface,
+    fonts: &mut FontCache,
+    t: &TextRun,
+    disable_latin_kerning: bool,
+) {
     if t.text.is_empty() {
         return;
     }
@@ -918,6 +925,7 @@ fn draw_text(surface: &mut Surface, fonts: &mut FontCache, t: &TextRun) {
         Point::from_xy(x, baseline_y),
         extra,
         spacing_pt as f32,
+        disable_latin_kerning,
     );
     draw_text_decoration(surface, t, x, baseline_y, ascent_pt, size, text_w);
     if rotated {
@@ -982,6 +990,7 @@ fn place_glyphs(
     origin: Point,
     extra: f32,
     spacing: f32,
+    disable_latin_kerning: bool,
 ) {
     // The one face a justified line needs — its words share a single pen, so the whole line must be
     // one non-substituted segment. `None` for any other run, which flows its segments instead.
@@ -992,7 +1001,7 @@ fn place_glyphs(
         _ => None,
     };
     if let Some(face) = justified {
-        if let Some(shaper) = Shaper::new(&face) {
+        if let Some(shaper) = Shaper::new(&face, disable_latin_kerning) {
             draw_justified_words(surface, &shaper, size, &t.text, origin, extra, spacing);
         }
         return;
@@ -1002,7 +1011,7 @@ fn place_glyphs(
         let Some(face) = fonts.face(seg.face) else {
             continue;
         };
-        let Some(shaper) = Shaper::new(&face) else {
+        let Some(shaper) = Shaper::new(&face, disable_latin_kerning) else {
             continue;
         };
         let seg_text = &t.text[seg.range.clone()];
@@ -1143,6 +1152,24 @@ impl FontCache {
     }
 }
 
+/// Harfrust feature masks use exclusive UTF-8 cluster endpoints. Set these fields
+/// directly: harfrust 0.5's RangeBounds constructor subtracts one from an excluded
+/// end, which would omit the last scalar of an ordinary Rust byte range.
+fn latin_kerning_features(text: &str, disabled: bool) -> Vec<harfrust::Feature> {
+    if !disabled {
+        return Vec::new();
+    }
+    rpt_text::latin_kerning_ranges(text)
+        .into_iter()
+        .map(|range| harfrust::Feature {
+            tag: harfrust::Tag::new(b"kern"),
+            value: 0,
+            start: range.start.try_into().unwrap_or(u32::MAX),
+            end: range.end.try_into().unwrap_or(u32::MAX),
+        })
+        .collect()
+}
+
 /// One face made ready to shape with: a harfrust shaper over [`LoadedFace::data`], borrowed alongside
 /// the krilla [`Font`] the shaped glyphs are drawn with.
 ///
@@ -1155,6 +1182,7 @@ impl FontCache {
 /// It does not make the two agree on its own: cosmic-text shapes word by word and this shapes whole
 /// runs, so a kern pair straddling a word boundary is applied here and not there. That granularity
 /// difference is the residual the PDF artifact checks measure, and it is not a shaper difference.
+/// The optional Basic-Latin compatibility policy supplies the same kerning masks as layout.
 ///
 /// It also exists to hold the parse: building the shaper reparses the whole font, so that belongs to
 /// the run rather than to each string shaped within it — a justified line shapes once per word, and
@@ -1164,15 +1192,17 @@ impl FontCache {
 struct Shaper<'a> {
     face: &'a LoadedFace,
     shaper: harfrust::Shaper<'a>,
+    disable_latin_kerning: bool,
 }
 
 impl<'a> Shaper<'a> {
     /// Parse `face` for shaping; `None` if the font data does not parse.
-    fn new(face: &'a LoadedFace) -> Option<Shaper<'a>> {
+    fn new(face: &'a LoadedFace, disable_latin_kerning: bool) -> Option<Shaper<'a>> {
         let font = harfrust::FontRef::from_index(&face.data, face.index).ok()?;
         Some(Shaper {
             face,
             shaper: face.shaper_data.shaper(&font).build(),
+            disable_latin_kerning,
         })
     }
 
@@ -1216,7 +1246,11 @@ impl<'a> Shaper<'a> {
                 harfrust::Direction::LeftToRight
             });
         }
-        let output = self.shaper.shape(buffer, &[]);
+        // The shared Basic-Latin byte ranges match the compatibility measurement
+        // policy. Feature masks leave Arabic/CJK characters and all substitution,
+        // joining, mark positioning and cluster logic on the advanced shaping path.
+        let features = latin_kerning_features(text, self.disable_latin_kerning);
+        let output = self.shaper.shape(buffer, &features);
         let positions = output.glyph_positions();
         let infos = output.glyph_infos();
         let upem = self.face.upem;

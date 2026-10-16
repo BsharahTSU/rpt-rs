@@ -18,6 +18,8 @@
 //! [cosmic-text]: https://github.com/pop-os/cosmic-text
 
 mod bundled;
+mod compatibility;
+pub use compatibility::latin_kerning_ranges;
 mod font_db;
 pub use font_db::{system_font_dirs, FaceReport, FaceRun, FontDb, FontInventory, FontSource};
 

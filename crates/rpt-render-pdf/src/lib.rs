@@ -405,6 +405,12 @@ impl Producer {
 pub struct PdfOptions {
     /// Which face library text is resolved, shaped and subset from.
     pub fonts: FontSource,
+    /// Disable the OpenType kerning feature for Basic Latin (ASCII) text spans, for
+    /// compatibility with legacy PDF exporters. Off by default. Other shaping
+    /// features, including ligatures, remain enabled. Non-ASCII scalars are excluded
+    /// from the feature ranges.
+    /// Pair this with the same measurement policy when producing the Page IR.
+    pub disable_latin_kerning: bool,
     /// The archival or accessibility standard to export against, and to fail the render on if unmet.
     pub conformance: Conformance,
     /// Emit a structure tree — what the marks mean and in what order they are read — without claiming

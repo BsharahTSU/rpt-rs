@@ -407,6 +407,7 @@ impl Cli {
     fn pdf_options(&self, semantics: rpt_render::Semantics) -> rpt_render::PdfOptions {
         rpt_render::PdfOptions {
             fonts: self.fonts(),
+            disable_latin_kerning: false,
             conformance: self.conformance,
             created: None,
             producer: rpt_render::Producer::default(),

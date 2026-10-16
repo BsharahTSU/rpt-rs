@@ -106,3 +106,15 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   Chinese: five passed; launcher: five checks on PS7/5.1 plus seven unchanged clock checks.
 - Details and the correction to earlier bbox conclusions: [CR-001 metrics](coverage/cr-001-metrics.md).
   Horizontal kerning and remaining small geometric differences are still being investigated.
+
+## 2026-10-16 - Checkpoint 4b: CR-001 English spacing
+
+- Actual glyph operators isolated pair kerning as the remaining English spacing error.
+  Added opt-in Basic-Latin unkerned measurement/wrapping and PDF shaping using shared ranges.
+- English glyph deviation across 63 matched lines fell from 0.64045 to 0.05832 pt.
+  Line breaks, all 34 ratings/baselines and the restored heading are preserved.
+- All 2,015 non-ASCII glyphs retain exact text and coordinates relative to the DPI600 replay.
+  All three page pairs reviewed. Arabic-only PDFs, ligatures, combining marks and Chinese
+  actual-PDF transport have focused regressions; general library defaults remain unchanged.
+- Details: [spacing findings and fix](coverage/cr-001-spacing.md). Signature/rule geometry
+  is recorded separately; this checkpoint does not claim pixel identity.

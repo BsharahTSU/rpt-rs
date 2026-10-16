@@ -7,7 +7,9 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use cosmic_text::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping, Style, Weight};
+use cosmic_text::{
+    Attrs, Buffer, Family, FeatureTag, FontFeatures, FontSystem, Metrics, Shaping, Style, Weight,
+};
 // One typographic point = 20 twips: the single definition lives in `rpt_pages` (cosmic-text is
 // unit-agnostic; we drive it in points and scale the resulting advances to twips).
 use rpt_pages::FontSpec;
@@ -133,6 +135,7 @@ pub struct CosmicLayout {
     known_families: HashSet<String>,
     /// Memoized `(line_height_twips, ascent_twips)` per [`FontKey`], computed lazily on first use.
     metrics_cache: RefCell<HashMap<FontKey, (f64, f64)>>,
+    disable_latin_kerning: bool,
 }
 
 impl std::fmt::Debug for CosmicLayout {
@@ -154,7 +157,15 @@ impl CosmicLayout {
             font_system: RefCell::new(font_system),
             known_families,
             metrics_cache: RefCell::new(HashMap::new()),
+            disable_latin_kerning: false,
         }
+    }
+
+    /// Opt into the legacy Basic-Latin unkerned width and wrapping policy.
+    /// The PDF backend must use the same policy; other scripts retain normal shaping.
+    pub fn without_latin_kerning(mut self) -> Self {
+        self.disable_latin_kerning = true;
+        self
     }
 
     /// Convenience: OS fonts only.
@@ -200,7 +211,31 @@ impl CosmicLayout {
         if font.italic {
             attrs = attrs.style(Style::Italic);
         }
-        buffer.set_text(text, &attrs, Shaping::Advanced, None);
+        let ranges = if self.disable_latin_kerning {
+            crate::latin_kerning_ranges(text)
+        } else {
+            Vec::new()
+        };
+        if ranges.is_empty() {
+            buffer.set_text(text, &attrs, Shaping::Advanced, None);
+        } else {
+            let mut features = FontFeatures::new();
+            features.disable(FeatureTag::KERNING);
+            let unkerned = attrs.clone().font_features(features);
+            let mut spans = Vec::new();
+            let mut previous = 0;
+            for range in ranges {
+                if previous < range.start {
+                    spans.push((&text[previous..range.start], attrs.clone()));
+                }
+                spans.push((&text[range.clone()], unkerned.clone()));
+                previous = range.end;
+            }
+            if previous < text.len() {
+                spans.push((&text[previous..], attrs.clone()));
+            }
+            buffer.set_rich_text(spans, &attrs, Shaping::Advanced, None);
+        }
         buffer.shape_until_scroll(&mut fs, false);
         buffer
     }
@@ -502,5 +537,87 @@ mod tests {
             (h20 / h10 - 2.0).abs() < 0.01,
             "scales with size: {h10} vs {h20}"
         );
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn legacy_latin_width_and_wrap_use_the_same_unkerned_advances() {
+    let normal = CosmicLayout::new(FontProvider::bundled());
+    let legacy = CosmicLayout::new(FontProvider::bundled()).without_latin_kerning();
+    let font = FontSpec {
+        family: "Liberation Sans".into(),
+        size_pt: 10.0,
+        ..Default::default()
+    };
+    let text = "AV AV";
+    let normal_width = normal.width_twips(text, &font);
+    let legacy_width = legacy.width_twips(text, &font);
+    assert!(legacy_width > normal_width);
+    let threshold = (normal_width + legacy_width) / 2.0;
+    assert_eq!(normal.wrap(text, threshold, &font), vec![text]);
+    assert_eq!(legacy.wrap(text, threshold, &font), vec!["AV", "AV"]);
+    for text in ["العربية", "中文成績", "A\u{301}"] {
+        assert_eq!(
+            normal.width_twips(text, &font),
+            legacy.width_twips(text, &font)
+        );
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn legacy_latin_ranges_preserve_combining_glyphs_and_positions() {
+    let normal = CosmicLayout::new(FontProvider::bundled());
+    let legacy = CosmicLayout::new(FontProvider::bundled()).without_latin_kerning();
+    let font = FontSpec {
+        family: "DejaVu Sans".into(),
+        size_pt: 12.0,
+        ..Default::default()
+    };
+    // A+acute can compose into a single glyph; q+acute needs a separately
+    // positioned mark. Equal total width alone cannot prove either is preserved.
+    for text in ["A\u{301}", "q\u{301}"] {
+        let normal_buffer = normal.shaped(text, &font, None);
+        let legacy_buffer = legacy.shaped(text, &font, None);
+        let glyphs = |buffer: &Buffer| {
+            buffer
+                .layout_runs()
+                .flat_map(|run| run.glyphs)
+                .map(|glyph| {
+                    (
+                        glyph.glyph_id,
+                        glyph.start,
+                        glyph.end,
+                        glyph.x,
+                        glyph.y,
+                        glyph.w,
+                        glyph.x_offset,
+                        glyph.y_offset,
+                        glyph.level,
+                    )
+                })
+                .collect::<Vec<_>>()
+        };
+        let expected = glyphs(&normal_buffer);
+        assert!(!expected.is_empty());
+        assert_eq!(
+            glyphs(&legacy_buffer),
+            expected,
+            "combining sequence {text:?}"
+        );
+        if text.starts_with('q') {
+            assert_eq!(
+                expected.len(),
+                2,
+                "fixture must exercise an independent mark"
+            );
+            assert!(
+                expected
+                    .iter()
+                    .any(|glyph| glyph.6 != 0.0 || glyph.7 != 0.0),
+                "fixture must exercise actual mark positioning"
+            );
+        }
     }
 }

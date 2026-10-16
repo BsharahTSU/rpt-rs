@@ -355,10 +355,10 @@ fn run(input: Input) -> Result<Json, String> {
     let mut document = rpt_render::render_dataset_with(
         &model,
         &dataset,
-        Box::new(rpt_text::WindowsLayout::with_printer_dpi(
-            FontSource::System,
-            printer_dpi,
-        )),
+        Box::new(
+            rpt_text::WindowsLayout::with_printer_dpi(FontSource::System, printer_dpi)
+                .without_latin_kerning(),
+        ),
         render_locale()?,
         Some(&scope),
         Some(as_of),
@@ -401,6 +401,7 @@ fn run(input: Input) -> Result<Json, String> {
         &document,
         &PdfOptions {
             fonts: FontSource::System,
+            disable_latin_kerning: true,
             ..Default::default()
         },
     )

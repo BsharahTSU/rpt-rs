@@ -190,6 +190,13 @@ impl WindowsLayout {
         Self::with_printer_dpi(source, NonZeroU32::new(TWIPS_PER_INCH).unwrap())
     }
 
+    /// Use the legacy Basic-Latin unkerned width and wrapping policy.
+    /// Pair with the PDF backend's matching option.
+    pub fn without_latin_kerning(mut self) -> Self {
+        self.inner = self.inner.without_latin_kerning();
+        self
+    }
+
     /// Use a selected vertical printer resolution for line pitch. This is explicit:
     /// no host printer is queried. Resolve saved report settings or deployment
     /// defaults at the caller. Glyph sizing, first-line ascent and wrapping retain

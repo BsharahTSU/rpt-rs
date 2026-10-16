@@ -165,10 +165,13 @@ fn printer_line_metrics_preserve_chinese_pdf_text_and_fallbacks() {
     let document = rpt_render::render_dataset_with(
         &report,
         &dataset,
-        Box::new(rpt_text::WindowsLayout::with_printer_dpi(
-            FontSource::System,
-            std::num::NonZeroU32::new(600).unwrap(),
-        )),
+        Box::new(
+            rpt_text::WindowsLayout::with_printer_dpi(
+                FontSource::System,
+                std::num::NonZeroU32::new(600).unwrap(),
+            )
+            .without_latin_kerning(),
+        ),
         Default::default(),
         None,
         None,
@@ -189,6 +192,7 @@ fn assert_chinese_pdf_round_trip(pages: rpt_pages::PagedDocument, profile: &str)
         &pages,
         &PdfOptions {
             fonts: FontSource::System,
+            disable_latin_kerning: profile == "printer-600",
             ..Default::default()
         },
     )
