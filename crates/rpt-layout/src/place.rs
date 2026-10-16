@@ -448,7 +448,7 @@ impl Formatter<'_> {
     fn emit_line(&mut self, obj: &ReportObject, l: &LineShape, at: &Placement) {
         let rect = self.page_rect(&obj.bounds, at.origin_y);
         // A horizontal line uses the box top; a vertical line its left. Use the object rect.
-        let (from, mut to) = line_endpoints(rect);
+        let (mut from, mut to) = line_endpoints(rect);
         if self.spans_sections(l.shape.end_section_index, at.section_name) {
             to.y = from.y;
         } else if l.shape.extend_to_bottom_of_section {
@@ -459,6 +459,16 @@ impl Formatter<'_> {
         let style = border_line_style(&obj.border).unwrap_or(RptLineStyle::NoLine);
         let color = obj.border.border_color.unwrap_or_default();
         if let Some(stroke) = stroke_of(style, color, l.shape.line_thickness) {
+            // Crystal stores the top/left edge of an axis-aligned stroke, not its
+            // centerline. Endpoint extents along the line remain unchanged.
+            let half = stroke.width.0 / 2;
+            if rect.height.0 == 0 && rect.width.0 > 0 {
+                from.y.0 += half;
+                to.y.0 += half;
+            } else if rect.width.0 == 0 && rect.height.0 > 0 {
+                from.x.0 += half;
+                to.x.0 += half;
+            }
             self.push_op(DrawOp::Line(LineOp {
                 from,
                 to,
@@ -1199,28 +1209,33 @@ impl Formatter<'_> {
     fn push_border(&mut self, obj: &ReportObject, rect: Rect, section_name: &str, instance: u32) {
         let b = &obj.border;
         let color = b.border_color.unwrap_or(DEFAULT_BORDER);
-        // Each edge has its own style. A bottom-only signature rule is not a box.
+        // Native SingleLine text/field borders sit outside the object by a 1pt
+        // gap plus half their 1pt stroke. Extend corners only toward selected
+        // adjacent edges: a bottom-only signature rule retains the original Xs.
+        // Other styles keep their previous geometry until separately verified.
+        let verified_frame = !b.tight_horizontal
+            && !b.has_drop_shadow
+            && b.background_color.is_none()
+            && obj.format.text_rotation.degrees() == 0
+            && [b.top, b.bottom, b.left, b.right]
+                .iter()
+                .all(|style| matches!(style, RptLineStyle::NoLine | RptLineStyle::SingleLine));
+        let outset = |style| {
+            if verified_frame && style == RptLineStyle::SingleLine {
+                30
+            } else {
+                0
+            }
+        };
+        let left = rect.left.0 - outset(b.left);
+        let right = rect.right().0 + outset(b.right);
+        let top = rect.top.0 - outset(b.top);
+        let bottom = rect.bottom().0 + outset(b.bottom);
         let edges = [
-            (
-                b.top,
-                (rect.left.0, rect.top.0),
-                (rect.right().0, rect.top.0),
-            ),
-            (
-                b.bottom,
-                (rect.left.0, rect.bottom().0),
-                (rect.right().0, rect.bottom().0),
-            ),
-            (
-                b.left,
-                (rect.left.0, rect.top.0),
-                (rect.left.0, rect.bottom().0),
-            ),
-            (
-                b.right,
-                (rect.right().0, rect.top.0),
-                (rect.right().0, rect.bottom().0),
-            ),
+            (b.top, (left, top), (right, top)),
+            (b.bottom, (left, bottom), (right, bottom)),
+            (b.left, (left, top), (left, bottom)),
+            (b.right, (right, top), (right, bottom)),
         ];
         for (style, (x1, y1), (x2, y2)) in edges {
             if let Some(stroke) = stroke_of(style, color, Twips(20)) {

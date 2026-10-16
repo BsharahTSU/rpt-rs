@@ -187,7 +187,8 @@ pub struct WindowsLayout {
 impl WindowsLayout {
     /// Load nominal layout metrics with the original 1440-DPI line pitch.
     pub fn new(source: crate::FontSource) -> Self {
-        Self::with_printer_dpi(source, NonZeroU32::new(TWIPS_PER_INCH).unwrap())
+        const DEFAULT_DPI: NonZeroU32 = NonZeroU32::new(TWIPS_PER_INCH).unwrap();
+        Self::with_printer_dpi(source, DEFAULT_DPI)
     }
 
     /// Use the legacy Basic-Latin unkerned width and wrapping policy.

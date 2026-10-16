@@ -118,3 +118,25 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   actual-PDF transport have focused regressions; general library defaults remain unchanged.
 - Details: [spacing findings and fix](coverage/cr-001-spacing.md). Signature/rule geometry
   is recorded separately; this checkpoint does not claim pixel identity.
+
+## 2026-10-17 - Checkpoint 4c: CR-001 border and rule geometry
+
+- Controlled native probes established 1.5-point outward ordinary SingleLine text/field
+  borders and half-width anchoring for authored horizontal/vertical lines. Signature
+  endpoints remain unchanged; no report/object/student-specific adjustment is used.
+- Independent review narrowed the correction to verified ordinary frames and axis-aligned
+  lines. Mixed styles, tight/filled/shadowed/rotated frames, two-dimensional line boxes
+  and degenerate lines preserve prior geometry, with explicit regression coverage.
+- Audited two public PDF reference changes: 284 coordinate lines / 142 segments only;
+  all text, fonts, images, transforms and page counts remain unchanged.
+- Docker full workspace: 1,615 passed. Final scope guards subsequently passed all
+  348 layout tests and nine PDF reference fixtures / 15 pages. All five Chinese PDF
+  tests passed in the workspace run. Strict workspace Clippy and formatting pass;
+  final text tests: 23, minimal features: 11. Default nonzero DPI is now checked at
+  compile time, resolving a strict documentation lint without changing behavior.
+- Resource controls added after the user's memory warning: one build/test job,
+  sequential 2-GiB Docker containers, D: temporary files and host RAM/disk checks.
+  Reclaimed unused Linux filesystem cache; no files, volumes or user processes removed.
+- [Geometry evidence](coverage/cr-001-geometry.md) records probes, limitations, review
+  guards and reference audit. The fresh final pair and independent review follow in
+  [the CR-001 comparison record](coverage/cr-001-parity.md).

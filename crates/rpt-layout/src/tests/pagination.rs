@@ -1715,3 +1715,196 @@ fn printer_line_pitch_keeps_boundary_header_and_repeats_it_on_continuation() {
         assert_eq!(first.bounds.top.0 + first.metrics.unwrap().ascent.0, 479);
     }
 }
+
+#[test]
+fn single_text_and_field_borders_have_native_outside_padding() {
+    for field in [false, true] {
+        for full in [false, true] {
+            for height in [125, 325] {
+                let mut report = tiny_report(3000);
+                let mut object = if field {
+                    db_field_object("Probe", "t.x", 100)
+                } else {
+                    text_object("Probe", "caption", 100)
+                };
+                object.bounds.height = Twips(height);
+                object.border.bottom = LineStyle::SingleLine;
+                if full {
+                    object.border.top = LineStyle::SingleLine;
+                    object.border.left = LineStyle::SingleLine;
+                    object.border.right = LineStyle::SingleLine;
+                }
+                report.report_definition.areas[1].sections[0].objects = vec![object];
+                let doc = rendered(&report, &numeric_rows(1));
+                let rules: Vec<_> = doc.pages[0]
+                    .ops
+                    .iter()
+                    .filter_map(|op| match op {
+                        DrawOp::Line(l) => Some(l),
+                        _ => None,
+                    })
+                    .collect();
+                let left = if full { 70 } else { 100 };
+                let right = if full { 3130 } else { 3100 };
+                let bottom = 300 + 100 + height + 30;
+                assert_eq!(rules.len(), if full { 4 } else { 1 });
+                let bottom_rule = rules
+                    .iter()
+                    .find(|r| r.from.y.0 == bottom && r.to.y.0 == bottom)
+                    .unwrap();
+                assert_eq!((bottom_rule.from.x.0, bottom_rule.to.x.0), (left, right));
+                assert_eq!(bottom_rule.stroke.width, Twips(20));
+                if full {
+                    assert_eq!((rules[0].from.y.0, rules[0].to.y.0), (370, 370));
+                    assert_eq!((rules[2].from.x.0, rules[3].from.x.0), (70, 3130));
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn standalone_rule_center_tracks_half_its_width_without_extending_endpoints() {
+    for vertical in [false, true] {
+        for width in [0, 10, 40] {
+            let mut report = tiny_report(3000);
+            let mut object = ReportObject::default();
+            object.name = "Rule".into();
+            object.bounds = Rect {
+                left: Twips(100),
+                top: Twips(100),
+                width: Twips(if vertical { 0 } else { 1000 }),
+                height: Twips(if vertical { 1000 } else { 0 }),
+            };
+            object.border.top = LineStyle::SingleLine;
+            object.kind = ReportObjectKind::Line(LineShape {
+                shape: rpt_model::DrawingShape {
+                    line_thickness: Twips(width),
+                    ..Default::default()
+                },
+            });
+            report.report_definition.areas[1].sections[0].objects = vec![object];
+            let doc = rendered(&report, &numeric_rows(1));
+            let rule = doc.pages[0]
+                .ops
+                .iter()
+                .find_map(|op| match op {
+                    DrawOp::Line(l) => Some(l),
+                    _ => None,
+                })
+                .unwrap();
+            if vertical {
+                assert_eq!(
+                    (rule.from.x.0, rule.to.x.0),
+                    (100 + width / 2, 100 + width / 2)
+                );
+                assert_eq!((rule.from.y.0, rule.to.y.0), (400, 1400));
+            } else {
+                assert_eq!(
+                    (rule.from.y.0, rule.to.y.0),
+                    (400 + width / 2, 400 + width / 2)
+                );
+                assert_eq!((rule.from.x.0, rule.to.x.0), (100, 1100));
+            }
+        }
+    }
+}
+
+#[test]
+fn mixed_border_styles_keep_their_previous_unverified_geometry() {
+    let mut report = tiny_report(3000);
+    let object = &mut report.report_definition.areas[1].sections[0].objects[0];
+    object.border.top = LineStyle::DoubleLine;
+    object.border.bottom = LineStyle::SingleLine;
+    let doc = rendered(&report, &numeric_rows(1));
+    let rules: Vec<_> = doc.pages[0]
+        .ops
+        .iter()
+        .filter_map(|op| match op {
+            DrawOp::Line(l) => Some(l),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(rules.len(), 2);
+    assert_eq!((rules[0].from.y.0, rules[1].from.y.0), (300, 540));
+    assert_eq!((rules[1].from.x.0, rules[1].to.x.0), (100, 3100));
+}
+
+#[test]
+fn unverified_frame_options_keep_their_previous_geometry() {
+    for option in ["tight", "shadow", "fill", "rotate90", "rotate270"] {
+        let mut report = tiny_report(3000);
+        let object = &mut report.report_definition.areas[1].sections[0].objects[0];
+        object.border.top = LineStyle::SingleLine;
+        object.border.bottom = LineStyle::SingleLine;
+        object.border.left = LineStyle::SingleLine;
+        object.border.right = LineStyle::SingleLine;
+        match option {
+            "tight" => object.border.tight_horizontal = true,
+            "shadow" => object.border.has_drop_shadow = true,
+            "fill" => object.border.background_color = Some(Color::default()),
+            "rotate90" => object.format.text_rotation = rpt_model::TextRotationAngle::Rotate90,
+            "rotate270" => object.format.text_rotation = rpt_model::TextRotationAngle::Rotate270,
+            _ => unreachable!(),
+        }
+        let doc = rendered(&report, &numeric_rows(1));
+        let rules: Vec<_> = doc.pages[0]
+            .ops
+            .iter()
+            .filter_map(|op| match op {
+                DrawOp::Line(l) => Some(l),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(rules.len(), 4, "{option}");
+        assert_eq!(
+            (rules[0].from.y.0, rules[1].from.y.0),
+            (300, 540),
+            "{option}"
+        );
+        assert_eq!(
+            (rules[2].from.x.0, rules[3].from.x.0),
+            (100, 3100),
+            "{option}"
+        );
+    }
+}
+
+#[test]
+fn non_axis_aligned_line_boxes_keep_their_previous_geometry() {
+    for (width, height) in [(1000, 200), (200, 1000), (0, 0)] {
+        let mut report = tiny_report(3000);
+        let mut object = ReportObject::default();
+        object.name = "UnverifiedRule".into();
+        object.bounds = Rect {
+            left: Twips(100),
+            top: Twips(100),
+            width: Twips(width),
+            height: Twips(height),
+        };
+        object.border.top = LineStyle::SingleLine;
+        object.kind = ReportObjectKind::Line(LineShape {
+            shape: rpt_model::DrawingShape {
+                line_thickness: Twips(40),
+                ..Default::default()
+            },
+        });
+        report.report_definition.areas[1].sections[0].objects = vec![object];
+        let doc = rendered(&report, &numeric_rows(1));
+        let rule = doc.pages[0]
+            .ops
+            .iter()
+            .find_map(|op| match op {
+                DrawOp::Line(l) => Some(l),
+                _ => None,
+            })
+            .unwrap();
+        let (from, to) = if width >= height {
+            ((100, 400 + height / 2), (100 + width, 400 + height / 2))
+        } else {
+            ((100 + width / 2, 400), (100 + width / 2, 400 + height))
+        };
+        assert_eq!((rule.from.x.0, rule.from.y.0), from);
+        assert_eq!((rule.to.x.0, rule.to.y.0), to);
+    }
+}
