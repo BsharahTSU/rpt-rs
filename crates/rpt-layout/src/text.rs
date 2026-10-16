@@ -46,6 +46,10 @@ impl<'a> SpacedLayout<'a> {
 }
 
 impl TextLayout for SpacedLayout<'_> {
+    fn prepare_line<'a>(&self, text: &'a str) -> &'a str {
+        self.inner.prepare_line(text)
+    }
+
     fn width_twips(&self, text: &str, font: &FontSpec) -> f64 {
         spaced_width_twips(self.inner, text, font, self.spacing)
     }
@@ -56,6 +60,10 @@ impl TextLayout for SpacedLayout<'_> {
 
     fn ascent_twips(&self, font: &FontSpec) -> f64 {
         self.inner.ascent_twips(font)
+    }
+
+    fn field_ascent_twips(&self, font: &FontSpec) -> f64 {
+        self.inner.field_ascent_twips(font)
     }
 
     fn is_approximate(&self) -> bool {

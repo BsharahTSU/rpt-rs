@@ -162,7 +162,7 @@ fn chinese_and_mixed_text_survive_pdf_font_embedding_and_extraction() {
 fn printer_line_metrics_preserve_chinese_pdf_text_and_fallbacks() {
     let report = report();
     let dataset = rpt_data::build_dataset(&rpt_data::EmptySource, &report.data_definition);
-    let document = rpt_render::render_dataset_with(
+    let mut document = rpt_render::render_dataset_with(
         &report,
         &dataset,
         Box::new(
@@ -170,12 +170,25 @@ fn printer_line_metrics_preserve_chinese_pdf_text_and_fallbacks() {
                 FontSource::System,
                 std::num::NonZeroU32::new(600).unwrap(),
             )
-            .without_latin_kerning(),
+            .without_latin_kerning()
+            .without_trailing_spaces(),
         ),
         Default::default(),
         None,
         None,
     );
+    // Exercise final alignment quantization through an actual PDF as well as the
+    // printer metrics. Shaping/wrapping has already selected these CJK/mixed lines.
+    let alignment = rpt_text::CosmicLayout::with_system_fonts().without_latin_kerning();
+    for op in document.pages.iter_mut().flat_map(|page| &mut page.ops) {
+        if let DrawOp::Text(run) = op {
+            run.align = rpt_pages::TextAlign::Center;
+            if let Some(metrics) = &mut run.metrics {
+                metrics.advance =
+                    Twips(alignment.crystal_alignment_width_twips(&run.text, &run.font) as i32);
+            }
+        }
+    }
     assert_chinese_pdf_round_trip(document, "printer-600");
 }
 

@@ -251,11 +251,39 @@ impl<'a> Formatter<'a> {
         } else {
             obj.bounds.width.0
         };
+        // Controlled native copies prove separate baseline paths for explicit RTL and RTF
+        // fields. Keep other fields on their previous nominal metrics: neither CanGrow,
+        // RightAlign, nor a box shorter than one line independently selected printer ascent.
+        // HTML/unknown formats are intentionally unverified and retain the field path.
+        let nominal_field_ascent = matches!(kind, ObjectKind::Field)
+            && !matches!(reading_order, ReadingOrder::RightToLeft)
+            && !matches!(&obj.kind, ReportObjectKind::Field(f)
+                if f.format.as_ref().is_some_and(|format|
+                    matches!(format.string.text_format, rpt_model::TextFormat::RTFText)));
+        let ascent_for = |font: &FontSpec| {
+            let ascent = if nominal_field_ascent {
+                self.text_layout.field_ascent_twips(font)
+            } else {
+                self.text_layout.ascent_twips(font)
+            };
+            Twips(ascent as i32)
+        };
         let mut lines: Vec<LayoutLine> = Vec::new();
         for (i, seg) in raw.split('\n').enumerate() {
             let para = paragraphs.and_then(|ps| ps.get(i));
             let para_order = para.and_then(|p| p.reading_order).unwrap_or(reading_order);
             let para_align = crate::resolved_align(self.report, obj, para_order);
+            // Native probes establish this emission policy only for centered LTR fields.
+            // Other fields and static text can retain trailing glyphs; do not broaden the
+            // rule or normalize stored data and interior tab segments.
+            let prepare_field = matches!(kind, ObjectKind::Field)
+                && matches!(para_align, TextAlign::Center)
+                && matches!(para_order, ReadingOrder::LeftToRight);
+            let seg = if prepare_field {
+                self.text_layout.prepare_line(seg)
+            } else {
+                seg
+            };
             let indent = para.map(|p| p.indent).unwrap_or_else(|| match &obj.kind {
                 ReportObjectKind::Field(f) => f
                     .format
@@ -279,7 +307,7 @@ impl<'a> Formatter<'a> {
                 &para_font,
                 self.text_layout,
             ));
-            let ascent = Twips(self.text_layout.ascent_twips(&para_font) as i32);
+            let ascent = ascent_for(&para_font);
             let avail = (body_w - left - right).max(1);
             // A spaced paragraph must break at the width it is drawn at, so the wrap measures through
             // the same adjusted advance the emitted run reports. Unspaced text (the default) uses the
@@ -301,6 +329,11 @@ impl<'a> Formatter<'a> {
             };
             let last_line = wrapped.len().saturating_sub(1);
             for (j, text) in wrapped.into_iter().enumerate() {
+                let text = if prepare_field {
+                    self.text_layout.prepare_line(&text).to_owned()
+                } else {
+                    text
+                };
                 // The first wrapped line of the paragraph also carries the first-line indent.
                 let x_offset = left + if j == 0 { first } else { 0 };
                 let width = (body_w - x_offset - right).max(1);
@@ -332,7 +365,7 @@ impl<'a> Formatter<'a> {
                 width: obj.bounds.width,
                 font: font.clone(),
                 line_height: Twips(self.text_layout.line_height_twips(&font) as i32),
-                ascent: Twips(self.text_layout.ascent_twips(&font) as i32),
+                ascent: ascent_for(&font),
                 align,
                 character_spacing: Twips(0),
             });

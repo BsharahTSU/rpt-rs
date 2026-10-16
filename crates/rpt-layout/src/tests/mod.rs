@@ -673,3 +673,6 @@ mod pagination;
 mod specials;
 mod subreports;
 mod text;
+
+mod ascent_paths;
+mod trailing_spaces;

@@ -45,6 +45,13 @@ pub(crate) fn apply(pages: &mut [Page], fixups: &[CurrencyFixup], text_layout: &
                 ..fx.mark.spec.clone()
             },
         );
+        // Currency fixups belong to fields. Match the original plan's verified
+        // centered-LTR preparation scope before ownership comparison and measurement.
+        let blanked = if matches!(run.align, rpt_pages::TextAlign::Center) && !run.rtl {
+            text_layout.prepare_line(&blanked).to_owned()
+        } else {
+            blanked
+        };
         // A value that printed no symbol in the first place — a suppressed zero, or one replaced by a
         // zero literal, both of which replace the whole rendering — neither claims the page's symbol
         // nor needs rewriting.

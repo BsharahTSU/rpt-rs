@@ -37,12 +37,16 @@ Sources: [DEVMODE field table](../../../crates/rpt-reader/src/field_table/tables
 
 ## Focused library correction
 
-[windows_metrics.rs](../../../crates/rpt-text/src/windows_metrics.rs) now separates font-device pixels from PDF twips:
+This section records the initial printer-pitch checkpoint. Its first-line-ascent
+contract is superseded by the dated follow-up below; the original measurements
+and passing-checkpoint results remain part of the history.
+
+[windows_metrics.rs](../../../crates/rpt-text/src/windows_metrics.rs) separates font-device pixels from PDF twips:
 
 - `WindowsLayout::new(source)` retains the previous **1440-DPI** behavior for existing general-library callers.
 - `WindowsLayout::with_printer_dpi(source, NonZeroU32)` accepts an explicit vertical printer resolution. It never queries a host printer.
 - Line pitch rounds the nominal point size to printer pixels, reads the applicable VDMX metrics (or the OS/2 fallback), rounds hhea external leading at that same resolution, then converts the sum back to twips. Fractional twips are retained until downstream geometry decides how to round.
-- PDF positive-height glyph sizing, nominal first-line ascent, Unicode shaping, wrapping, and font fallback retain their previous behavior. In particular the 10 pt Arial cell still selects an 8.95 pt PDF glyph em under the existing 1440-DPI conversion.
+- At this initial checkpoint, PDF positive-height glyph sizing, nominal first-line ascent, Unicode shaping, wrapping, and font fallback retained their previous behavior. In particular the 10 pt Arial cell still selected an 8.95 pt PDF glyph em under the existing 1440-DPI conversion. The follow-up below changes the selected-DPI ascent contract while retaining the separate PDF glyph-cell conversion.
 
 The caller is responsible for resolving an explicit override, a valid stored report resolution, and a deterministic deployment fallback. The STC worker integration and its configuration tests are owned by the coordinating change; this library API by itself does not select a new default for all consumers.
 
@@ -85,3 +89,99 @@ A separate horizontal residual is now established: native Basic-Latin glyph adva
 unkerned, while Rust applies pair kerning (up to 0.64045 pt in the matched English body).
 That investigation is a separate follow-up; the printer-metrics checkpoint does not claim it
 is fixed. PDF descriptor differences also continue to affect text-extraction bounding boxes.
+
+## Follow-up: first-line ascent depends on the native layout path
+
+On 2026-10-17, independent final-PDF review found small uniform baseline errors
+within specific font/size groups, rather than cumulative line-pitch drift. Actual
+font VDMX tables and native PDF text positions identify selected printer DPI
+as a missing first-line-ascent input for particular native layout paths:
+
+| Nominal face and size | Previous 1440-DPI ascent | 600-DPI ascent in twips | Native inferred ascent |
+| --- | ---: | ---: | ---: |
+| Arial Bold, 16 pt | 290 | 295.2, rounded to 295 | 295 |
+| Microsoft Sans Serif, 10 pt | 184 | 184.8, rounded to 185 | 185 |
+| Arial, 11 pt | 197 | 199.2, rounded to 199 | 199 |
+| Times New Roman Bold, 10 pt | 183 | 180 | 180 |
+
+These four matches supersede the earlier blanket statement that first-line ascent
+always stays at 1440 DPI. They do not establish one rule for every object kind.
+The initial follow-up routed ascent through
+`device_metrics(font, false, selected_dpi)`, converted printer pixels to twips and
+rounded to a whole twip. The fresh replay then disproved applying that choice to
+every field: all 54 identified regressions were fixed StandardText fields.
+That correlation did not establish CanGrow or field interpretation as the cause.
+Native copied-template controls now distinguish several paths:
+
+- Changing a short standard-text rating field from fixed height to CanGrow leaves
+  all glyph positions unchanged. CanGrow is not a universal printer-ascent switch.
+- Changing only the same field's reading order from LTR to RTL shifts all 34 rating
+  baselines by +0.05 pt in PDF Y and leaves X unchanged. Changing only its alignment
+  to Right changes X but leaves Y unchanged. Reading order independently selects a
+  different ascent path; right alignment alone does not explain it.
+- Enabling CanGrow on that right-aligned standard field also leaves all 34 ratings
+  at the same X/Y positions. The CanGrow-plus-Right conjunction is likewise not a
+  general switch. Separately, disabling CanGrow on another standard LTR/right field
+  moves only its two runs / 36 glyphs by +0.10 pt in PDF Y. This exception requires
+  more than the CanGrow/right-alignment flags to explain it. Reducing the first
+  grow/right field's authored height from 290 to 200 twips, below its 228-twip line
+  pitch, still moves no glyphs. Height below line pitch alone also fails to explain
+  the exception.
+- Changing a centered LTR string field from RTF to StandardText, with CanGrow still
+  true, moves all 15 short single-line heading baselines by +0.05 pt in PDF Y.
+  Exactly 175 glyphs change Y, with zero X change and no other coordinate changes
+  anywhere in the three-page export. The first baseline is 593.95 then 594.00 pt.
+  This matches printer ascent 168 versus ordinary ascent 167 twips and establishes
+  a separate formatted-text path.
+- An RTF-to-standard toggle on an RTL/right-aligned string field causes no glyph
+  movement. Its existing RTL path prevents this control from isolating formatting.
+  A date field's attempted StandardText-to-RTF setter does not persist in native
+  readback, so that attempted toggle is excluded from conclusions.
+
+The RTF result does not prove HTML behavior, handling of arbitrary rich-text markup,
+or every font/wrapping combination. The bounded investigation stops with the
+standard LTR field's growth-dependent two-twip change unresolved. A universal
+CanGrow, Right, their conjunction, or height-below-pitch heuristic is unsupported
+and must not be used to hide that residual. The evidence supports scoped RTL and
+RTF field paths together with the measured static-text path. Font, size and DPI
+alone do not determine native ascent; implementation and acceptance must retain
+these proven boundaries.
+
+The scoped integration is implemented: `TextLayout::field_ascent_twips` delegates
+to the existing ascent by default, while `WindowsLayout` supplies the legacy
+1440-DPI field ascent. Field layout selects printer ascent only for explicit RTL
+or known RTF interpretation; other field formats retain 1440 DPI. Static-text
+placement retains the selected-printer path. No CanGrow, overflow, language or
+object-name heuristic is part of that boundary. Source integration and fresh
+verification are pending; this paragraph records the agreed implementation scope,
+not a passed replay.
+
+`WindowsLayout::new` still selects 1440 DPI, preserving the general constructor's
+default behavior. The positive-height PDF glyph-cell conversion remains the separate
+1440-DPI policy used after layout. The selected-DPI ascent change does not introduce
+a new line-pitch formula or a new wrapping algorithm. Font resolution and the existing
+fallback path remain in place.
+
+The initial replay and test counts above are historical results for their checkpoint,
+not validation of this follow-up. Fresh output must still verify page allocation,
+line breaks and actual text origins after combining ascent with the horizontal
+measurement changes. See [final text origins](cr-001-text-origins.md) and the
+[parity record](cr-001-parity.md); no final parity result is asserted here.
+
+Numeric evidence is in ignored `cr-001-parity/final/review/` under
+`printer-ascent-evidence.json` and `remaining-residual-classification.md`.
+The controlled exports, saved-property readback and glyph comparisons are retained
+under sibling `ascent-grow-probe/`, `ascent-direction-probe/`, `ascent-format-probe/`
+and `ascent-centered-format-probe/`; later growth controls are in
+`ascent-student-grow-probe/`, `ascent-grow-right-probe/` and
+`ascent-grow-height-probe/`.
+These probes use only private copied templates
+and the frozen DataSet. Original template and snapshot hashes remain unchanged;
+no SQL was executed.
+Only sanitized metrics are recorded in this document; font binaries and report data
+remain private.
+
+Focused verification after integration: 481 Docker tests pass across Page IR, text,
+layout, render and worker packages; this includes the five actual Chinese PDF tests
+and the public reference net. Strict all-target/all-feature workspace Clippy and
+formatting pass. The committed-source fresh pair remains the next comparison gate.

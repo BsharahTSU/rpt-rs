@@ -55,3 +55,36 @@ Implementation: [shared ranges](../../../crates/rpt-text/src/compatibility.rs),
 [worker](../../../apps/stc-render-worker/src/main.rs).
 Private coordinate evidence is in research/stc-verification/cr-001-parity/spacing/review.
 No font binaries, private report data or generated PDFs are committed.
+
+## Follow-up: final alignment width is a separate measurement
+
+The verified unkerned-spacing replay above remains a historical checkpoint. Later
+all-glyph review separated the small painted-advance differences from larger, nearly
+uniform translations of centered/right-aligned runs. Matching kerning alone does not
+establish the final alignment origin.
+
+The current follow-up adds an explicit
+`CosmicLayout::crystal_alignment_width_twips` method. It shapes the effective-size
+line, rounds each glyph advance to integer PDF thousandths of an em, rounds that
+glyph's effective-size advance to a whole twip, then sums those rounded advances.
+Ligatures, combining marks and fallback remain shaped glyphs; the method does not
+sum Unicode character widths or round only the final line total.
+
+The STC worker selects this method after PDF font-cell conversion, only for Center
+or Right alignment with zero rigid character spacing. Ordinary width measurement,
+nominal wrapping and PDF-painted glyph advances keep their existing policies.
+Centered LTR runs exclude terminal U+0020 from final alignment measurement; static
+text retains its emitted trailing glyphs. The separately gated field-emission policy
+is recorded in [trailing whitespace](cr-001-whitespace.md).
+
+The analysis predicted smaller origin errors, with a few already-small cases moving
+by half a twip. The subsequent independent horizontal replay confirms a maximum
+0.05708-point X error across 4,467 matched nonblank glyphs and 0.03332 point across
+the 63 English lines, with shape inventories preserved. These are new measurements;
+the earlier passed checkpoint tests alone did not establish them. A separate native
+control changes reading order alone and shifts the baseline by one twip, whereas
+changing right alignment alone changes X without changing Y. Thus the alignment-width
+correction must remain independent from vertical metric selection. CanGrow alone
+also leaves the tested rating baselines unchanged; it is not a universal switch
+for printer ascent. See [final text origins](cr-001-text-origins.md) for all controls,
+the formula, known tradeoff and pending combined acceptance boundary.

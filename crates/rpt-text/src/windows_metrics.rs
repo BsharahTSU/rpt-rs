@@ -23,7 +23,7 @@ pub struct WindowsFontMetrics {
 }
 
 /// Hinted metrics in device pixels. PDF glyph-cell metrics use 1440 DPI; printer
-/// line pitch may use a different resolution and is converted back to twips.
+/// line pitch and first-line ascent use the selected resolution and convert back to twips.
 #[derive(Debug, Clone, Copy)]
 struct DeviceMetrics {
     em: i32,
@@ -32,6 +32,13 @@ struct DeviceMetrics {
     leading: i32,
 }
 impl DeviceMetrics {
+    #[cfg(any(feature = "cosmic", test))]
+    fn ascent_twips(self, dpi: NonZeroU32) -> f64 {
+        // Native placement rounds the converted printer ascent to a whole twip.
+        // Line pitch separately retains fractional twips until layout consumes it.
+        (f64::from(self.ascent) * f64::from(TWIPS_PER_INCH) / f64::from(dpi.get())).round()
+    }
+
     #[cfg(any(feature = "cosmic", test))]
     fn line_height_twips(self, dpi: NonZeroU32) -> f64 {
         f64::from(self.ascent + self.descent + self.leading) * f64::from(TWIPS_PER_INCH)
@@ -182,10 +189,11 @@ pub struct WindowsLayout {
     inner: crate::CosmicLayout,
     fonts: FontDb,
     printer_dpi: NonZeroU32,
+    trim_trailing_spaces: bool,
 }
 #[cfg(feature = "cosmic")]
 impl WindowsLayout {
-    /// Load nominal layout metrics with the original 1440-DPI line pitch.
+    /// Load nominal layout metrics with the original 1440-DPI pitch and ascent.
     pub fn new(source: crate::FontSource) -> Self {
         const DEFAULT_DPI: NonZeroU32 = NonZeroU32::new(TWIPS_PER_INCH).unwrap();
         Self::with_printer_dpi(source, DEFAULT_DPI)
@@ -198,20 +206,39 @@ impl WindowsLayout {
         self
     }
 
-    /// Use a selected vertical printer resolution for line pitch. This is explicit:
+    /// Remove line-ending U+0020 only when a caller explicitly prepares a complete display line.
+    /// Raw width measurement and wrapping retain their fragment semantics. The layout caller
+    /// currently applies this policy only to centered LTR field objects. Other fields and
+    /// static text can retain trailing space glyphs in native exports.
+    pub fn without_trailing_spaces(mut self) -> Self {
+        self.trim_trailing_spaces = true;
+        self
+    }
+
+    /// Use a selected vertical printer resolution for line pitch and ascent. This is explicit:
     /// no host printer is queried. Resolve saved report settings or deployment
-    /// defaults at the caller. Glyph sizing, first-line ascent and wrapping retain
-    /// their existing behavior; only multiline pitch uses printer-pixel rounding.
+    /// defaults at the caller. Multiline pitch and the ordinary ascent use printer-pixel
+    /// metrics; ascent rounds to whole twips after conversion. The separate field-ascent
+    /// hook retains nominal 1440-DPI metrics for paths without printer-ascent evidence.
+    /// PDF glyph-cell sizing keeps its 1440-DPI contract, and wrapping remains unchanged.
     pub fn with_printer_dpi(source: crate::FontSource, printer_dpi: NonZeroU32) -> Self {
         Self {
             inner: crate::CosmicLayout::new(crate::FontProvider::from_source(source)),
             fonts: source.load(),
             printer_dpi,
+            trim_trailing_spaces: false,
         }
     }
 }
 #[cfg(feature = "cosmic")]
 impl TextLayout for WindowsLayout {
+    fn prepare_line<'a>(&self, text: &'a str) -> &'a str {
+        if self.trim_trailing_spaces {
+            text.trim_end_matches(' ')
+        } else {
+            text
+        }
+    }
     fn width_twips(&self, text: &str, font: &FontSpec) -> f64 {
         self.inner.width_twips(text, font)
     }
@@ -234,8 +261,14 @@ impl TextLayout for WindowsLayout {
     }
     fn ascent_twips(&self, font: &FontSpec) -> f64 {
         self.fonts
+            .device_metrics(font, false, self.printer_dpi)
+            .map(|metrics| metrics.ascent_twips(self.printer_dpi))
+            .unwrap_or_else(|| self.inner.ascent_twips(font))
+    }
+    fn field_ascent_twips(&self, font: &FontSpec) -> f64 {
+        self.fonts
             .windows_metrics(font, false)
-            .map(|m| f64::from(m.ascent))
+            .map(|metrics| f64::from(metrics.ascent))
             .unwrap_or_else(|| self.inner.ascent_twips(font))
     }
     fn substituted_chars(&self, text: &str, font: &FontSpec) -> String {
@@ -327,6 +360,61 @@ mod tests {
     }
 
     #[test]
+    fn printer_ascent_rounds_converted_twips_in_both_directions() {
+        // Synthetic VDMX rows reproduce the independent native-font evidence without
+        // loading proprietary font binaries. Both upward and downward changes matter;
+        // a blanket translation cannot satisfy these cases.
+        let cases = [
+            (16.0, &[(133, 123, 30)][..], 290.0, 295.0),
+            (10.0, &[(83, 77, 18), (200, 184, 42)][..], 184.0, 185.0),
+            (11.0, &[(92, 83, 20), (220, 197, 47)][..], 197.0, 199.0),
+            (10.0, &[(83, 75, 18), (200, 183, 43)][..], 183.0, 180.0),
+        ];
+        let pdf_dpi = NonZeroU32::new(1440).unwrap();
+        let printer_dpi = NonZeroU32::new(600).unwrap();
+        for (size, rows, old_ascent, native_ascent) in cases {
+            let tables = MetricTables {
+                units: 2048.0,
+                win_ascent: 1854.0,
+                win_descent: 434.0,
+                line_gap: 67.0,
+                vdmx: Some(rows),
+            };
+            let ordinary = tables.at_dpi(size, false, pdf_dpi);
+            let printer = tables.at_dpi(size, false, printer_dpi);
+            assert_eq!(ordinary.ascent_twips(pdf_dpi), old_ascent);
+            assert_eq!(
+                ordinary.ascent_twips(pdf_dpi),
+                f64::from(ordinary.ascent),
+                "the 1440-DPI constructor keeps the old integer ascent"
+            );
+            assert_eq!(printer.ascent_twips(printer_dpi), native_ascent);
+        }
+        // Explicitly separate rounding up184.8->185 from truncation, and rounding
+        // down295.2->295 from retaining a fractional baseline.
+        assert_eq!(
+            DeviceMetrics {
+                em: 83,
+                ascent: 77,
+                descent: 18,
+                leading: 0
+            }
+            .ascent_twips(printer_dpi),
+            185.0
+        );
+        assert_eq!(
+            DeviceMetrics {
+                em: 133,
+                ascent: 123,
+                descent: 30,
+                leading: 0
+            }
+            .ascent_twips(printer_dpi),
+            295.0
+        );
+    }
+
+    #[test]
     fn default_dpi_preserves_half_twip_rounding() {
         let tables = MetricTables {
             units: 2048.0,
@@ -387,7 +475,7 @@ fn leading_spaces_are_preserved_without_changing_word_fit() {
 
 #[cfg(all(test, feature = "cosmic"))]
 #[test]
-fn explicit_printer_dpi_preserves_default_layout_and_first_baseline() {
+fn explicit_printer_dpi_preserves_default_layout_and_uses_selected_ascent() {
     let source = crate::FontSource::Bundled;
     let original = WindowsLayout::new(source);
     let explicit = WindowsLayout::with_printer_dpi(source, NonZeroU32::new(1440).unwrap());
@@ -402,7 +490,36 @@ fn explicit_printer_dpi_preserves_default_layout_and_first_baseline() {
         original.line_height_twips(&font),
         explicit.line_height_twips(&font)
     );
-    assert_eq!(original.ascent_twips(&font), printer.ascent_twips(&font));
+    assert_eq!(original.ascent_twips(&font), explicit.ascent_twips(&font));
+    // Field metrics preserve the old nominal-1440 route even when printer ascent differs.
+    for layout in [&original, &explicit, &printer] {
+        assert_eq!(
+            layout.field_ascent_twips(&font),
+            original.ascent_twips(&font)
+        );
+    }
+    let printer_dpi = NonZeroU32::new(600).unwrap();
+    let device_ascent = printer
+        .fonts
+        .device_metrics(&font, false, printer_dpi)
+        .unwrap()
+        .ascent;
+    assert_eq!(
+        printer.ascent_twips(&font),
+        (f64::from(device_ascent) * 1440.0 / 600.0).round()
+    );
+    // The public glyph-cell API remains the 1440-DPI path regardless of which
+    // printer resolution the layout object selects.
+    let cell = |layout: &WindowsLayout| {
+        let metrics = layout.fonts.windows_metrics(&font, true).unwrap();
+        (
+            metrics.em_twips,
+            metrics.ascent,
+            metrics.descent,
+            metrics.leading,
+        )
+    };
+    assert_eq!(cell(&original), cell(&printer));
     assert_eq!(
         original.width_twips(text, &font),
         printer.width_twips(text, &font)
@@ -411,5 +528,45 @@ fn explicit_printer_dpi_preserves_default_layout_and_first_baseline() {
     assert_eq!(
         original.wrap(text, width, &font),
         printer.wrap(text, width, &font)
+    );
+}
+
+#[cfg(all(test, feature = "cosmic"))]
+#[test]
+fn trailing_ascii_space_preparation_is_opt_in_and_keeps_fragment_metrics() {
+    let ordinary = WindowsLayout::new(crate::FontSource::Bundled);
+    let compatibility = WindowsLayout::new(crate::FontSource::Bundled).without_trailing_spaces();
+    let font = FontSpec {
+        family: "Liberation Sans".into(),
+        size_pt: 10.0,
+        ..Default::default()
+    };
+    for (input, expected) in [
+        ("  alpha  beta  ", "  alpha  beta"),
+        ("   ", ""),
+        ("", ""),
+        ("中文 ", "中文"),
+        ("مرحبا ", "مرحبا"),
+        ("a\u{a0} ", "a\u{a0}"),
+        ("a\u{a0}", "a\u{a0}"),
+        ("a\t ", "a\t"),
+        ("a \t", "a \t"),
+        ("a\n", "a\n"),
+        ("a\r", "a\r"),
+    ] {
+        assert_eq!(ordinary.prepare_line(input), input);
+        assert_eq!(compatibility.prepare_line(input), expected);
+    }
+    assert_eq!(
+        ordinary.width_twips("AAA  ", &font),
+        compatibility.width_twips("AAA  ", &font)
+    );
+    assert_eq!(
+        ordinary.line_height_twips(&font),
+        compatibility.line_height_twips(&font)
+    );
+    assert_eq!(
+        ordinary.ascent_twips(&font),
+        compatibility.ascent_twips(&font)
     );
 }

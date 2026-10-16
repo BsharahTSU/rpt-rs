@@ -357,7 +357,8 @@ fn run(input: Input) -> Result<Json, String> {
         &dataset,
         Box::new(
             rpt_text::WindowsLayout::with_printer_dpi(FontSource::System, printer_dpi)
-                .without_latin_kerning(),
+                .without_latin_kerning()
+                .without_trailing_spaces(),
         ),
         render_locale()?,
         Some(&scope),
@@ -372,6 +373,7 @@ fn run(input: Input) -> Result<Json, String> {
     // heights. Apply that conversion only after wrapping/pagination, keeping the
     // nominal baselines. This policy belongs to this compatibility adapter.
     let fonts = FontSource::System.load();
+    let alignment = rpt_text::CosmicLayout::with_system_fonts().without_latin_kerning();
     for op in document.pages.iter_mut().flat_map(|p| &mut p.ops) {
         if let DrawOp::Text(text) = op {
             if let Some(metrics) = fonts.windows_metrics(&text.font, true) {
@@ -379,7 +381,25 @@ fn run(input: Input) -> Result<Json, String> {
                 let ratio = size / text.font.size_pt;
                 text.font.size_pt = size;
                 if let Some(m) = &mut text.metrics {
-                    m.advance.0 = (m.advance.0 as f32 * ratio).round() as i32;
+                    m.advance.0 = if text.character_spacing.0 == 0
+                        && matches!(
+                            text.align,
+                            rpt_pages::TextAlign::Center | rpt_pages::TextAlign::Right
+                        ) {
+                        // Native alignment uses integer PDF widths and rounds each shaped
+                        // glyph on the 1440 logical grid. Do not change nominal wrapping or
+                        // the PDF's drawn advances. Centered LTR static text retains its
+                        // trailing glyphs but excludes those spaces from the alignment width.
+                        let measured =
+                            if matches!(text.align, rpt_pages::TextAlign::Center) && !text.rtl {
+                                text.text.trim_end_matches(' ')
+                            } else {
+                                &text.text
+                            };
+                        alignment.crystal_alignment_width_twips(measured, &text.font) as i32
+                    } else {
+                        (m.advance.0 as f32 * ratio).round() as i32
+                    };
                 }
             }
         }

@@ -168,6 +168,28 @@ impl CosmicLayout {
         self
     }
 
+    /// Measure final Crystal PDF alignment after selecting the effective font cell size.
+    /// Each shaped glyph advance is rounded to PDF thousandths of an em, then to a whole
+    /// twip, before summing. Ligatures, zero-advance marks and fallback faces remain shaped.
+    /// This is an explicit compatibility measure; ordinary widths, wrapping and painted
+    /// advances are unchanged. Pass already prepared single-line text and an effective
+    /// font size on the whole-twip grid. Rigid character spacing is not included.
+    pub fn crystal_alignment_width_twips(&self, text: &str, font: &FontSpec) -> f64 {
+        self.shaped(text, font, None)
+            .layout_runs()
+            .map(|run| {
+                run.glyphs
+                    .iter()
+                    .map(|glyph| {
+                        let em_twips = f64::from((glyph.font_size * TWIPS_PER_PT as f32).round());
+                        let advance_em = f64::from(glyph.w / glyph.font_size);
+                        crystal_glyph_advance_twips(advance_em, em_twips)
+                    })
+                    .sum::<f64>()
+            })
+            .fold(0.0, f64::max)
+    }
+
     /// Convenience: OS fonts only.
     pub fn with_system_fonts() -> CosmicLayout {
         CosmicLayout::new(FontProvider::system())
@@ -294,6 +316,12 @@ impl CosmicLayout {
     }
 }
 
+// Match the native exporter's integer /Widths before its logical-device measurement.
+// Rounding only the final sum, or skipping PDF1000 normalization, changes alignment.
+fn crystal_glyph_advance_twips(advance_em: f64, em_twips: f64) -> f64 {
+    ((advance_em * 1000.0).round() * em_twips / 1000.0).round()
+}
+
 impl TextLayout for CosmicLayout {
     fn width_twips(&self, text: &str, font: &FontSpec) -> f64 {
         let buffer = self.shaped(text, font, None);
@@ -394,6 +422,53 @@ mod tests {
             size_pt: size,
             ..FontSpec::default()
         }
+    }
+
+    #[test]
+    fn crystal_alignment_quantizes_pdf_width_before_each_device_advance() {
+        // A 1023-unit glyph in a 2048-unit face rounds to PDF width 500. At an
+        // odd 177-twip em it occupies 89 device twips, not the direct-round 88.
+        let advance = 1023.0 / 2048.0;
+        assert_eq!(crystal_glyph_advance_twips(advance, 177.0), 89.0);
+        assert_eq!((advance * 177.0).round(), 88.0);
+        assert_eq!(crystal_glyph_advance_twips(0.0, 177.0), 0.0);
+        assert_eq!(crystal_glyph_advance_twips(0.5, 179.0), 90.0);
+    }
+
+    #[test]
+    fn crystal_alignment_sums_rounded_shaped_glyphs_without_changing_normal_widths() {
+        let layout = CosmicLayout::new(FontProvider::bundled()).without_latin_kerning();
+        let spec = FontSpec {
+            family: "Liberation Sans".into(),
+            size_pt: 10.0,
+            ..Default::default()
+        };
+        let original = layout.width_twips("iiii", &spec);
+        // Bundled Liberation Sans i has PDF width 222, M width 833.
+        assert_eq!(layout.crystal_alignment_width_twips("iiii", &spec), 176.0);
+        assert_eq!(layout.crystal_alignment_width_twips("MMMM", &spec), 668.0);
+        assert_ne!(
+            original.round(),
+            176.0,
+            "rounding the sum must not reproduce per-glyph rounding"
+        );
+        assert_eq!(layout.width_twips("iiii", &spec), original);
+        let arabic = FontSpec {
+            family: "DejaVu Sans".into(),
+            size_pt: 10.0,
+            ..Default::default()
+        };
+        let shaped = layout.shaped("لا", &arabic, None);
+        assert_eq!(
+            shaped.layout_runs().map(|r| r.glyphs.len()).sum::<usize>(),
+            1,
+            "exercise a real joined ligature"
+        );
+        assert_eq!(
+            layout.crystal_alignment_width_twips("لا", &arabic),
+            layout.crystal_alignment_width_twips("لَا", &arabic),
+            "zero-advance marks must not add alignment width"
+        );
     }
 
     #[test]

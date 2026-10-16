@@ -19,6 +19,14 @@ pub const TWIPS_PER_PT: f64 = 20.0;
 /// Measures and line-breaks text for the layout engine, in twips. Implementors range from the
 /// dependency-free [`ApproxLayout`] to a full shaping stack (`rpt-text::CosmicLayout`).
 pub trait TextLayout: std::fmt::Debug {
+    /// Prepare a complete display line before measuring and emitting it. The default preserves
+    /// every character. A caller chooses which object kinds support an opt-in compatibility rule.
+    /// Never apply this to internal measurement fragments, such as segments before a tab: spaces
+    /// there are not at the end of the complete line. An empty result still occupies its line.
+    fn prepare_line<'a>(&self, text: &'a str) -> &'a str {
+        text
+    }
+
     /// Width of a single line of `text` in `font`, in twips.
     fn width_twips(&self, text: &str, font: &FontSpec) -> f64;
 
@@ -33,6 +41,13 @@ pub trait TextLayout: std::fmt::Debug {
     /// resolved face's ascent so text sits on the same baseline across every backend.
     fn ascent_twips(&self, font: &FontSpec) -> f64 {
         font.size_pt as f64 * TWIPS_PER_PT * 0.8
+    }
+
+    /// Baseline offset for the ordinary field-rendering path. The default follows the regular
+    /// ascent, preserving existing implementors. A compatibility stack can supply distinct field
+    /// metrics; the layout caller selects verified formatted/RTL paths with `ascent_twips` instead.
+    fn field_ascent_twips(&self, font: &FontSpec) -> f64 {
+        self.ascent_twips(font)
     }
 
     /// Break `text` into display lines that each fit `max_width` twips in `font`. Explicit newlines
@@ -121,6 +136,24 @@ mod tests {
         FontSpec {
             size_pt: size,
             ..FontSpec::default()
+        }
+    }
+
+    #[test]
+    fn default_line_preparation_is_identity() {
+        for text in ["  alpha  ", "   ", "中文 ", "مرحبا ", "a\t", "a\u{a0}"] {
+            assert_eq!(ApproxLayout.prepare_line(text), text);
+        }
+    }
+
+    #[test]
+    fn default_field_ascent_follows_the_existing_object_safe_contract() {
+        let layout: &dyn TextLayout = &ApproxLayout;
+        for size in [8.0, 10.5, 16.0] {
+            assert_eq!(
+                layout.field_ascent_twips(&font(size)),
+                layout.ascent_twips(&font(size))
+            );
         }
     }
 

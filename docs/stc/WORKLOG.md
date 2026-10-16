@@ -179,3 +179,35 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   decoder parity tests: 1,630 total, zero failed/ignored. Includes all five Chinese
   PDF tests, JSON/KDL checks and public PDF reference fixtures. No live DB configured.
 - Strict workspace Clippy (all targets/features, warnings denied) and formatting pass.
+
+## 2026-10-17 - Checkpoint 4f: final text origins
+
+- Independent review of the fresh pair at `3683e20` found three remaining measured
+  causes: centered-field trailing whitespace, first-line printer ascent, and final
+  per-glyph alignment measurement. Acceptance stayed open while native probes and
+  all-glyph coordinate classification distinguished these from font rasterization.
+- The centered LTR field omits trailing ASCII spaces before measurement/emission.
+  Left/right and centered RTL fields retain their text; static centered LTR text
+  keeps trailing glyphs while excluding them from its final alignment measurement.
+  Leading/internal spaces, blank lines, tabs and NBSP retain their existing semantics.
+- Selected printer DPI controls ascent for static text, explicit RTL fields and known RTF fields, rounded to whole twips; other fields retain prior nominal ascent.
+  This supersedes checkpoint 4a's first-ascent preservation policy, not its measured
+  rating-baseline results. The ordinary 1440-DPI default and PDF cell sizing remain.
+- Final Center/Right alignment with zero character spacing rounds each shaped advance
+  to PDF thousandths, then effective-font twips, before summing. Wrapping and painted
+  advances retain their earlier behavior. Ligatures and zero-advance marks are tested.
+- Focused Docker checks pass: 361 layout, 18 Page IR, 27 text, 12 worker and 12 minimal
+  text tests. A page-total fixture initially omitted the existing reserved sign cell;
+  corrected expectations now explicitly retain it while verifying the late suffix fix.
+- Render integration checks, strict linting and independent replay measurements are
+  in progress. [Current acceptance](coverage/cr-001-parity.md) owns the final results.
+- Universal printer ascent was rejected after 54 field-run regressions. Controlled
+  native probes establish RTL and RTF paths; CanGrow, Right alignment, their
+  conjunction and a short box are insufficient general rules. Synthetic guards
+  retain old field ascent for unverified formats and those negative cases.
+- Two standard-field runs / 36 glyphs retain a documented 0.10-pt native baseline
+  exception. No report/object-specific offset is introduced. The scoped repair
+  remains a recoverable checkpoint while committed-source comparison is prepared.
+- Scoped checkpoint verification passes 481 Docker tests (19 Page IR, 27 text, 367 layout,
+  56 render, 12 worker), including five Chinese PDF tests. Strict workspace Clippy and
+  formatting pass; worker rebuilt. The earlier minimal-feature text run passed12.

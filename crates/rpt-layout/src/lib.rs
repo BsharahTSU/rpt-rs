@@ -800,6 +800,14 @@ impl<'a> Formatter<'a> {
                         .replacen(&render(fx.provisional_total), &render(total), 1)
                 }
             };
+            let text = if matches!(&fx.kind, PageCountFixupKind::Field(_))
+                && matches!(run.align, TextAlign::Center)
+                && !run.rtl
+            {
+                self.text_layout.prepare_line(&text).to_owned()
+            } else {
+                text
+            };
             if let Some(m) = run.metrics.as_mut() {
                 m.advance = Twips(crate::text::spaced_width_twips(
                     self.text_layout,

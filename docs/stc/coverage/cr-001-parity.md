@@ -9,17 +9,21 @@ uses the previously captured, schema-bearing DataSet; no SQL is executed during 
 
 | Difference | Verified cause | Fix |
 | --- | --- | --- |
-| Missing final subgroup heading on page 1; growing row drift | Printer line pitch measured at 1440 DPI instead of stored 600 DPI | Decode saved X/Y resolution; use printer-pixel pitch while preserving glyph cells and first baselines |
+| Missing final subgroup heading on page 1; growing row drift | Printer line pitch measured at 1440 DPI instead of stored 600 DPI | Decode saved X/Y resolution; use printer-pixel pitch while preserving PDF glyph cells |
 | Small English letter-spacing differences | Rust applied pair kerning; native uses unkerned advances | Shared opt-in Basic-Latin policy for measurement, wrapping and PDF shaping |
 | Signature rules 1.5 pt too high | Native text/field borders sit outside selected object edges | Apply 30-twip outward padding to ordinary SingleLine frames; preserve isolated edge endpoints |
 | Standalone rules 0.25 pt off at 0.5 pt thickness | Native coordinates anchor stroke edges, while PDF paths anchor centers | Offset the path by half its width on the perpendicular axis |
 | Terminal Arabic period on the wrong side | Reader dropped the stored paragraph reading-order field | Preserve optional per-paragraph direction and carry it through wrapping to PDF operations |
 | Arabic shadda marks vertically mirrored | Native Crystal reverses ScriptPlace vertical offsets | Opt-in Arabic-cluster offset sign compatibility, preserving other scripts and all glyph advances |
+| Centered Arabic field about 1.025 pt left of Crystal | Rust includes a trailing ASCII space in its centering width; native omits it | Opt-in centered-LTR field preparation; preserve leading/internal spaces and unverified field directions |
+| First-line offsets in static, RTL and RTF text up to 0.25 pt | Native uses a separate printer-ascent path for these objects | Use selected-printer ascent for measured paths; preserve prior nominal ascent for other fields and preserve PDF cell sizing |
+| Remaining centered/right text-origin offsets | Native rounds each shaped advance through PDF thousandths and whole twips before summing | Measure alignment after effective font selection; nominal wrapping and painted advances stay unchanged |
 | Rounded outer frames 0.25 / 0.50 pt outside native centers | Native box bounds contain the full stroke | Inset ordinary unfilled circular rounded frames by half the stroke width, including spanning fragments |
 
 Detailed evidence, numeric probes, implementation contracts and regression coverage:
 [printer metrics](cr-001-metrics.md), [spacing](cr-001-spacing.md),
-[geometry](cr-001-geometry.md), [Arabic direction and marks](cr-001-arabic.md).
+[geometry](cr-001-geometry.md), [Arabic direction and marks](cr-001-arabic.md),
+[trailing-space alignment](cr-001-whitespace.md), [final text origins](cr-001-text-origins.md).
 
 The earlier large baseline estimate from text-extraction bounding boxes was partly a
 font-descriptor artifact. Actual first rating baselines already matched. The repair does
@@ -35,13 +39,29 @@ glyph deviation falls from 0.64045 to 0.05832 pt. All 2,015 non-ASCII glyphs ret
 text and positions across the spacing correction alone. Subsequent actual glyph-outline
 review identified and repaired separate Arabic punctuation and mark-placement defects.
 
-Final regression coverage is 1,630 passing Rust tests: the final workspace sweep
-passed 1,590 tests and reused the 40 unchanged decoder parity tests that had just passed
-in the focused reader run. Zero tests failed or were ignored. This includes all five
-Chinese PDF tests, Arabic/mixed-script tests, 154-report JSON baselines, KDL smoke checks
-and the nine-fixture / 15-page PDF reference net. Live database tests were not configured;
-this repair performs no SQL. Strict workspace Clippy (all targets/features, warnings denied) and formatting pass.
-Fresh-pair acceptance follows below.
+At checkpoint `3683e20`, the full regression sweep covered 1,630 passing Rust tests:
+1,590 workspace tests plus the 40 just-passed unchanged reader parity tests. Zero
+failed or ignored; included five Chinese PDF tests, 154-report JSON baselines, KDL
+and the nine-fixture / 15-page PDF reference net. No live database was configured.
+
+Independent review then found the final text-origin issues described above. The
+intermediate horizontal fix is measured across all 4,467 nonblank glyphs and all
+216 centered/right-aligned runs: maximum X difference is 0.05708 pt, down from
+1.025 pt. All 63 English line breaks remain, with maximum glyph-X error 0.03332 pt.
+The existing Chinese PDF profile now exercises the final alignment measurement
+through actual PDF generation/extraction as well as printer/Arabic compatibility.
+
+The first universal printer-ascent attempt regressed 54 field runs and was rejected.
+Controlled native copies prove separate RTL and RTF paths; growth, alignment, their
+conjunction and a short box do not provide a universal rule. The narrow implementation
+retains the prior ascent for other fields, with explicit regressions for these guards.
+Two repeated standard-field runs (36 glyphs) still have a 0.10-pt baseline difference;
+their CanGrow-dependent native behavior remains unexplained. Do not hide it with an
+object name, language guess or blanket translation. Details and rejected hypotheses
+are recorded in [final text origins](cr-001-text-origins.md).
+
+The scoped integration passes 481 focused Docker tests across Page IR, text, layout, render and worker packages, including all five Chinese tests and the public PDF reference net. Strict all-target/all-feature workspace Clippy and formatting pass. The minimal-feature text suite previously passed 12 tests. Regenerated committed-source
+PDFs and all-page review follow at the next checkpoint. CR-001 acceptance remains open.
 
 ## Reproduction and evidence handling
 
