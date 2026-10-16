@@ -41,5 +41,8 @@ unchanged full suite on every case. Chinese regression coverage remains part of 
 
 ## Inventory status
 
-Source and SQL discovery are in progress. No broad coverage or new report-family parity is claimed yet.
-The existing evaluation sample is a prior checkpoint, not proof of the inventory to be assembled here.
+Source and SQL discovery are complete for the documented local scope: 38 AAJ case groups, three
+ready evaluation groups and 98 candidate students. Other local copies are metadata-only evidence;
+external Gradebook and authenticated API/UI delivery remain open. Read the [surface inventory](parent-surfaces.md),
+[SQL findings](sql-eligibility.md), [isolated runner](case-runner.md), and [clock fix](clock-parity.md).
+Actual case exports and parity are separate subsequent checkpoints.

@@ -37,3 +37,26 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   7 launcher checks, 39 adapter checks, 10 worker tests; strict worker Clippy and formatting passed.
 - Normal worker/adapter binaries rebuilt. No database or PDF generation for this fix.
 - Details and reproduction: [clock parity](coverage/clock-parity.md).
+
+## 2026-10-16 - Checkpoint 2b: Parent inventory and isolated-case harness
+
+- Source review traced three fixed AAJ Crystal templates and dynamic evaluation RPT policies in
+  AAJ/GOPS/BAS/TerraSanta; external Gradebook remains an unverified separate application.
+- Read-only SQL inventory found 38 grouped cases across eight configured/local AAJ templates and
+  246 current students in those cohorts. Three first-term evaluation groups have 98 ready candidates
+  (27 / 33 / 38). Other cases are retained with publication, empty-data or configuration blockers.
+- The standard AAJ procedure updates grade-related tables. No execution was attempted on live data;
+  a disposable database is required for faithful standard-case testing. Other local copies were
+  metadata-only discovery: 51 school databases, 19 source profiles, no remote servers contacted.
+- Added one-case capture/native-live/native-frozen/Docker-Rust runner and generic PDF inspection.
+  Actual worker/adapter/template/snapshot hashes, scoped rows and culture/clock are recorded privately.
+  Fresh run directories and owned-container cleanup prevent stale exports from becoming passes.
+- Review caught and corrected UTF-8 and subprocess-exit handling under Windows PowerShell 5.1.
+- Validation: 12 synthetic harness checks passed in PowerShell 7 and 5.1; three Python comparison
+  regressions passed in Docker. Inventory completed in about eight seconds; scripts parsed and
+  private outputs are ignored. No PDFs generated at this checkpoint.
+- Prepared private manifests for one eligible representative in each ready group. The established
+  reference student is retained for the third template. Next: render each case sequentially and
+  record actual native export, frozen replay, Rust diagnostics and all-page visual findings.
+- Details: [surfaces](coverage/parent-surfaces.md), [SQL](coverage/sql-eligibility.md),
+  [runner](coverage/case-runner.md).
