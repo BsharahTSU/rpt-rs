@@ -7,12 +7,25 @@ param(
     [string]$TemplateRoot,
     [string]$FontDirectory,
     [switch]$DebugPageIr,
+    [string]$AsOfLocal,
     [string]$Image = 'stc-rpt-rs:bridge-dev'
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 if ($RequestFile -and ($Build -or $Test)) { throw 'Run build/test separately so request stdout stays JSON only.' }
+# Reject an explicit malformed replay clock before Docker or SQL work. The normal request
+# captures DateTime.Now in the caller's zone, independently of the container's clock zone.
+$clockFormat = "yyyy-MM-dd'T'HH:mm:ss"
+$hasClockOverride = $PSBoundParameters.ContainsKey('AsOfLocal')
+if ($hasClockOverride) {
+    $parsedClock = [DateTime]::MinValue
+    if (-not [DateTime]::TryParseExact($AsOfLocal, $clockFormat, [Globalization.CultureInfo]::InvariantCulture,
+            [Globalization.DateTimeStyles]::None, [ref]$parsedClock) -or
+        $parsedClock.ToString($clockFormat, [Globalization.CultureInfo]::InvariantCulture) -cne $AsOfLocal) {
+        throw 'Invalid AsOfLocal; expected yyyy-MM-ddTHH:mm:ss without an offset.'
+    }
+}
 if ((& docker info --format '{{.OSType}}') -ne 'linux') { throw 'The Docker Linux engine is required.' }
 if ($Build) {
     & (Join-Path $PSScriptRoot 'Invoke-DockerCargo.ps1') -Build -CargoArgs @('build', '--locked', '-p', 'stc-render-worker')
@@ -23,6 +36,7 @@ if ($Build) {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 if ($Test) {
+    & (Join-Path $PSScriptRoot 'Test-ClockContract.ps1')
     & docker run --rm --mount "type=bind,source=$repoRoot,target=/src" --mount 'type=volume,source=stc-rpt-bridge-nuget,target=/root/.nuget/packages' -w /src/bridge/Stc.CrystalBridge.Tests mcr.microsoft.com/dotnet/sdk:10.0 dotnet run --nologo
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & (Join-Path $PSScriptRoot 'Invoke-DockerCargo.ps1') -CargoArgs @('test', '--locked', '-p', 'stc-render-worker')
@@ -40,6 +54,8 @@ if ($RequestFile) {
         '--mount', 'type=volume,source=stc-rpt-rs-target,target=/target,readonly',
         '-e', 'PARENT_REPORTS_CRYSTAL_TEMP_ROOT=/work', '-e', 'PARENT_REPORTS_CRYSTAL_TEMPLATE_ROOT=/reports',
         '-e', 'STC_RPT_WORKER=/target/debug/stc-rpt-worker')
+    $localClock = if ($hasClockOverride) { $AsOfLocal } else { [DateTime]::Now.ToString($clockFormat, [Globalization.CultureInfo]::InvariantCulture) }
+    $dockerArgs += @('-e', ('STC_RPT_LOCAL_DATETIME=' + $localClock))
     $culture = Get-Culture
     $dockerArgs += @('-e', ('STC_RPT_LOCALE=' + $culture.Name), '-e', ('STC_RPT_SHORT_DATE=' + $culture.DateTimeFormat.ShortDatePattern))
     if ($FontDirectory) { $dockerArgs += @('--mount', "type=bind,source=$([IO.Path]::GetFullPath($FontDirectory)),target=/usr/local/share/fonts/windows,readonly") }

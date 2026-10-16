@@ -1,9 +1,10 @@
 //! Prepared-data renderer. SQL credentials stay in the adapter and never enter this process.
 mod params;
 use rpt_data::{
-    cell_to_value_reporting, Cell, Column, EmptySource, Row, RowData, RowSource, ScopeData,
+    cell_to_value_reporting, Cell, Column, DateTimeSpecials, EmptySource, Row, RowData, RowSource,
+    ScopeData,
 };
-use rpt_formula::eval::Value;
+use rpt_formula::eval::{Date, Time, Value};
 use rpt_pages::{DiagnosticKind, DrawOp, PagedDocument};
 use rpt_reader::model::{FieldValueType, Report};
 use rpt_render::{FontSource, PdfOptions, ReportDocument};
@@ -21,6 +22,9 @@ struct Input {
     report_path: String,
     output_path: String,
     export_format: String,
+    // A captured local wall-clock value, with no UTC conversion. Older prepared inputs omit it.
+    #[serde(default)]
+    as_of_local: Option<String>,
     columns: Vec<InputColumn>,
     rows: Vec<Vec<Option<InputCell>>>,
     query_params: BTreeMap<String, Json>,
@@ -166,6 +170,70 @@ fn accept_document(document: &PagedDocument) -> Result<(), String> {
     }
     Ok(())
 }
+// Host wall-clock fields are explicit because Docker may use a different time zone.
+// This is a naive calendar value; do not interpret it as UTC or apply an offset.
+fn parse_local_clock(value: &str) -> Result<DateTimeSpecials, String> {
+    let error =
+        || "Invalid local render clock; expected yyyy-MM-ddTHH:mm:ss without an offset".to_string();
+    let bytes = value.as_bytes();
+    if bytes.len() != 19
+        || bytes.iter().enumerate().any(|(index, byte)| match index {
+            4 | 7 => *byte != b'-',
+            10 => *byte != b'T',
+            13 | 16 => *byte != b':',
+            _ => !byte.is_ascii_digit(),
+        })
+    {
+        return Err(error());
+    }
+    let pair = |index: usize| (bytes[index] - b'0') * 10 + bytes[index + 1] - b'0';
+    let year = i32::from(pair(0)) * 100 + i32::from(pair(2));
+    let date = Date::new(year, pair(5), pair(8));
+    let time = Time::new(pair(11), pair(14), pair(17));
+    if year < 1
+        || !(1..=12).contains(&date.month)
+        || !(1..=31).contains(&date.day)
+        || Date::from_days(date.to_days()) != date
+        || time.hour > 23
+        || time.minute > 59
+        || time.second > 59
+    {
+        return Err(error());
+    }
+    Ok(DateTimeSpecials::new(date, time))
+}
+
+fn resolve_render_clock(
+    prepared: Option<&str>,
+    environment: Option<&str>,
+    fallback: DateTimeSpecials,
+) -> Result<DateTimeSpecials, String> {
+    match prepared.or(environment) {
+        Some(value) => parse_local_clock(value),
+        // Backward compatibility for standalone worker inputs. Normal bridge calls always pass
+        // captured DateTime.Now or the host launcher's explicit local clock.
+        None => Ok(fallback),
+    }
+}
+
+fn render_clock(prepared: Option<&str>) -> Result<DateTimeSpecials, String> {
+    if let Some(value) = prepared {
+        return parse_local_clock(value);
+    }
+    let environment = match std::env::var("STC_RPT_LOCAL_DATETIME") {
+        Ok(value) => Some(value),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(std::env::VarError::NotUnicode(_)) => {
+            return Err("Invalid local render clock encoding".into())
+        }
+    };
+    resolve_render_clock(
+        prepared,
+        environment.as_deref(),
+        rpt_render::default_as_of(),
+    )
+}
+
 fn render_locale() -> Result<rpt_render::Locale, String> {
     let tag = std::env::var("STC_RPT_LOCALE").unwrap_or_else(|_| "en-US".into());
     let pattern = std::env::var("STC_RPT_SHORT_DATE").ok();
@@ -221,6 +289,7 @@ fn run(input: Input) -> Result<Json, String> {
     if !matches!(input.export_format.as_str(), "pdf" | "page_ir") {
         return Err("Unsupported export format".into());
     }
+    let as_of = render_clock(input.as_of_local.as_deref())?;
     let report = ReportDocument::load(&input.report_path).map_err(|e| e.to_string())?;
     let source = prepare(report.report(), &input)?;
     let mut model = report.report().clone();
@@ -234,7 +303,6 @@ fn run(input: Input) -> Result<Json, String> {
         input: &input,
         failures: RefCell::new(Vec::new()),
     };
-    let as_of = rpt_render::default_as_of();
     let sink = rpt_data::CollectingSink::new();
     let dataset = rpt_data::build_dataset_opts(
         &source,
@@ -327,6 +395,87 @@ fn main() {
 mod tests {
     use super::*;
     use rpt_pages::{Diagnostic, Page, PageSize};
+    #[test]
+    fn captured_local_clock_keeps_next_day_near_midnight_for_formula_specials() {
+        // 00:15 in UTC+03 is still 21:15 on the previous UTC date.
+        let utc = DateTimeSpecials::new(Date::new(2026, 10, 15), Time::new(21, 15, 7));
+        let local = resolve_render_clock(Some("2026-10-16T00:15:07"), None, utc).unwrap();
+        assert_ne!(local, utc);
+        let registry = rpt_data::FormulaRegistry::new().with_datetime(local);
+        let row = Row::default();
+        let context = rpt_data::DataContext::new(&row, &registry);
+        for (formula, expected) in [
+            ("CurrentDate", Value::Date(Date::new(2026, 10, 16))),
+            ("Today", Value::Date(Date::new(2026, 10, 16))),
+            ("CurrentTime", Value::Time(Time::new(0, 15, 7))),
+            (
+                "CurrentDateTime",
+                Value::DateTime(Date::new(2026, 10, 16), Time::new(0, 15, 7)),
+            ),
+        ] {
+            let (ast, diagnostics) = rpt_formula::parse(formula, rpt_formula::Syntax::Crystal);
+            assert!(diagnostics.is_empty());
+            assert_eq!(rpt_formula::eval::eval(&ast, &context).unwrap(), expected);
+        }
+    }
+
+    #[test]
+    fn frozen_prepared_clock_wins_and_older_inputs_keep_their_fallback() {
+        let fallback = DateTimeSpecials::new(Date::new(2026, 10, 15), Time::new(21, 15, 7));
+        let frozen = parse_local_clock("2024-02-29T23:59:59").unwrap();
+        assert_eq!(
+            resolve_render_clock(Some("2024-02-29T23:59:59"), Some("malformed"), fallback).unwrap(),
+            frozen
+        );
+        assert_eq!(
+            resolve_render_clock(None, Some("2024-02-29T23:59:59"), fallback).unwrap(),
+            frozen
+        );
+        assert_eq!(
+            resolve_render_clock(None, None, fallback).unwrap(),
+            fallback
+        );
+        assert!(resolve_render_clock(Some(""), Some("2024-02-29T23:59:59"), fallback).is_err());
+        let old: Input = serde_json::from_value(
+            json!({ "report_path": "x.rpt", "output_path": "x.pdf", "export_format": "pdf",
+            "columns": [], "rows": [], "query_params": {}, "report_variables": {} }),
+        )
+        .unwrap();
+        assert!(old.as_of_local.is_none());
+    }
+
+    #[test]
+    fn malformed_local_clocks_fail_instead_of_normalizing_or_converting() {
+        for value in [
+            "",
+            "2026-02-29T00:00:00",
+            "1900-02-29T00:00:00",
+            "2026-04-31T00:00:00",
+            "2026-00-01T00:00:00",
+            "2026-13-01T00:00:00",
+            "2026-01-00T00:00:00",
+            "0000-01-01T00:00:00",
+            "2026-10-16T24:00:00",
+            "2026-10-16T00:60:00",
+            "2026-10-16T00:00:60",
+            "2026-10-16 00:00:00",
+            "2026-10-16T00:00:00Z",
+            "2026-10-16T00:00:00+03:00",
+            "2026-10-16T00:00:00.000",
+            "2026-1-16T00:00:00",
+            "２０２６-10-16T00:00:00",
+        ] {
+            assert!(parse_local_clock(value).is_err(), "accepted {value:?}");
+        }
+        for value in [
+            "0001-01-01T00:00:00",
+            "2000-02-29T00:00:00",
+            "9999-12-31T23:59:59",
+        ] {
+            assert!(parse_local_clock(value).is_ok(), "rejected {value:?}");
+        }
+    }
+
     #[test]
     fn printer_rounding_preserves_custom_sizes_and_pdf_coordinates() {
         let mut report = Report::default();

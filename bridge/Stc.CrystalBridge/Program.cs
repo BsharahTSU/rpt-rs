@@ -15,12 +15,13 @@ internal static class Program
             var request = Contract.ReadRequest(args, new JsonCodec(), ref typed);
             code = "render_failed";
             if (request.ExportFormat != "pdf") throw new NotSupportedException("BIFF/XLS export is not implemented in this experimental adapter.");
+            string localClock = CaptureLocalClock(); // Validate overrides before any SQL work.
             using var data = DataAccess.Load(request);
             var table = data.Tables[0]; // Same first-table binding for main report and subreports.
             scratch = request.OutputPath + "." + Guid.NewGuid().ToString("N") + ".partial";
             var prepared = new {
                 report_path = request.ReportPath, output_path = scratch,
-                export_format = request.ExportFormat,
+                export_format = request.ExportFormat, as_of_local = localClock,
                 columns = table.Columns.Cast<DataColumn>().Select(c => new { name = c.ColumnName, value_type = ValueType(c.DataType) }),
                 rows = table.Rows.Cast<DataRow>().Select(r => r.ItemArray.Select(Cell)),
                 query_params = request.QueryParams, report_variables = request.ReportVariables
@@ -51,6 +52,18 @@ internal static class Program
             if (scratch != null)
                 try { File.Delete(scratch); } catch (Exception e) { Console.Error.WriteLine("Export cleanup failed: " + e.Message); }
         }
+    }
+    // A naive local calendar value matches Crystal's CurrentDate/CurrentTime semantics. The
+    // launcher captures Windows host time; direct adapter callers use their process-local clock.
+    internal static string CaptureLocalClock()
+    {
+        const string format = "yyyy-MM-dd'T'HH:mm:ss";
+        string supplied = Environment.GetEnvironmentVariable("STC_RPT_LOCAL_DATETIME");
+        if (supplied == null) return DateTime.Now.ToString(format, CultureInfo.InvariantCulture);
+        if (!DateTime.TryParseExact(supplied, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)
+            || parsed.ToString(format, CultureInfo.InvariantCulture) != supplied)
+            throw new InvalidOperationException("Invalid local render clock; expected yyyy-MM-ddTHH:mm:ss without an offset.");
+        return supplied;
     }
     internal static object Cell(object value) => value switch {
         null or DBNull => null,

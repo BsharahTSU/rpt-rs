@@ -25,3 +25,15 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Validation: clean starting checkout; documentation and Git diff checks. No runtime behavior changes.
 - Next checkpoint: consolidate source coverage and local SQL candidate counts, record unavailable or
   unsafe-to-run branches, then exercise isolated report cases with explicit evidence levels.
+
+## 2026-10-16 - Checkpoint 2a: host-local report clock
+
+- Review found Docker's UTC clock could print the previous date during the first hours of the
+  Windows host's local day. Capturing culture alone did not fix CurrentDate/CurrentTime specials.
+- The STC launcher now captures host DateTime.Now, the adapter validates/forwards it, and the worker
+  applies one local clock to data/formulas/layout. Explicit replay clocks are supported; malformed
+  values fail before data access. Existing standalone-worker fallback is documented.
+- Added persistent near-midnight, override, malformed-date and transport regressions. Docker results:
+  7 launcher checks, 39 adapter checks, 10 worker tests; strict worker Clippy and formatting passed.
+- Normal worker/adapter binaries rebuilt. No database or PDF generation for this fix.
+- Details and reproduction: [clock parity](coverage/clock-parity.md).
