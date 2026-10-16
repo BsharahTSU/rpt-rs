@@ -154,7 +154,7 @@ The production backend dependency files were not changed.
 | SQL | SQL Server text/procedures, strict selectors and legacy defaults | One live evaluation procedure passes; other templates/procedures pending |
 | DataSet | Schema/multiple-table transport; first-table main/subreport binding | Chinese/null/binary transport checks pass; broad subreport/schema parity pending |
 | Parameters | All RPT aliases, linked/range/default values and precedence | Initial declared binding; complex and embedded-query cases pending |
-| PDF | Content, pagination, repeated headers, borders, footers, dates and fonts | Real comparison values match; visual parity fails |
+| PDF | Content, pagination, repeated headers, borders, footers, dates and fonts | Evaluation sample has matching pagination/content and close visual parity; small text/row metric differences remain; other reports pending |
 | Excel | Actual BIFF/XLS preserving current callers | Not implemented; rejected before executing SQL |
 | Lifecycle | Owned paths, cleanup, cancellation and caller logging | Owned paths/scratch cleanup covered; cancellation/integration pending |
 | Deployment | Standalone Docker runtime and explicit opt-in bridge selection | Local development harness only; production unchanged |
@@ -163,3 +163,48 @@ The canonical existing contracts remain in the backend repository's `docs/report
 Keep all required access/publication/HideMarks/student-scope rules in the current backend. Real
 report-content/layout comparisons and unsupported-feature failures remain required before the
 experimental adapter can replace the current bridge.
+
+
+## Evaluation PDF parity checkpoint (2026-10-16)
+
+The follow-up comparison regenerates the unchanged Windows Crystal baseline and the Linux Rust
+candidate, using the Parent evaluation recipe. Rust iterations reuse the privately captured typed
+rows, so changing SQL data cannot masquerade as a renderer difference. The source RPT, database,
+Parent configuration and Windows bridge are unchanged. No student records, passwords, report
+exports or captured rows are committed.
+
+Corrections in this checkpoint:
+
+- Decode area-level conditional formulas separately from section conditions, including KDL output.
+  Apply area page breaks once at the boundary; recover the category break before Science.
+- Repeat opted-in group headers on continuation pages and resolve page-footer visibility using
+  the final page count. The print date appears on the final page with the caller's short-date pattern.
+- End spanning frames at actual rendered section instances, including repeated details and page
+  breaks. Respect each border edge, round-box ellipse diameters, and dotted/dashed PDF strokes.
+- Honor field indentation/reading order and resolve missing Arial Unicode MS to Arial when present.
+  The compatibility worker uses Windows VDMX font-cell metrics from mounted font files for the
+  legacy PDF glyph sizes; nominal metrics still drive wrapping and baselines. Leading paragraph
+  spaces remain in the output but do not consume the word-fit allowance.
+- Recover standard-paper dimensions within the two-twip printer conversion tolerance, and retain
+  Crystal's fractional drawing coordinates with its integer-point PDF MediaBox. Custom paper
+  dimensions outside this tolerance are preserved.
+
+The VDMX policy is opt-in through the experimental worker, rather than a global point-size change.
+References: [OpenType VDMX](https://learn.microsoft.com/en-us/typography/opentype/spec/vdmx),
+[SAP PDF font reduction](https://userapps.support.sap.com/sap/support/knowledge/en/1220516).
+Host culture and its potentially customized short-date pattern are passed by the Docker launcher.
+The fonts were mounted read-only from the existing Windows installation; they are not redistributed.
+
+Current private outputs are under `research/stc-verification/student-793/` with the suffix
+`evaluation-crystal-current.pdf` / `evaluation-rust-current.pdf`. The comparison records page
+counts, ordered ratings by page, paper boxes, PDF integrity and current page renders. Both have
+three pages and the same 35 ratings distributed 16 / 12 / 7. English continues on page 2 and
+Science starts page 3; the logo, signatures, legends, date and page labels are present. This is
+close visual parity, not pixel identity: the native rich-text line pitch and glyph positioning
+still differ slightly. Full bridge compatibility and other templates remain separate gates above.
+
+Regression coverage includes synthetic area/section condition ownership, conditional pagination,
+repeated headers, final-page footer visibility, edge-only borders, multi-page frames, VDMX parsing
+and cell selection, whitespace fitting, custom date culture and paper-coordinate preservation.
+The two public decoder JSON baselines changed only to expose formerly omitted area conditions.
+Verification logs remain in ignored `research/stc-verification/parity-*.log`.

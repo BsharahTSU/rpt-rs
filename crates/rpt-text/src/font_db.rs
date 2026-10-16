@@ -168,6 +168,16 @@ pub(crate) fn generic_for(family: &str) -> GenericFamily {
     GenericFamily::SansSerif
 }
 
+/// Windows commonly substitutes this discontinued Office font with Arial.
+/// Prefer the caller's actual Arial when available before a generic fallback.
+pub(crate) fn compatibility_family(family: &str) -> &str {
+    if family.eq_ignore_ascii_case("Arial Unicode MS") {
+        "Arial"
+    } else {
+        family
+    }
+}
+
 /// One face in a [`FontDb`], flattened for reporting: what it is and where it came from.
 #[derive(Clone, Debug)]
 pub struct FaceReport {
@@ -397,7 +407,11 @@ impl FontDb {
     /// when nothing matches at all.
     pub fn query(&self, spec: &FontSpec) -> Option<ID> {
         let query = Query {
-            families: &[Family::Name(&spec.family), generic_fallback(&spec.family)],
+            families: &[
+                Family::Name(&spec.family),
+                Family::Name(compatibility_family(&spec.family)),
+                generic_fallback(&spec.family),
+            ],
             weight: if spec.bold {
                 Weight::BOLD
             } else {
@@ -536,7 +550,7 @@ impl FontDb {
 
 /// The fontdb generic an absent family falls back to, from [`generic_for`]. Keeping this in step with
 /// the layout side is what stops the writer embedding one face while the metrics came from another.
-fn generic_fallback(family: &str) -> Family<'static> {
+pub(crate) fn generic_fallback(family: &str) -> Family<'static> {
     match generic_for(family) {
         GenericFamily::Serif => Family::Serif,
         GenericFamily::Monospace => Family::Monospace,

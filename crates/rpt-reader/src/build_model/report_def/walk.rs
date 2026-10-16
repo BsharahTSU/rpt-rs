@@ -617,8 +617,17 @@ impl<'a> RdWalk<'a> {
     fn apply_section_conditions(&mut self, node: &RecordNode) {
         let row = self.row(&ft::SECTION_FORMAT_WRAPPER, node);
         let resolved = resolve_conditions(&condition_slots(&row), &self.conditions);
-        if let Some(sec) = current_section(&mut self.areas) {
-            sec.condition_formulas.extend(resolved);
+        let is_section = node
+            .children
+            .iter()
+            .find(|n| n.rtype == crate::records::rtype::AREA_SECTION_FORMAT)
+            .is_none_or(|n| is_section_format(&self.row(&ft::AREA_SECTION_FORMAT, n)));
+        if is_section {
+            if let Some(sec) = current_section(&mut self.areas) {
+                sec.condition_formulas.extend(resolved);
+            }
+        } else if let Some(area) = self.areas.last_mut() {
+            area.condition_formulas.extend(resolved);
         }
     }
 }
@@ -984,5 +993,40 @@ mod tests {
         let areas = walk(&s.logical, &[&first, &marker, &marked, &second, &unmarked]);
         assert_eq!(areas[0].sections[0].kind, AreaSectionKind::GroupFooter);
         assert_eq!(areas[1].sections[0].kind, AreaSectionKind::PageHeader);
+    }
+    #[test]
+    fn area_condition_wrapper_does_not_attach_to_the_previous_section() {
+        for is_section in [false, true] {
+            let mut s = Stream::default();
+            let a = s.area("GroupHeaderArea1");
+            let section = s.section(300);
+            let wrapper = s.nested(
+                SECTION_FORMAT_WRAPPER,
+                AREA_SECTION_FORMAT,
+                |e| {
+                    e.narrowing(1, 0);
+                    e.i16_be(0);
+                    e.i16_be(i16::from(is_section));
+                    e.i16_be(1);
+                },
+                |e| {
+                    e.string(b"@New_Page_Before");
+                    e.narrowing(1, 0);
+                    e.u16_be(0);
+                },
+            );
+            let mut w = RdWalk::new(&[], &s.logical, &[]);
+            w.conditions
+                .insert(0, ("New_Page_Before".into(), "true".into()));
+            w.feed(&a);
+            w.feed(&section);
+            w.feed(&wrapper);
+            let areas = w.into_areas();
+            assert_eq!(areas[0].condition_formulas.len(), usize::from(!is_section));
+            assert_eq!(
+                areas[0].sections[0].condition_formulas.len(),
+                usize::from(is_section)
+            );
+        }
     }
 }

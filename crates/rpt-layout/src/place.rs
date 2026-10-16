@@ -193,6 +193,7 @@ impl Formatter<'_> {
                 );
             }
         }
+        self.end_section_spans(&section.name, origin_y, height, section.height.0);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -402,18 +403,16 @@ impl Formatter<'_> {
     ) {
         let rect = self.page_rect(&obj.bounds, at.origin_y);
         // A box that names a later end section spans down to it: its height is the run from
-        // its top to that section's bottom (summed from the design section layout). Otherwise
+        // its top to the rendered endpoint section (resolved when that band closes). Otherwise
         // it is an in-section box: a section-spanning background box (its design bottom reaches
         // most of the way down the section) grows with the band, so when can-grow content makes
         // the row taller the shading/frame tracks the actual rendered height instead of covering
         // only the top slice, preserving its distance from the band bottom.
         let rect = if self.spans_sections(b.shape.end_section_index, at.section_name) {
-            self.span_rect(
-                rect,
-                at.section_name,
-                b.shape.end_section_index,
-                obj.bounds.top.0,
-            )
+            Rect {
+                height: Twips(0),
+                ..rect
+            }
         } else {
             extend_section_box(rect, &obj.bounds, at.band_height, at.section_design_height)
         };
@@ -433,9 +432,10 @@ impl Formatter<'_> {
                 border_color,
                 b.shape.line_thickness,
             ),
-            corner_radius: Twips(b.corner_ellipse_width.0.max(b.corner_ellipse_height.0)),
+            corner_radius: Twips(b.corner_ellipse_width.0.max(b.corner_ellipse_height.0) / 2),
             source: at.src(obj, ObjectKind::Box),
         }));
+        self.register_span(at.section_name, &b.shape, self.cur.ops.len() - 1);
         // Drop shadow: two filled bars offset to the bottom-right in the border color (the
         // engine draws the shadow as edge rectangles, not a CSS shadow).
         if obj.border.has_drop_shadow {
@@ -448,22 +448,11 @@ impl Formatter<'_> {
     fn emit_line(&mut self, obj: &ReportObject, l: &LineShape, at: &Placement) {
         let rect = self.page_rect(&obj.bounds, at.origin_y);
         // A horizontal line uses the box top; a vertical line its left. Use the object rect.
-        let (mut from, mut to) = line_endpoints(rect);
-        // A line that names a later end section spans down to it (a spanning line is vertical):
-        // extend its lower endpoint to that section's bottom in the design section layout.
+        let (from, mut to) = line_endpoints(rect);
         if self.spans_sections(l.shape.end_section_index, at.section_name) {
-            if let Some(h) = self.design_span_height(
-                at.section_name,
-                l.shape.end_section_index,
-                obj.bounds.top.0,
-            ) {
-                let bottom = rect.top.0 + h;
-                if to.y.0 >= from.y.0 {
-                    to.y = Twips(to.y.0.max(bottom));
-                } else {
-                    from.y = Twips(from.y.0.max(bottom));
-                }
-            }
+            to.y = from.y;
+        } else if l.shape.extend_to_bottom_of_section {
+            to.y = Twips(at.origin_y + at.band_height);
         }
         // A line's stroke style and color live in its border record (the `0xec` leaf); the shape
         // carries only the thickness.
@@ -476,6 +465,7 @@ impl Formatter<'_> {
                 stroke,
                 source: at.src(obj, ObjectKind::Line),
             }));
+            self.register_span(at.section_name, &l.shape, self.cur.ops.len() - 1);
         }
     }
 
@@ -1208,24 +1198,50 @@ impl Formatter<'_> {
     /// No-op when every edge is `NoLine`. The fill is drawn separately by [`Self::push_object_fill`].
     fn push_border(&mut self, obj: &ReportObject, rect: Rect, section_name: &str, instance: u32) {
         let b = &obj.border;
-        let visible = [b.top, b.bottom, b.left, b.right]
-            .iter()
-            .any(|s| !matches!(s, RptLineStyle::NoLine));
-        if !visible {
-            return;
-        }
         let color = b.border_color.unwrap_or(DEFAULT_BORDER);
-        self.push_op(DrawOp::Rect(RectOp {
-            bounds: rect,
-            fill: None,
-            stroke: Some(hairline_stroke(color)),
-            corner_radius: Twips(0),
-            source: Some(
-                ObjectRef::new(section_name, ObjectKind::Box)
-                    .named(&obj.name)
-                    .with_instance(instance),
+        // Each edge has its own style. A bottom-only signature rule is not a box.
+        let edges = [
+            (
+                b.top,
+                (rect.left.0, rect.top.0),
+                (rect.right().0, rect.top.0),
             ),
-        }));
+            (
+                b.bottom,
+                (rect.left.0, rect.bottom().0),
+                (rect.right().0, rect.bottom().0),
+            ),
+            (
+                b.left,
+                (rect.left.0, rect.top.0),
+                (rect.left.0, rect.bottom().0),
+            ),
+            (
+                b.right,
+                (rect.right().0, rect.top.0),
+                (rect.right().0, rect.bottom().0),
+            ),
+        ];
+        for (style, (x1, y1), (x2, y2)) in edges {
+            if let Some(stroke) = stroke_of(style, color, HAIRLINE_W) {
+                self.push_op(DrawOp::Line(LineOp {
+                    from: rpt_pages::Point {
+                        x: Twips(x1),
+                        y: Twips(y1),
+                    },
+                    to: rpt_pages::Point {
+                        x: Twips(x2),
+                        y: Twips(y2),
+                    },
+                    stroke,
+                    source: Some(
+                        ObjectRef::new(section_name, ObjectKind::Box)
+                            .named(&obj.name)
+                            .with_instance(instance),
+                    ),
+                }));
+            }
+        }
     }
 
     pub(crate) fn page_rect(&self, b: &Rect, origin_y: i32) -> Rect {
@@ -1257,39 +1273,6 @@ impl Formatter<'_> {
         flat.iter()
             .position(|(n, _)| *n == section_name)
             .is_some_and(|s| usize::from(end_section_index) > s)
-    }
-
-    /// The height of a shape that spans from `start` section (its top `box_top` twips below the
-    /// section top) down to the bottom of the section at `end` (its stored end-section index).
-    /// `None` when the start section is not found, the end index is out of range, or the end lies
-    /// above the start. Growth of the intervening bands is not tracked (the span uses design
-    /// heights); the static layout is reproduced faithfully.
-    fn design_span_height(&self, start: &str, end: u16, box_top: i32) -> Option<i32> {
-        let flat = self.flat_sections();
-        let s = flat.iter().position(|(n, _)| *n == start)?;
-        let e = usize::from(end);
-        if e < s || e >= flat.len() {
-            return None;
-        }
-        // From the box top to the bottom of the start section, then every full section down to and
-        // including the end section.
-        let mut h = flat[s].1 - box_top;
-        for (_, height) in &flat[s + 1..=e] {
-            h += *height;
-        }
-        Some(h.max(0))
-    }
-
-    /// Extend a spanning box's rect to reach its end section's bottom (design layout). The box never
-    /// shrinks below its own decoded height; a span that cannot be resolved leaves the rect unchanged.
-    fn span_rect(&self, rect: Rect, start: &str, end: u16, box_top: i32) -> Rect {
-        match self.design_span_height(start, end, box_top) {
-            Some(h) if h > rect.height.0 => Rect {
-                height: Twips(h),
-                ..rect
-            },
-            _ => rect,
-        }
     }
 }
 

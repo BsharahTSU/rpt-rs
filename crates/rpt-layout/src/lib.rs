@@ -36,6 +36,7 @@ mod paginate;
 mod place;
 mod resolve;
 mod sections;
+mod spans;
 mod tabs;
 mod text;
 
@@ -357,6 +358,9 @@ pub(crate) struct Formatter<'a> {
     report: &'a Report,
     dataset: &'a Dataset,
     formulas: &'a FormulaRegistry,
+    repeat_headers: Vec<(usize, Option<&'a Row>, ResolveState)>,
+    shape_spans: Vec<spans::SpanShape>,
+    footer_contexts: Vec<(Option<&'a Row>, ResolveState)>,
     bands: Bands<'a>,
     page_size: PageSize,
     /// The printable-area origin (report top-left margin) stamped on every emitted [`Page`] so
@@ -579,6 +583,9 @@ impl<'a> Formatter<'a> {
             dataset,
             formulas,
             bands,
+            repeat_headers: Vec::new(),
+            footer_contexts: Vec::new(),
+            shape_spans: Vec::new(),
             page_size,
             origin,
             body_bottom: content_bottom - page_footer_height,
@@ -697,6 +704,7 @@ impl<'a> Formatter<'a> {
             self.emit_band(s, last, &rf_state, None);
         }
         self.finish_page();
+        self.emit_final_footers();
 
         // The final page count is now known: rewrite every `TotalPageCount`/`PageNofM` run that was
         // placed with a provisional total during the single pass.

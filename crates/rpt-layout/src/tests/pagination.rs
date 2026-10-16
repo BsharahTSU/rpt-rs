@@ -1082,6 +1082,7 @@ fn box_spans_to_end_section() {
     };
     let mut bs = rpt_model::BoxShape::default();
     bs.shape.end_section_index = 1; // the Details section
+    bs.shape.bottom = Twips(500); // endpoint within the destination section
     let border = Color {
         a: 255,
         r: 0x33,
@@ -1134,6 +1135,7 @@ fn line_spans_to_end_section() {
     };
     let mut ls = LineShape::default();
     ls.shape.end_section_index = 1; // the Details section
+    ls.shape.extend_to_bottom_of_section = true;
     ls.shape.line_thickness = Twips(10);
     lineo.kind = ReportObjectKind::Line(ls);
     lineo.border.left = LineStyle::SingleLine;
@@ -1397,4 +1399,261 @@ fn a_group_carried_over_a_page_break_counts_against_the_next_page_cap() {
         2 + 4,
         "group B's remaining rows and the whole of group C"
     );
+}
+
+#[test]
+fn area_new_page_before_applies_once_per_group_not_per_section() {
+    let (mut report, saved) = paging_limit_report(9000, 2, 2, 0, 0);
+    report.report_definition.areas[0]
+        .condition_formulas
+        .push(("New_Page_Before".into(), "{t.region} = \"B\"".into()));
+    report.report_definition.areas[0].sections.push(section(
+        AreaSectionKind::GroupHeader,
+        "GH2",
+        200,
+        vec![text_object("Second", "SECOND", 0)],
+    ));
+    let doc = rendered(&report, &saved);
+    assert_eq!(doc.pages.len(), 2);
+    for page in &doc.pages {
+        assert_eq!(page_text_tops(page, "GH").len(), 1);
+        assert_eq!(page_text_tops(page, "SECOND").len(), 1);
+        assert_eq!(page_text_tops(page, "line").len(), 2);
+    }
+}
+#[test]
+fn continued_group_repeats_its_header_without_losing_rows() {
+    let (mut report, saved) = paging_limit_report(1200, 1, 7, 0, 0);
+    report.report_definition.areas[0]
+        .format
+        .group
+        .as_mut()
+        .unwrap()
+        .repeat_group_header = true;
+    let doc = rendered(&report, &saved);
+    assert_eq!(doc.pages.len(), 3);
+    assert_eq!(
+        doc.pages
+            .iter()
+            .map(|p| page_text_tops(p, "line").len())
+            .collect::<Vec<_>>(),
+        vec![3, 3, 1]
+    );
+    for page in &doc.pages {
+        assert_eq!(page_text_tops(page, "GH"), vec![0]);
+    }
+}
+#[test]
+fn footer_suppression_uses_final_page_count_without_moving_prior_footer() {
+    let mut report = tiny_report(1800);
+    let mut final_only = section(
+        AreaSectionKind::PageFooter,
+        "FinalOnly",
+        200,
+        vec![text_object("Date", "DATE", 0)],
+    );
+    final_only.condition_formulas.push((
+        "Section_Visibility".into(),
+        "PageNumber < TotalPageCount".into(),
+    ));
+    report.report_definition.areas.push(area(
+        AreaSectionKind::PageFooter,
+        vec![
+            section(
+                AreaSectionKind::PageFooter,
+                "Always",
+                200,
+                vec![text_object("Footer", "FOOT", 0)],
+            ),
+            final_only,
+        ],
+    ));
+    let doc = rendered(&report, &numeric_rows(7));
+    assert_eq!(doc.pages.len(), 3);
+    for (i, page) in doc.pages.iter().enumerate() {
+        assert_eq!(page_text_tops(page, "FOOT"), vec![1400]);
+        assert_eq!(page_text_tops(page, "DATE").len(), usize::from(i == 2));
+    }
+}
+#[test]
+fn bottom_only_field_border_does_not_draw_a_box() {
+    let mut report = tiny_report(3000);
+    let object = &mut report.report_definition.areas[1].sections[0].objects[0];
+    object.border.bottom = LineStyle::SingleLine;
+    let doc = rendered(&report, &numeric_rows(1));
+    let rules: Vec<_> = doc.pages[0]
+        .ops
+        .iter()
+        .filter_map(|op| {
+            if let DrawOp::Line(l) = op {
+                Some(l)
+            } else {
+                None
+            }
+        })
+        .collect();
+    assert_eq!(rules.len(), 1);
+    assert_eq!(rules[0].from.y, rules[0].to.y);
+    assert!(doc.pages[0]
+        .ops
+        .iter()
+        .all(|op| !matches!(op, DrawOp::Rect(_))));
+}
+
+#[test]
+fn group_frame_tracks_repeated_details_across_a_page_break() {
+    let (mut report, saved) = paging_limit_report(1200, 1, 4, 0, 0);
+    let mut object = ReportObject::default();
+    object.name = "Frame".into();
+    object.bounds = Rect {
+        left: Twips(0),
+        top: Twips(50),
+        width: Twips(5000),
+        height: Twips(200),
+    };
+    let mut shape = rpt_model::BoxShape::default();
+    shape.shape.end_section_index = 2;
+    shape.shape.bottom = Twips(100);
+    object.kind = ReportObjectKind::Box(shape);
+    object.border.top = LineStyle::SingleLine;
+    report.report_definition.areas[0].sections[0]
+        .objects
+        .push(object);
+    report.report_definition.areas.push(area(
+        AreaSectionKind::GroupFooter,
+        vec![section(AreaSectionKind::GroupFooter, "GF", 200, vec![])],
+    ));
+    let doc = rendered(&report, &saved);
+    assert_eq!(doc.pages.len(), 2);
+    let frames: Vec<_> = doc
+        .pages
+        .iter()
+        .map(|p| {
+            p.ops
+                .iter()
+                .find_map(|o| match o {
+                    DrawOp::Rect(r) if r.stroke.is_some() => Some(r.bounds),
+                    _ => None,
+                })
+                .unwrap()
+        })
+        .collect();
+    assert_eq!(frames[0].top.0, 50);
+    assert_eq!(frames[0].height.0, 1150);
+    assert_eq!(frames[1].top.0, 0);
+    assert_eq!(frames[1].height.0, 400);
+}
+
+#[test]
+fn frame_closes_at_a_suppressed_report_header_endpoint() {
+    let mut report = tiny_report(2000);
+    let mut shape = rpt_model::BoxShape::default();
+    shape.shape.end_section_index = 1;
+    shape.shape.bottom = Twips(40);
+    let mut object = ReportObject::default();
+    object.name = "HeaderFrame".into();
+    object.bounds = Rect {
+        left: Twips(0),
+        top: Twips(0),
+        width: Twips(1000),
+        height: Twips(100),
+    };
+    object.kind = ReportObjectKind::Box(shape);
+    object.border.top = LineStyle::SingleLine;
+    let mut end = section(AreaSectionKind::ReportHeader, "HiddenEnd", 900, vec![]);
+    end.format.base.suppress = true;
+    report.report_definition.areas.insert(
+        0,
+        area(
+            AreaSectionKind::ReportHeader,
+            vec![
+                section(AreaSectionKind::ReportHeader, "Start", 200, vec![object]),
+                end,
+            ],
+        ),
+    );
+    let doc = rendered(&report, &numeric_rows(1));
+    let height = doc.pages[0]
+        .ops
+        .iter()
+        .find_map(|op| match op {
+            DrawOp::Rect(r) if r.stroke.is_some() => Some(r.bounds.height.0),
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(height, 240);
+}
+
+#[test]
+fn ordinary_footer_reads_print_state_at_its_own_page_boundary() {
+    use rpt_model::{FieldDef, FieldKindData, Formula, FormulaField};
+    let mut report = tiny_report(1200);
+    let mut run = db_field_object("Run", "@Run", 0);
+    if let ReportObjectKind::Field(f) = &mut run.kind {
+        f.ref_kind = FieldRefKind::Formula;
+        f.value_type = FieldValueType::Number;
+    }
+    report.report_definition.areas[1].sections[0].objects = vec![run];
+    let mut foot = db_field_object("Foot", "@Foot", 0);
+    if let ReportObjectKind::Field(f) = &mut foot.kind {
+        f.ref_kind = FieldRefKind::Formula;
+        f.value_type = FieldValueType::Number;
+    }
+    report.report_definition.areas.push(area(
+        AreaSectionKind::PageFooter,
+        vec![section(
+            AreaSectionKind::PageFooter,
+            "Footer",
+            300,
+            vec![foot],
+        )],
+    ));
+    for (name, text) in [
+        (
+            "Run",
+            "WhilePrintingRecords; Global NumberVar counter; counter := counter + 1; counter",
+        ),
+        (
+            "Foot",
+            "WhilePrintingRecords; Global NumberVar counter; counter",
+        ),
+    ] {
+        let mut f = FieldDef::default();
+        f.name = name.into();
+        f.kind = FieldKindData::Formula(FormulaField {
+            text: Formula(text.into()),
+            ..Default::default()
+        });
+        report.data_definition.field_definitions.push(f);
+    }
+    let doc = rendered(&report, &numeric_rows(6));
+    let values: Vec<f64> = doc
+        .pages
+        .iter()
+        .map(|p| {
+            p.ops
+                .iter()
+                .find_map(|op| match op {
+                    DrawOp::Text(t)
+                        if t.source
+                            .as_ref()
+                            .is_some_and(|s| s.object_name.as_deref() == Some("Foot")) =>
+                    {
+                        Some(t.text.replace(',', "").trim().parse().unwrap_or_else(|_| {
+                            panic!(
+                                "footer value {:?}, diagnostics {:?}",
+                                t.text, doc.diagnostics
+                            )
+                        }))
+                    }
+                    _ => None,
+                })
+                .unwrap()
+        })
+        .collect();
+    assert!(
+        values.windows(2).all(|w| w[0] < w[1]),
+        "footers must not all read the final print state: {values:?}"
+    );
+    assert_eq!(values.last(), Some(&6.0));
 }

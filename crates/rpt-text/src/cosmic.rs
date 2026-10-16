@@ -181,6 +181,11 @@ impl CosmicLayout {
         // glyphs the chosen face lacks.
         let family = if self.known_families.contains(&font.family.to_lowercase()) {
             Family::Name(&font.family)
+        } else if self
+            .known_families
+            .contains(&crate::font_db::compatibility_family(&font.family).to_lowercase())
+        {
+            Family::Name(crate::font_db::compatibility_family(&font.family))
         } else {
             match crate::font_db::generic_for(&font.family) {
                 crate::font_db::GenericFamily::Serif => Family::Serif,
@@ -285,7 +290,11 @@ impl TextLayout for CosmicLayout {
         let fs = self.font_system.borrow();
         let db = fs.db();
         let primary = db.query(&Query {
-            families: &[Family::Name(&font.family), Family::SansSerif],
+            families: &[
+                Family::Name(&font.family),
+                Family::Name(crate::font_db::compatibility_family(&font.family)),
+                crate::font_db::generic_fallback(&font.family),
+            ],
             weight: if font.bold {
                 Weight::BOLD
             } else {

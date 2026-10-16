@@ -6,7 +6,7 @@ use rpt_data::{
 use rpt_formula::eval::Value;
 use rpt_pages::{DiagnosticKind, DrawOp, PagedDocument};
 use rpt_reader::model::{FieldValueType, Report};
-use rpt_render::{FontSource, PdfOptions, RenderOptions, RenderSource, ReportDocument};
+use rpt_render::{FontSource, PdfOptions, ReportDocument};
 use serde::Deserialize;
 use serde_json::{json, Value as Json};
 use std::{
@@ -166,12 +166,65 @@ fn accept_document(document: &PagedDocument) -> Result<(), String> {
     }
     Ok(())
 }
+fn render_locale() -> Result<rpt_render::Locale, String> {
+    let tag = std::env::var("STC_RPT_LOCALE").unwrap_or_else(|_| "en-US".into());
+    let pattern = std::env::var("STC_RPT_SHORT_DATE").ok();
+    locale_with_pattern(&tag, pattern.as_deref())
+}
+fn locale_with_pattern(tag: &str, pattern: Option<&str>) -> Result<rpt_render::Locale, String> {
+    let mut locale = rpt_render::Locale::lookup(tag)
+        .ok_or_else(|| format!("Unsupported render locale: {tag}"))?;
+    if let Some(pattern) = pattern {
+        let (order, padded, sep) = match pattern {
+            "dd/MM/yyyy" => ("en-GB", true, '/'),
+            "d/M/yyyy" => ("en-GB", false, '/'),
+            "MM/dd/yyyy" => ("en-US", true, '/'),
+            "M/d/yyyy" => ("en-US", false, '/'),
+            "dd.MM.yyyy" => ("en-GB", true, '.'),
+            "yyyy-MM-dd" => ("ja-JP", true, '-'),
+            _ => return Err(format!("Unsupported host short-date pattern: {pattern}")),
+        };
+        locale.date_order = rpt_render::Locale::from_tag(order).date_order;
+        locale.short_date_leading_zero = padded;
+        locale.date_sep = sep;
+    }
+    Ok(locale)
+}
+// Windows printer rectangles can truncate millimetre conversions by two twips.
+// Restore the declared standard sheet only within that rounding tolerance; retain
+// custom/driver dimensions and the stored orientation in every other case.
+fn normalize_driver_paper_rounding(report: &mut Report) {
+    let p = &mut report.print_options;
+    if let Some((w, h)) = p.paper_size.std_dims() {
+        let actual_w = p.content_width.0 + p.margins.left.0 + p.margins.right.0;
+        let actual_h = p.content_height.0 + p.margins.top.0 + p.margins.bottom.0;
+        for (w, h) in [(w, h), (h, w)] {
+            if (w - actual_w).abs() <= 2 && (h - actual_h).abs() <= 2 {
+                p.content_width.0 += w - actual_w;
+                p.content_height.0 += h - actual_h;
+                break;
+            }
+        }
+    }
+}
+// Crystal preserves the fractional point coordinate transform but writes an
+// integer MediaBox. Keep drawing in the same bottom-left physical coordinates.
+fn legacy_media_boxes(document: &mut PagedDocument) {
+    for page in &mut document.pages {
+        let dy = page.size.height.0.rem_euclid(20);
+        page.size.height.0 -= dy;
+        page.size.width.0 -= page.size.width.0.rem_euclid(20);
+        page.origin.y.0 -= dy;
+    }
+}
 fn run(input: Input) -> Result<Json, String> {
     if !matches!(input.export_format.as_str(), "pdf" | "page_ir") {
         return Err("Unsupported export format".into());
     }
     let report = ReportDocument::load(&input.report_path).map_err(|e| e.to_string())?;
     let source = prepare(report.report(), &input)?;
+    let mut model = report.report().clone();
+    normalize_driver_paper_rounding(&mut model);
     let parameters = params::bind(
         report.report(),
         &input.query_params,
@@ -181,16 +234,51 @@ fn run(input: Input) -> Result<Json, String> {
         input: &input,
         failures: RefCell::new(Vec::new()),
     };
-    let document = report.render_with(RenderOptions {
-        datasource: RenderSource::Rows(&source),
-        params: parameters,
-        scope: Some(&scope),
-        fonts: FontSource::System,
-        ..Default::default()
-    });
+    let as_of = rpt_render::default_as_of();
+    let sink = rpt_data::CollectingSink::new();
+    let dataset = rpt_data::build_dataset_opts(
+        &source,
+        &report.report().data_definition,
+        rpt_data::DatasetOptions {
+            params: Some(&parameters),
+            sink: Some(&sink),
+            datetime: Some(as_of),
+            ..Default::default()
+        },
+    );
+    let mut document = rpt_render::render_dataset_with(
+        &model,
+        &dataset,
+        Box::new(rpt_text::WindowsLayout::new(FontSource::System)),
+        render_locale()?,
+        Some(&scope),
+        Some(as_of),
+    );
+    document
+        .diagnostics
+        .extend(rpt_layout::diagnostics::from_evals(
+            &sink.into_diagnostics(),
+        ));
+    // The legacy PDF exporter treats nominal point sizes as positive GDI cell
+    // heights. Apply that conversion only after wrapping/pagination, keeping the
+    // nominal baselines. This policy belongs to this compatibility adapter.
+    let fonts = FontSource::System.load();
+    for op in document.pages.iter_mut().flat_map(|p| &mut p.ops) {
+        if let DrawOp::Text(text) = op {
+            if let Some(metrics) = fonts.windows_metrics(&text.font, true) {
+                let size = metrics.em_twips as f32 / 20.0;
+                let ratio = size / text.font.size_pt;
+                text.font.size_pt = size;
+                if let Some(m) = &mut text.metrics {
+                    m.advance.0 = (m.advance.0 as f32 * ratio).round() as i32;
+                }
+            }
+        }
+    }
     if !scope.failures.borrow().is_empty() {
         return Err(scope.failures.borrow().join("; "));
     }
+    legacy_media_boxes(&mut document);
     if let Ok(path) = std::env::var("STC_RPT_DEBUG_IR") {
         let file = std::fs::File::create(path).map_err(|e| e.to_string())?;
         serde_json::to_writer(file, &document).map_err(|e| e.to_string())?;
@@ -239,6 +327,48 @@ fn main() {
 mod tests {
     use super::*;
     use rpt_pages::{Diagnostic, Page, PageSize};
+    #[test]
+    fn printer_rounding_preserves_custom_sizes_and_pdf_coordinates() {
+        let mut report = Report::default();
+        report.print_options.paper_size = rpt_reader::model::PaperSize::PaperA4;
+        report.print_options.content_width.0 = 11904;
+        report.print_options.content_height.0 = 16836;
+        normalize_driver_paper_rounding(&mut report);
+        assert_eq!(report.print_options.content_width.0, 11906);
+        assert_eq!(report.print_options.content_height.0, 16838);
+        report.print_options.content_width.0 = 12000;
+        normalize_driver_paper_rounding(&mut report);
+        assert_eq!(report.print_options.content_width.0, 12000);
+        let mut doc = PagedDocument::default();
+        let mut page = Page::new(
+            1,
+            PageSize {
+                width: rpt_reader::model::Twips(11906),
+                height: rpt_reader::model::Twips(16838),
+            },
+        );
+        page.origin.y.0 = 245;
+        doc.pages.push(page);
+        legacy_media_boxes(&mut doc);
+        assert_eq!(doc.pages[0].size.height.0, 16820);
+        assert_eq!(doc.pages[0].size.width.0, 11900);
+        assert_eq!(
+            doc.pages[0].size.height.0 - doc.pages[0].origin.y.0,
+            16838 - 245
+        );
+    }
+    #[test]
+    fn custom_host_date_pattern_is_independent_of_language_tag() {
+        let locale = locale_with_pattern("en-US", Some("dd/MM/yyyy")).unwrap();
+        assert_eq!(
+            locale.date_order,
+            rpt_render::Locale::from_tag("en-GB").date_order
+        );
+        assert_eq!(locale.date_sep, '/');
+        assert!(locale.short_date_leading_zero);
+        assert!(locale_with_pattern("en-US", Some("unsupported")).is_err());
+        assert!(locale_with_pattern("unsupported", None).is_err());
+    }
     #[test]
     fn report_errors_cannot_be_returned_as_successful_certificates() {
         let mut document = PagedDocument::default();

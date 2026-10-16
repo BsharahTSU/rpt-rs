@@ -1181,6 +1181,12 @@
           ]
         },
         {
+          "condition_formulas": [
+            [
+              "New_Page_Before",
+              "Not OnFirstRecord"
+            ]
+          ],
           "format": {
             "base": {
               "keep_together": false,

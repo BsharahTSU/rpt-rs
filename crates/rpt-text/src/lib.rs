@@ -25,3 +25,8 @@ pub use font_db::{system_font_dirs, FaceReport, FaceRun, FontDb, FontInventory, 
 mod cosmic;
 #[cfg(feature = "cosmic")]
 pub use cosmic::{CosmicLayout, FontProvider};
+
+mod windows_metrics;
+pub use windows_metrics::WindowsFontMetrics;
+#[cfg(feature = "cosmic")]
+pub use windows_metrics::WindowsLayout;

@@ -947,6 +947,12 @@
           ]
         },
         {
+          "condition_formulas": [
+            [
+              "New_Page_Before",
+              "Not onFirstRecord"
+            ]
+          ],
           "format": {
             "base": {
               "keep_together": false,

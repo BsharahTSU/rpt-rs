@@ -835,6 +835,7 @@ fn area_node(a: &Area) -> Node {
         group_level: _,
         format,
         sections,
+        condition_formulas,
     } = a;
     let AreaFormat {
         base,
@@ -863,6 +864,7 @@ fn area_node(a: &Area) -> Node {
         )
         .flag("clamp-page-footer", *clamp_page_footer)
         .children(sections.iter().map(section_node))
+        .children(crate::format::condition_formula_nodes(condition_formulas))
 }
 
 fn section_node(s: &Section) -> Node {

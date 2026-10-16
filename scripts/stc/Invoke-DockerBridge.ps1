@@ -40,6 +40,8 @@ if ($RequestFile) {
         '--mount', 'type=volume,source=stc-rpt-rs-target,target=/target,readonly',
         '-e', 'PARENT_REPORTS_CRYSTAL_TEMP_ROOT=/work', '-e', 'PARENT_REPORTS_CRYSTAL_TEMPLATE_ROOT=/reports',
         '-e', 'STC_RPT_WORKER=/target/debug/stc-rpt-worker')
+    $culture = Get-Culture
+    $dockerArgs += @('-e', ('STC_RPT_LOCALE=' + $culture.Name), '-e', ('STC_RPT_SHORT_DATE=' + $culture.DateTimeFormat.ShortDatePattern))
     if ($FontDirectory) { $dockerArgs += @('--mount', "type=bind,source=$([IO.Path]::GetFullPath($FontDirectory)),target=/usr/local/share/fonts/windows,readonly") }
     if ($DebugPageIr) { $dockerArgs += @('-e', 'STC_RPT_DEBUG_IR=/work/rust-page-ir.json') }
     $dockerArgs += @($Image, 'dotnet', '/src/bridge/Stc.CrystalBridge/bin/Debug/net10.0/stc-crystal-bridge.dll', ('/work/' + [IO.Path]::GetFileName($requestPath)))

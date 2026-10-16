@@ -29,7 +29,7 @@ use krilla::image::Image;
 use krilla::metadata::{DateTime, Metadata};
 use krilla::outline::Outline;
 use krilla::page::PageSettings;
-use krilla::paint::Stroke;
+use krilla::paint::{Stroke, StrokeDash};
 use krilla::surface::Surface;
 use krilla::tagging::{
     Artifact, ArtifactType, ContentTag, Node, SpanTag, Tag, TagGroup, TagKind, TagTree,
@@ -593,13 +593,20 @@ fn artifact_type(kind: ArtifactKind) -> ArtifactType {
     }
 }
 
-fn stroke_for(color: Color, width_twips: i32) -> Stroke {
-    let (rgb, opacity) = rgb_alpha(color);
+fn stroke_for(source: rpt_pages::Stroke) -> Stroke {
+    let (rgb, opacity) = rgb_alpha(source.color);
+    let dash = match source.style {
+        rpt_pages::LineStyle::Single | rpt_pages::LineStyle::Double => None,
+        rpt_pages::LineStyle::Dashed => Some(vec![3.0, 3.0]),
+        rpt_pages::LineStyle::Dotted => Some(vec![1.0, 3.0]),
+    }
+    .map(|array| StrokeDash { array, offset: 0.0 });
     Stroke {
         paint: rgb.into(),
         // A stored width of 0 (hairline) still needs to render; clamp to a thin visible line.
-        width: (pt(width_twips) as f32).max(MIN_STROKE_PT as f32),
+        width: (pt(source.width.0) as f32).max(MIN_STROKE_PT as f32),
         opacity,
+        dash,
         ..Stroke::default()
     }
 }
@@ -646,7 +653,7 @@ fn draw_rect(surface: &mut Surface, r: &RectOp) {
         .as_ref()
         .map(|f| fill_of(surface, f, Bounds::of(&r.bounds)));
     surface.set_fill(fill);
-    surface.set_stroke(r.stroke.map(|s| stroke_for(s.color, s.width.0)));
+    surface.set_stroke(r.stroke.map(stroke_for));
     surface.draw_path(&path);
 }
 
@@ -680,7 +687,7 @@ fn draw_ellipse(surface: &mut Surface, e: &EllipseOp) {
         .as_ref()
         .map(|f| fill_of(surface, f, Bounds::of(&e.bounds)));
     surface.set_fill(fill);
-    surface.set_stroke(e.stroke.map(|s| stroke_for(s.color, s.width.0)));
+    surface.set_stroke(e.stroke.map(stroke_for));
     surface.draw_path(&path);
 }
 
@@ -692,7 +699,7 @@ fn draw_line(surface: &mut Surface, l: &LineOp) {
         return;
     };
     surface.set_fill(None);
-    surface.set_stroke(Some(stroke_for(l.stroke.color, l.stroke.width.0)));
+    surface.set_stroke(Some(stroke_for(l.stroke)));
     surface.draw_path(&path);
 }
 
@@ -721,7 +728,7 @@ fn draw_polygon(surface: &mut Surface, p: &PolygonOp) {
         fill_of(surface, f, bounds)
     });
     surface.set_fill(fill);
-    surface.set_stroke(p.stroke.map(|s| stroke_for(s.color, s.width.0)));
+    surface.set_stroke(p.stroke.map(stroke_for));
     surface.draw_path(&path);
 }
 

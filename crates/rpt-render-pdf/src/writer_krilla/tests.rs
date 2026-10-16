@@ -188,3 +188,41 @@ fn mixed_arabic_and_latin_runs_follow_the_stored_paragraph_direction() {
     let pdf = crate::try_render_pages(&[page]).expect("mixed RTL PDF serializes");
     assert!(pdf.starts_with(b"%PDF-"));
 }
+
+#[test]
+fn dotted_and_dashed_rules_survive_pdf_serialization() {
+    let mut page = Page::new(
+        1,
+        PageSize {
+            width: Twips(4000),
+            height: Twips(4000),
+        },
+    );
+    for (i, style) in [
+        rpt_pages::LineStyle::Dotted,
+        rpt_pages::LineStyle::Dashed,
+        rpt_pages::LineStyle::Single,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        page.push(DrawOp::Line(LineOp {
+            from: rpt_pages::Point::new(100, 100 + i as i32 * 200),
+            to: rpt_pages::Point::new(3000, 100 + i as i32 * 200),
+            stroke: rpt_pages::Stroke {
+                color: Color {
+                    a: 255,
+                    r: 0,
+                    g: 0,
+                    b: 0,
+                },
+                width: Twips(10),
+                style,
+            },
+            source: None,
+        }));
+    }
+    let listing = operator_listing(&crate::render_pages(&[page]));
+    assert!(listing.contains("[ 1 3 ] 0 d"), "{listing}");
+    assert!(listing.contains("[ 3 3 ] 0 d"), "{listing}");
+}

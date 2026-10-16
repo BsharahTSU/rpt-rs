@@ -18,6 +18,8 @@ rpt-reader = { workspace = true, features = ["serde"] }
 rpt-data = { workspace = true }
 rpt-formula = { workspace = true }
 rpt-pages = { workspace = true }
+rpt-text = { workspace = true }
+rpt-layout = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 [lints]

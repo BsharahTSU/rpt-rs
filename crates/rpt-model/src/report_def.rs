@@ -54,6 +54,12 @@ pub struct Area {
     pub group_level: Option<usize>,
     /// Formatting shared by all sections in the area.
     pub format: AreaFormat,
+    /// Conditional formatting on the area, distinct from its individual sections.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Vec::is_empty")
+    )]
+    pub condition_formulas: Vec<(String, String)>,
     /// The sections that make up this area (usually one; groups repeat per instance).
     pub sections: Vec<Section>,
 }

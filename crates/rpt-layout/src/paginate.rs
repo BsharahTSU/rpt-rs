@@ -175,7 +175,10 @@ impl<'a> Formatter<'a> {
                 cond_color(&f.font_color.condition_formulas, cond::FONT_COLOR, ctx)
                     .unwrap_or(f.font_color.color),
                 ObjectKind::Field,
-                ReadingOrder::LeftToRight,
+                f.format
+                    .as_ref()
+                    .map(|f| f.string.reading_order)
+                    .unwrap_or_default(),
                 None,
             ),
             ReportObjectKind::Text(t) => (
@@ -251,7 +254,14 @@ impl<'a> Formatter<'a> {
         let mut lines: Vec<LayoutLine> = Vec::new();
         for (i, seg) in raw.split('\n').enumerate() {
             let para = paragraphs.and_then(|ps| ps.get(i));
-            let indent = para.map(|p| p.indent).unwrap_or_default();
+            let indent = para.map(|p| p.indent).unwrap_or_else(|| match &obj.kind {
+                ReportObjectKind::Field(f) => f
+                    .format
+                    .as_ref()
+                    .map(|f| f.string.indent)
+                    .unwrap_or_default(),
+                _ => Default::default(),
+            });
             let (left, right, first) = (
                 indent.left_indent.0,
                 indent.right_indent.0,
@@ -332,6 +342,48 @@ impl<'a> Formatter<'a> {
         })
     }
 
+    /// Area page-break conditions apply once at the area's boundary; section
+    /// conditions override the section's static setting. Repeated furniture does
+    /// not take page breaks through this path.
+    fn page_break_condition(
+        &self,
+        section: &Section,
+        row: Option<&Row>,
+        state: &ResolveState,
+        before: bool,
+    ) -> bool {
+        let empty = Row::default();
+        let ctx = self.context(row.unwrap_or(&empty), state);
+        let name = if before {
+            "New_Page_Before"
+        } else {
+            "New_Page_After"
+        };
+        let local = crate::resolve::cond_bool(&section.condition_formulas, name, Some(&ctx))
+            .unwrap_or(if before {
+                section.format.base.new_page_before
+            } else {
+                section.format.base.new_page_after
+            });
+        let area = self
+            .report
+            .report_definition
+            .areas
+            .iter()
+            .find(|a| a.sections.iter().any(|s| s.name == section.name));
+        let inherited = area.is_some_and(|a| {
+            let boundary = if before {
+                a.sections.first()
+            } else {
+                a.sections.last()
+            };
+            boundary.is_some_and(|s| s.name == section.name)
+                && crate::resolve::cond_bool(&a.condition_formulas, name, Some(&ctx))
+                    .unwrap_or(false)
+        });
+        local || inherited
+    }
+
     /// Emit one band (section) at the cursor, paginating first if it would overflow the body. The
     /// band grows vertically when a `can-grow` text object wraps to more lines than its box holds.
     ///
@@ -349,6 +401,7 @@ impl<'a> Formatter<'a> {
         underlay_end: Option<UnderlayEnd>,
     ) -> bool {
         if section.format.base.suppress {
+            self.end_section_spans(&section.name, self.cursor_y, 0, section.height.0);
             return false;
         }
         // A Section_Visibility condition suppresses the whole band per record, like the static flag.
@@ -364,12 +417,15 @@ impl<'a> Formatter<'a> {
             )
             .unwrap_or(false)
             {
+                self.end_section_spans(&section.name, self.cursor_y, 0, section.height.0);
                 return false;
             }
         }
         // NewPageBefore on this band, or a deferred NewPageAfter from the previous band, starts a
         // fresh page — but not when we are already at the top of one (that would leave a blank page).
-        if (self.pending_page_break || section.format.base.new_page_before) && self.cursor_y > 0 {
+        if (self.pending_page_break || self.page_break_condition(section, row, state, true))
+            && self.cursor_y > 0
+        {
             self.finish_page();
             self.begin_page();
         }
@@ -393,6 +449,7 @@ impl<'a> Formatter<'a> {
         // formulas have already evaluated (above), so their record-time side effects still fire.
         if section.format.suppress_if_blank && self.section_is_blank(section, &plans, ctx.as_ref())
         {
+            self.end_section_spans(&section.name, self.cursor_y, 0, section.height.0);
             return false;
         }
         // Route to the cross-page-flow path only when an inline subreport can't land atomically on a
@@ -435,7 +492,7 @@ impl<'a> Formatter<'a> {
         }
 
         // NewPageAfter: defer the break to the next flow band so a trailing one adds no blank page.
-        if section.format.base.new_page_after {
+        if self.page_break_condition(section, row, state, false) {
             self.pending_page_break = true;
         }
         // ResetPageNumberAfter: restart the page-number counter at the next page top.
@@ -722,6 +779,11 @@ impl<'a> Formatter<'a> {
                 self.emit_band(s, first, &state, Some(UnderlayEnd::GroupFooter(g.level)));
             }
         }
+        self.repeat_headers.push((
+            g.level,
+            g.details.first().or_else(|| first_row(g)),
+            state.clone(),
+        ));
         // Children: subgroups or detail rows.
         if g.subgroups.is_empty() {
             self.emit_details(&g.details, &g.summaries);
@@ -752,6 +814,7 @@ impl<'a> Formatter<'a> {
                 self.emit_band(s, last, &state, None);
             }
         }
+        self.repeat_headers.pop();
         self.group_stack.pop();
         self.refresh_group_summaries();
     }
@@ -1011,6 +1074,20 @@ impl<'a> Formatter<'a> {
         self.open_page();
         if !self.in_report_header {
             self.emit_page_header();
+            self.continue_spanning_page();
+            for (level, row, mut state) in self.repeat_headers.clone() {
+                if self
+                    .bands
+                    .group_formats
+                    .get(level)
+                    .is_some_and(|f| f.repeat_group_header)
+                {
+                    state.page_number = self.page_number;
+                    for section in self.bands.group_headers[level].clone() {
+                        self.emit_band_no_paginate(section, row, &state, true);
+                    }
+                }
+            }
         }
     }
 
@@ -1030,6 +1107,7 @@ impl<'a> Formatter<'a> {
         for s in rh {
             let state = self.state(None);
             if s.format.base.suppress {
+                self.end_section_spans(&s.name, self.cursor_y, 0, s.height.0);
                 continue;
             }
             let empty = Row::default();
@@ -1057,19 +1135,73 @@ impl<'a> Formatter<'a> {
     }
 
     pub(crate) fn finish_page(&mut self) {
-        // Pin the page footer to the bottom. It resolves against the last record printed on this page
-        // (Crystal's page-footer record context).
-        let page_row = self.current_row;
-        let pf: Vec<&Section> = self.bands.page_footer.clone();
-        self.cursor_y = self.body_bottom;
-        for s in pf {
-            let state = self.state(None);
-            // Page Footer is a fixed repeating band — can-grow is inert (it must fit the space
-            // reserved at the page bottom).
-            self.emit_band_no_paginate(s, page_row, &state, false);
+        self.finish_spanning_page();
+        // Keep ordinary footer formulas in print order, including mutations and
+        // running totals. Only visibility that needs the final count is deferred.
+        let needs_total = self.bands.page_footer.iter().any(|s| {
+            s.condition_formulas.iter().any(|(name, body)| {
+                name == crate::resolve::cond::SECTION_VISIBILITY
+                    && body.to_ascii_lowercase().contains("totalpagecount")
+            })
+        });
+        if needs_total {
+            self.footer_contexts
+                .push((self.current_row, self.state(None)));
+        } else {
+            self.cursor_y = self.body_bottom;
+            for s in self.bands.page_footer.clone() {
+                let state = self.state(None);
+                self.emit_band_no_paginate(s, self.current_row, &state, false);
+            }
         }
         let page = std::mem::replace(&mut self.cur, Page::new(0, self.page_size));
         self.pages.push(page);
+    }
+
+    /// Resolve page furniture once the true page count is known. Body records and
+    /// their print-time formulas are never replayed. Suppressed footer bands reserve
+    /// no output height; the stack starts at the reserved footer area, preserving
+    /// the position of earlier bands when a trailing band is suppressed.
+    pub(crate) fn emit_final_footers(&mut self) {
+        if self.footer_contexts.is_empty() {
+            return;
+        }
+        let pages = std::mem::take(&mut self.pages);
+        let total = pages.len() as i64;
+        for (page, (row, mut state)) in pages
+            .into_iter()
+            .zip(std::mem::take(&mut self.footer_contexts))
+        {
+            self.page_number = page.number as i64;
+            state.page_number = self.page_number;
+            state.total_pages = total;
+            self.cur = page;
+            let empty = Row::default();
+            let ctx = self.context(row.unwrap_or(&empty), &state);
+            let visible: Vec<&Section> = self
+                .bands
+                .page_footer
+                .iter()
+                .copied()
+                .filter(|s| {
+                    !s.format.base.suppress
+                        && !crate::resolve::cond_bool(
+                            &s.condition_formulas,
+                            crate::resolve::cond::SECTION_VISIBILITY,
+                            Some(&ctx),
+                        )
+                        .unwrap_or(false)
+                })
+                .collect();
+            self.cursor_y = self.body_bottom;
+            for s in visible {
+                self.emit_band_no_paginate(s, row, &state, false);
+            }
+            self.pages.push(std::mem::replace(
+                &mut self.cur,
+                Page::new(0, self.page_size),
+            ));
+        }
     }
 
     /// Emit an already-positioned band without the overflow check. `allow_grow` selects the band
@@ -1085,10 +1217,21 @@ impl<'a> Formatter<'a> {
         allow_grow: bool,
     ) {
         if section.format.base.suppress {
+            self.end_section_spans(&section.name, self.cursor_y, 0, section.height.0);
             return;
         }
         let empty = Row::default();
         let ctx = Some(self.context(row.unwrap_or(&empty), state));
+        if crate::resolve::cond_bool(
+            &section.condition_formulas,
+            crate::resolve::cond::SECTION_VISIBILITY,
+            ctx.as_ref(),
+        )
+        .unwrap_or(false)
+        {
+            self.end_section_spans(&section.name, self.cursor_y, 0, section.height.0);
+            return;
+        }
         let (plans, height) = self.band_plans_and_height(section, ctx.as_ref(), state, allow_grow);
         let origin_y = self.cursor_y;
         self.emit_band_plans(section, &plans, origin_y, height, ctx.as_ref(), &[], None);
