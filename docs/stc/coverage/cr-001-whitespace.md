@@ -4,6 +4,11 @@ Follow-up: 2026-10-17. The native probes below are complete. The current source
 implementation is narrower than the probe findings; fresh-pair acceptance for the
 combined text-origin changes is recorded in the [parity record](cr-001-parity.md).
 
+Current follow-up: [CR-003 whitespace/fitting](cr-003-whitespace.md) proves and adds
+centered RTL field preparation, hinted LTR fitting and terminal-LRM handling. The
+CR-001 PDF/IR/PNGs remain byte-identical after those changes. The narrower scope
+below describes the original CR-001 checkpoint.
+
 ## Finding
 
 The fresh pair at commit `3683e20` corrected the previous pagination, spacing,

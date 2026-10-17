@@ -4,6 +4,9 @@ See [local fork provenance](FORK.md), [checkpoint ledger](WORKLOG.md), and [Pare
 The [CR-001 repair](coverage/cr-001-parity.md) is implemented through clean commit `be022bd`.
 Both PDFs have been regenerated and the captured CR-001 comparison is accepted within its
 documented tolerances after independent final page/operator review.
+[CR-003](coverage/cr-003-parity.md) is now also accepted from clean `899ca64`, with
+all 72 English lines, 52 ratings and 6,449 glyphs verified. Its hinted-width/LRM/RTL
+fixes preserve the accepted CR-001 PDF byte-for-byte. CR-005 remains open.
 Sections below preserve earlier checkpoints and their own datasets/counts. They do not
 establish acceptance of the other Parent cases.
 
@@ -163,7 +166,7 @@ The production backend dependency files were not changed.
 | SQL | SQL Server text/procedures, strict selectors and legacy defaults | One live evaluation procedure passes; other templates/procedures pending |
 | DataSet | Schema/multiple-table transport; first-table main/subreport binding | Chinese/null/binary transport checks pass; broad subreport/schema parity pending |
 | Parameters | All RPT aliases, linked/range/default values and precedence | Initial declared binding; complex and embedded-query cases pending |
-| PDF | Content, pagination, repeated headers, borders, footers, dates and fonts | Captured CR-001 accepted within measured tolerances; CR-003, CR-005 and other reports remain open |
+| PDF | Content, pagination, repeated headers, borders, footers, dates and fonts | Captured CR-001 and CR-003 accepted within measured tolerances; CR-005 and other reports remain open |
 | Excel | Actual BIFF/XLS preserving current callers | Not implemented; rejected before executing SQL |
 | Lifecycle | Owned paths, cleanup, cancellation and caller logging | Owned paths/scratch cleanup covered; cancellation/integration pending |
 | Deployment | Standalone Docker runtime and explicit opt-in bridge selection | Local development harness only; production unchanged |
@@ -194,7 +197,10 @@ Corrections in this checkpoint:
 - Honor field indentation/reading order and resolve missing Arial Unicode MS to Arial when present.
   The compatibility worker uses Windows VDMX font-cell metrics from mounted font files for the
   legacy PDF glyph sizes; nominal metrics still drive wrapping and baselines. Leading paragraph
-  spaces remain in the output but do not consume the word-fit allowance.
+  spaces remain in the output. The original prefix-exclusion rule is retained for
+  RTL; [CR-003 fitting](coverage/cr-003-whitespace.md) counts LTR prefixes, uses
+  available exact printer device advances for unkerned printable ASCII and preserves
+  terminal space/LRM tails without creating content lines.
 - Recover standard-paper dimensions within the two-twip printer conversion tolerance, and retain
   Crystal's fractional drawing coordinates with its integer-point PDF MediaBox. Custom paper
   dimensions outside this tolerance are preserved.
@@ -280,7 +286,23 @@ fresh page PNGs; each engine's fresh PNGs, glyph data and geometry match its rev
 as does the Rust IR. The final audit passes without blockers: captured CR-001 is accepted
 within these tolerances. There remain 42 Unicode CMap differences for identical glyph outlines.
 
-These are measured CR-001 tolerances, not pixel identity. CR-003 and CR-005 require separate reruns and
-comparisons, and the remaining eligible students are still inventory evidence. BIFF/XLS,
+These are measured CR-001 tolerances, not pixel identity. CR-003's later accepted
+comparison and its own measured envelope are recorded separately below. CR-005 and
+the remaining eligible students still need their own comparisons. BIFF/XLS,
 template-owned SQL, broader legacy/subreport compatibility and authenticated Parent delivery remain
 open. Chinese and Arabic synthetic regressions remain required alongside the affected case.
+
+## CR-003 repair checkpoint (2026-10-17)
+
+The [current comparison](coverage/cr-003-parity.md) and [native findings](coverage/cr-003-whitespace.md)
+record the rejected prefix-only candidate, 570 GDI/hdmx measurements, controlled
+terminal-LRM/centered-RTL probes and final clean `899ca64` pair. Three pages,
+52 ratings, 72 English lines and all 6,449 nonblank glyph outlines/sizes agree;
+maximum residuals are 0.06008 pt X and 0.03016 pt mark Y. All six final PNGs pass
+independent review. Both engines reproduce their own reviewed candidates.
+
+Verification passes 479 focused Docker tests plus 13 minimal text tests, including
+six Chinese tests and synthetic font/device-table regressions. Strict workspace
+Clippy/formatting and worker build pass. CR-001 Rust PDF/IR/PNGs remain byte-identical.
+Original inputs and Parent behavior are unchanged; no SQL or deployment. The ledger
+records D: temporary storage, sequential bounded Docker and RAM/C: checkpoints.

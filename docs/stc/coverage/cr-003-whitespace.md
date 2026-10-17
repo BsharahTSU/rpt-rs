@@ -4,8 +4,8 @@
 
 This records two independently controlled native Crystal behaviors identified during
 CR-003 comparison on 2026-10-17. The source fix and synthetic regressions have been
-reviewed; final Docker validation and fresh paired-PDF acceptance are recorded by
-the coordinator in the [CR-003 repair ledger](cr-003-parity.md). This document does not establish
+reviewed; final Docker validation and fresh paired-PDF acceptance pass and are
+recorded in the [CR-003 repair ledger](cr-003-parity.md). This document does not establish
 broader template coverage, Excel support, live SQL behavior or Parent API delivery.
 
 The original template and frozen schema-bearing DataSet were hashed before and
@@ -89,7 +89,9 @@ Absent ppem records, unsupported text, non-opt-in layouts and malformed/incomple
 tables retain the nominal path. There is no font/report name check, interpolation,
 new dependency or installed-printer query. The parser validates table version,
 record sizes, glyph bounds and complete table length. This measured policy is not
-a claim that all fonts or scripts have portable hinted metrics.
+a claim that all fonts or scripts have portable hinted metrics. Fitting follows
+the selected printer resolution already passed to WindowsLayout; non-square
+printer profiles remain unverified by this case.
 
 ### Terminal direction marker and spaces
 

@@ -5,6 +5,10 @@ These are three representative students from the 98 SQL-ready candidates in the 
 They establish actual PDF generation for these representatives, not all students or authenticated
 Parent API/UI delivery. The remaining 95 candidates have eligibility evidence only.
 
+Current status: [CR-001](cr-001-parity.md) and [CR-003](cr-003-parity.md) have since
+completed their individual repairs and fresh paired acceptance. CR-005 remains open.
+The table and observations below retain the original October 16 results.
+
 ## Results
 
 | Case | Template | Native live | Native snapshot | Rust snapshot | Pages (each) | Ordered ratings per page | Visual parity |

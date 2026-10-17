@@ -8,9 +8,10 @@ schema-bearing DataSet. No SQL is executed. Native Crystal runs on Windows; Rust
 builds, tests and exports run in Linux Docker. Parent code, publication, configuration
 and deployment are unchanged. All work stays on the existing branch with local commits.
 
-Implementation and final synthetic validation are complete. A
-clean-commit fresh native/Rust pair are the remaining acceptance gates at this
-checkpoint. [Whitespace findings and fixes](cr-003-whitespace.md) owns the controlled
+**Accepted for this captured case within the measured tolerances below.** Both
+engines were freshly regenerated from clean local implementation commit `899ca64`;
+final independent all-page/operator review passes without blockers. [Whitespace findings and fixes](cr-003-whitespace.md)
+owns the controlled
 native experiments and exact implementation scope.
 
 ## Findings and implementation
@@ -41,18 +42,25 @@ hard-coded translation was added. Controlled copies and raw field data remain pr
 
 ## Verification
 
-The two CR-003 regressions failed against the prior behavior before the fixes.
-The first implementation checkpoint passed **473 focused Docker tests**: 33 text, 371 layout, 57 render
-(including six documentation tests) and 12 worker tests. The render checks include
-six Chinese tests, Simplified/Traditional leading-prefix coverage, existing Chinese
-PDF extraction/fallback checks and the unchanged public PDF reference net.
-Twelve minimal-feature text tests, strict all-target/all-feature workspace Clippy,
-format checking and the worker build also pass. Independent source review found
-no blocking issue. No public baseline was updated and no live database was configured.
-The all-page candidate audit then caught two wrapping regressions despite those
-passes; the rejected evidence is retained in `candidate/review`. The final hinted
-width/tail correction has passed its initial 35 text tests. Extended suite totals
-and clean-source comparison are recorded below when complete.
+Final source verification passes **479 focused Docker tests**: 39 text, 371 layout,
+57 render (including six documentation tests) and 12 worker tests. Thirteen
+minimal-feature text tests, strict all-target/all-feature workspace Clippy,
+format checking and the committed-source worker build also pass. Independent
+source review found no blocking issue. No public baseline was updated and no
+live database was configured.
+
+The render checks include six Chinese tests: Simplified/Traditional leading-prefix
+coverage plus existing Chinese PDF extraction/fallback checks. The unchanged public
+PDF reference net also passes. Four additional integration tests construct synthetic
+hdmx records in a bundled open font entirely in memory, covering actual glyph-ID
+fitting, unchanged nominal metrics/caches, opt-in/script/ppem guards and malformed
+record fallback. No proprietary font fixture is added.
+
+Both original compatibility regressions failed before their fixes. The first
+implementation passed 473 focused and 12 minimal tests, but its all-page candidate
+audit still caught two wrapping regressions. That rejected evidence is retained in
+`candidate/review`. Native GDI/table and terminal-tail probes established the final
+correction; final tests and fresh-pair comparison pass as recorded here.
 
 The earlier CR-001 full 1,630-test checkpoint remains historical evidence; it is not
 added to these counts or represented as a full workspace rerun for CR-003.
@@ -85,16 +93,16 @@ Linux filesystem cache recovered it to 5.07 GiB; WSL working set fell from 3.47 
 0.66 GiB. C: remained 282.98 GiB free. No files, volumes or user processes were removed,
 and no global WSL settings were changed. Final resource readings follow acceptance.
 
-## Reviewed candidate and CR-001 regression
+## Final comparison and CR-001 regression
 
-The corrected hinted-width candidate passes independent review of all six page
+The corrected candidate and fresh final pair pass independent review of all six page
 PNGs, all 6,449 nonblank glyph outlines/sizes, 377 text runs (279 aligned runs),
 72 English lines (23/26/23) and 52 ordered ratings (18/21/13). No run is excluded.
 The target English break, previously regressed short word and terminal-LRM row
 height now agree with native. Both RTL headings' maximum X errors fall from about
 1.11 pt to 0.02212 and 0.01148 pt. The other previously matched runs do not regress.
 
-| Candidate measurement | Maximum native/Rust difference |
+| Final measurement | Maximum native/Rust difference |
 | --- | ---: |
 | All glyph X origins | 0.06008 pt |
 | English glyph X origins | 0.03265 pt |
@@ -116,3 +124,37 @@ Page IR and all three PNGs are byte-identical to the accepted CR-001 final outpu
 Private `cr-one-hinted-regression/` records that compatibility check. This does not
 establish other students, CR-005, standard reports, Excel, template-owned SQL,
 subreports, authenticated API/UI delivery or production readiness.
+
+## Final regeneration and local commits
+
+Both original Windows Crystal and Linux Docker Rust were freshly generated at
+19:02:21-19:02:47 local on 2026-10-17 from clean `899ca64`. Both pass PDF integrity
+checks, contain three 595 x 841 pt pages, share the print date and preserve all
+52 ordered ratings. Original template and frozen snapshot SHA-256 values are
+unchanged; source was clean and no SQL was executed.
+
+The coordinator and independent reviewer inspected all six fresh PNGs. Full
+operator/outline analysis without exclusions reproduces every measurement above.
+Each engine's fresh PDF and PNG hashes equal its own reviewed candidate; Rust IR,
+run geometry and path audit also match. This is not equality between the two
+engines' PDF bytes or raster pixels. There are no unresolved layout defects in
+this captured pair within the documented envelope.
+
+Final private evidence beneath `research/stc-verification/cr-003-parity/final/`:
+
+- `native.pdf`, `rust.pdf`, `comparison.html`, `comparison.json` and six page PNGs.
+- `evidence.json`: clean source commit, timestamps, snapshot hash and no-SQL replay.
+- `engine-hashes.json`: source/PDF/template/bridge/worker/image hashes.
+- `review/final-review.md`, `final-review-summary.json`, `candidate-identity.json`,
+  all-glyph positions and run/English/rating/path measurements.
+- `resources.json`: final resource checkpoint and absence of running containers.
+
+At 19:03:43, C: had 282.98 GiB free, D: 561.41 GiB free, available host RAM was
+4.28 GiB and WSL working set was 2.21 GiB. No container remained. Initial C: free
+space was 283.01 GiB. Idle cache was released only between completed stages;
+temporary files/evidence remained on D: and existing Docker storage was reused.
+
+Implementation and initial findings are committed locally as `899ca64`. The final
+acceptance ledger/index updates form a separate local documentation checkpoint;
+canonical backend changes contain documentation only. No branch, worktree, hosted
+fork, push, application deployment, report change or database mutation was made.

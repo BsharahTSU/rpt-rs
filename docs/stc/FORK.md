@@ -25,8 +25,12 @@ RTL glyphs, preserving fixed/English guards without report-specific constants.
 Both native/Rust PDFs have been regenerated and pass integrity, page/date and ordered-rating
 checks. Independent final all-page/operator review passes, and the captured CR-001 comparison
 is accepted below 0.06 pt X / 0.031 pt Y, with remaining differences documented in its acceptance
-record. CR-003 and CR-005 remain separate open comparisons. This case
-does not establish full template/student coverage, pixel identity or authenticated Parent delivery.
+record. [CR-003](coverage/cr-003-parity.md) is also accepted from clean `899ca64`:
+printer device-width fitting, terminal LRM handling, centered RTL field preparation
+and mixed-direction reconstruction are repaired and regression-tested. All 6,449
+glyphs, 72 English lines and 52 ratings agree; maximum residuals are 0.06008 pt X /
+0.03016 pt mark Y. CR-001 replay remains byte-identical. CR-005 remains open.
+These cases do not establish full coverage, pixel identity or authenticated delivery.
 
 Template-owned SQL and BIFF/XLS are explicitly unsupported. Multiple-table transport exists,
 but main/subreport binding currently uses the first table. Full caller integration, production
@@ -44,6 +48,7 @@ packaging and broad template parity remain open. Production Parent configuration
 | Parent case discovery and comparison protocol | [coverage/README](coverage/README.md) |
 | Current CR-001 repair and acceptance evidence | [coverage/cr-001-parity](coverage/cr-001-parity.md) |
 | Detailed CR-001 findings and fixes | [metrics](coverage/cr-001-metrics.md), [spacing](coverage/cr-001-spacing.md), [geometry](coverage/cr-001-geometry.md), [Arabic](coverage/cr-001-arabic.md), [whitespace](coverage/cr-001-whitespace.md), [text origins](coverage/cr-001-text-origins.md) |
+| Current CR-003 acceptance and native findings | [comparison](coverage/cr-003-parity.md), [fitting and whitespace](coverage/cr-003-whitespace.md) |
 | Private inputs, logs and outputs (untracked) | `research/stc-verification/` |
 
 Canonical Parent behavior is documented in the sibling backend repository

@@ -334,3 +334,26 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Corrected candidate all-page review passes all 72 English lines, 52 ratings and
   6,449 glyphs, with documented rounding only. Latest CR-001 Rust PDF/IR/all PNGs
   remain byte-identical to its accepted final outputs. Clean-source pair is next.
+
+## 2026-10-17 - Checkpoint 5c: final CR-003 pair accepted
+
+- Fresh native Windows Crystal and Docker Linux Rust exports from clean `899ca64`
+  ran at 19:02:21-19:02:47. Both PDFs are valid, three 595x841pt pages, with the same
+  date and 52 ordered ratings (18/21/13). Original template and snapshot hashes agree.
+- Coordinator and independent reviewer inspected all six final PNGs. Full audit
+  without exclusions matches 6,449 glyphs, 377 runs, 279 aligned runs and 72 English
+  lines. Both headings, the target wrap, short-word boundary and terminal-LRM row
+  are correct. No unresolved layout blocker remains in this captured pair.
+- Measured residuals: max glyph X 0.06008pt; ordinary Y 0.00005pt; rating Y 0.00004pt;
+  mark Y 0.03016pt; path rounding 0.05004pt. Seven rounded bounds agree within
+  0.00005pt and six filled bounds exactly. Eighty-nine CMap differences preserve
+  identical outlines. This is documented tolerance acceptance, not pixel identity.
+- Fresh per-engine PDFs/PNGs, Rust IR and audit data equal the reviewed candidate.
+  Latest CR-001 replay is independently confirmed byte-identical in PDF/IR/PNGs.
+- Final checks: 479 focused Docker tests plus 13 minimal text tests, six Chinese
+  tests, strict Clippy/formatting and worker build. No public baseline changes.
+- At 19:03:43 C: had 282.98GiB free, D: 561.41GiB free, available RAM 4.28GiB;
+  no container remained. D: holds temp/evidence; existing Docker volumes were reused.
+- Updated fork/current coverage and canonical backend documentation. CR-005, other
+  candidates, standard-report database rehearsal, Excel/subreports and authenticated
+  Parent delivery remain open. Local commits only; no branches/worktrees/push/deploy.

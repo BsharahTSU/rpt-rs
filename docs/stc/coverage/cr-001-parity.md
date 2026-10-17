@@ -5,6 +5,11 @@ This work changes the local Rust fork only. Original Crystal, Parent application
 report publication, database data and the original RPT remain unchanged. All case rendering
 uses the previously captured, schema-bearing DataSet; no SQL is executed during this repair.
 
+CR-003 follow-up: its [accepted repair](cr-003-parity.md) extends the shared text
+rules with native hinted fitting and RTL whitespace evidence. CR-001 replay under
+that implementation produces the exact same Rust PDF, Page IR and three PNGs.
+The measurements below retain the original CR-001 acceptance checkpoint.
+
 ## Findings and fixes
 
 | Difference | Verified cause | Fix |
