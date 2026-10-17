@@ -17,6 +17,19 @@ use rpt_pages::{TextLayout, TWIPS_PER_PT};
 
 use crate::FontSource;
 
+fn logical_line_text(text: &str, glyphs: &[cosmic_text::LayoutGlyph]) -> String {
+    let range = glyphs.iter().fold(None, |range, glyph| {
+        Some(match range {
+            Some((start, end)) => (usize::min(start, glyph.start), usize::max(end, glyph.end)),
+            None => (glyph.start, glyph.end),
+        })
+    });
+    range
+        .and_then(|(start, end)| text.get(start..end))
+        .unwrap_or("")
+        .to_owned()
+}
+
 /// Default leading as a multiple of the em, until we read the font's real ascent+descent+line-gap.
 const DEFAULT_LEADING: f32 = 1.2;
 
@@ -197,6 +210,74 @@ impl CosmicLayout {
         self.shaped(text, font, None)
             .layout_runs()
             .any(|run| run.glyphs.iter().any(|glyph| glyph.level.is_rtl()))
+    }
+
+    /// Direction selected by the existing Unicode shaper for the first paragraph.
+    /// A paragraph can be LTR while containing RTL glyph runs, so this is deliberately
+    /// separate from `has_rtl_glyphs`, which serves the growing-field ascent policy.
+    pub(crate) fn first_paragraph_is_rtl(&self, text: &str, font: &FontSpec) -> bool {
+        self.shaped(text, font, None)
+            .layout_runs()
+            .next()
+            .is_some_and(|run| run.rtl)
+    }
+
+    /// Fit unkerned printable Latin using exact hinted device advances, when the
+    /// selected face supplies a complete hdmx record. The painted/PDF and public
+    /// nominal width metrics remain unchanged. Other scripts retain Unicode shaping.
+    pub(crate) fn wrap_with_device_widths(
+        &self,
+        text: &str,
+        width: f64,
+        font: &FontSpec,
+        dpi: u32,
+    ) -> Option<Vec<String>> {
+        if !self.disable_latin_kerning
+            || text.is_empty()
+            || !text.bytes().all(|b| (b' '..=b'~').contains(&b))
+        {
+            return None;
+        }
+        let size = font.size_pt.max(1.0);
+        let ppem = (size * dpi as f32 / 72.0).round();
+        if !(1.0..=255.0).contains(&ppem) || dpi == 0 {
+            return None;
+        }
+        let buffer = self.shaped(text, font, None);
+        let mut shape = buffer.lines.first()?.shape_opt()?.clone();
+        let fs = self.font_system.borrow();
+        let mut records = HashMap::new();
+        for glyph in shape
+            .spans
+            .iter_mut()
+            .flat_map(|span| &mut span.words)
+            .flat_map(|word| &mut word.glyphs)
+        {
+            if let std::collections::hash_map::Entry::Vacant(entry) = records.entry(glyph.font_id) {
+                let widths = fs.db().with_face_data(glyph.font_id, |data, index| {
+                    crate::windows_metrics::font_device_widths(data, index, ppem as u8)
+                })??;
+                entry.insert(widths);
+            }
+            let pixels = *records
+                .get(&glyph.font_id)?
+                .get(usize::from(glyph.glyph_id))?;
+            glyph.x_advance = f32::from(pixels) * 72.0 / dpi as f32 / size;
+        }
+        Some(
+            shape
+                .layout(
+                    size,
+                    Some((width / TWIPS_PER_PT) as f32),
+                    cosmic_text::Wrap::WordOrGlyph,
+                    None,
+                    None,
+                    cosmic_text::Hinting::Disabled,
+                )
+                .iter()
+                .map(|line| logical_line_text(text, &line.glyphs))
+                .collect(),
+        )
     }
 
     /// Convenience: OS fonts only.
@@ -402,18 +483,12 @@ impl TextLayout for CosmicLayout {
     fn wrap(&self, text: &str, max_width: f64, font: &FontSpec) -> Vec<String> {
         let max_width_pt = (max_width / TWIPS_PER_PT) as f32;
         let buffer = self.shaped(text, font, Some(max_width_pt));
-        // Each layout run is one visual (wrapped) line; reconstruct its text from the glyph byte
-        // ranges into the logical line. Correct for LTR/CJK; RTL visual order is not reconstructed
-        // correctly.
+        // A visual line can mix LTR and RTL runs. Its first/last visual glyphs need not
+        // hold the logical byte extrema; inspect every cluster so reordered segments,
+        // ligatures and marks cannot truncate the reconstructed logical text.
         let mut lines: Vec<String> = buffer
             .layout_runs()
-            .map(|run| match (run.glyphs.first(), run.glyphs.last()) {
-                (Some(first), Some(last)) => {
-                    let (a, b) = (first.start.min(last.start), first.end.max(last.end));
-                    run.text.get(a..b).unwrap_or("").to_string()
-                }
-                _ => String::new(),
-            })
+            .map(|run| logical_line_text(run.text, run.glyphs))
             .collect();
         if lines.is_empty() {
             lines.push(String::new());
@@ -528,6 +603,45 @@ mod tests {
                 "inspection must not mutate glyphs or positions"
             );
         }
+    }
+
+    #[test]
+    fn paragraph_direction_does_not_confuse_mixed_glyph_levels_with_base_direction() {
+        let layout = CosmicLayout::new(FontProvider::bundled());
+        let spec = font(10.0);
+        for (text, rtl) in [
+            ("", false),
+            ("   ", false),
+            ("  alpha beta", false),
+            ("  中文报告", false),
+            ("  مرحبا بالعالم", true),
+            ("123 مرحبا", true),
+            ("English مرحبا", false),
+            ("مرحبا English", true),
+        ] {
+            let width = layout.width_twips(text, &spec);
+            assert_eq!(layout.first_paragraph_is_rtl(text, &spec), rtl, "{text:?}");
+            assert_eq!(layout.width_twips(text, &spec), width);
+        }
+    }
+
+    #[test]
+    fn mixed_direction_wrap_preserves_all_logical_clusters() {
+        let layout = CosmicLayout::new(FontProvider::bundled()).without_latin_kerning();
+        let spec = FontSpec {
+            family: "DejaVu Sans".into(),
+            size_pt: 10.0,
+            ..Default::default()
+        };
+        for text in ["alpha مرحبا", "مرحبا alpha", "A لَا B", "abc שלום مرحبا xyz"]
+        {
+            assert_eq!(layout.wrap(text, 100000.0, &spec), [text], "{text:?}");
+        }
+        let width = layout.width_twips("alpha مرحبا", &spec) + 0.01;
+        assert_eq!(
+            layout.wrap("alpha مرحبا beta", width, &spec),
+            ["alpha مرحبا", "beta"]
+        );
     }
 
     #[test]
@@ -755,3 +869,7 @@ fn legacy_latin_ranges_preserve_combining_glyphs_and_positions() {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "cosmic_device_tests.rs"]
+mod cosmic_device_tests;

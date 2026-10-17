@@ -46,8 +46,8 @@ pub(crate) fn apply(pages: &mut [Page], fixups: &[CurrencyFixup], text_layout: &
             },
         );
         // Currency fixups belong to fields. Match the original plan's verified
-        // centered-LTR preparation scope before ownership comparison and measurement.
-        let blanked = if matches!(run.align, rpt_pages::TextAlign::Center) && !run.rtl {
+        // centered-field preparation scope before ownership comparison and measurement.
+        let blanked = if matches!(run.align, rpt_pages::TextAlign::Center) {
             text_layout.prepare_line(&blanked).to_owned()
         } else {
             blanked

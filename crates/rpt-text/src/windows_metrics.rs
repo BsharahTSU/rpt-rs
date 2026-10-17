@@ -117,6 +117,37 @@ fn vdmx_records(bytes: &[u8]) -> Option<Vec<(i32, i32, i32)>> {
     }
     None
 }
+// Exact hinted advances are stored per ppem in TrueType hdmx. Unsupported or
+// malformed records must retain the existing nominal fitting path.
+#[cfg(any(feature = "cosmic", test))]
+fn hdmx_record(data: &[u8], glyph_count: u16, ppem: u8) -> Option<&[u8]> {
+    if u16_at(data, 0)? != 0 {
+        return None;
+    }
+    let count = usize::from(u16_at(data, 2)?);
+    let size = usize::try_from(u32::from_be_bytes(data.get(4..8)?.try_into().ok()?)).ok()?;
+    let glyphs = usize::from(glyph_count);
+    if size < glyphs.checked_add(2)? || size % 4 != 0 {
+        return None;
+    }
+    data.get(..8_usize.checked_add(count.checked_mul(size)?)?)?;
+    for record in data[8..].chunks_exact(size).take(count) {
+        if record[0] == ppem {
+            return record.get(2..2 + glyphs);
+        }
+    }
+    None
+}
+
+#[cfg(feature = "cosmic")]
+pub(crate) fn font_device_widths(data: &[u8], index: u32, ppem: u8) -> Option<Vec<u8>> {
+    let face = ttf_parser::Face::parse(data, index).ok()?;
+    let table = face
+        .raw_face()
+        .table(ttf_parser::Tag::from_bytes(b"hdmx"))?;
+    Some(hdmx_record(table, face.number_of_glyphs(), ppem)?.to_vec())
+}
+
 fn select_cell(records: &[(i32, i32, i32)], height: i32) -> Option<(i32, i32, i32)> {
     let mut previous = None;
     for &(em, ascent, descent) in records {
@@ -181,7 +212,7 @@ impl FontDb {
     }
 }
 
-/// Nominal wrapping uses the normal Unicode shaper; vertical GDI metrics preserve
+/// Wrapping uses the Unicode shaper with optional exact printer device advances; GDI metrics preserve
 /// the existing Crystal row heights and baselines when the same fonts are mounted.
 #[cfg(feature = "cosmic")]
 #[derive(Debug)]
@@ -208,7 +239,7 @@ impl WindowsLayout {
 
     /// Remove line-ending U+0020 only when a caller explicitly prepares a complete display line.
     /// Raw width measurement and wrapping retain their fragment semantics. The layout caller
-    /// currently applies this policy only to centered LTR field objects. Other fields and
+    /// currently applies this policy only to centered field objects. Other fields and
     /// static text can retain trailing space glyphs in native exports.
     pub fn without_trailing_spaces(mut self) -> Self {
         self.trim_trailing_spaces = true;
@@ -220,7 +251,8 @@ impl WindowsLayout {
     /// defaults at the caller. Multiline pitch and the ordinary ascent use printer-pixel
     /// metrics; ascent rounds to whole twips after conversion. The separate field-ascent
     /// hook retains nominal 1440-DPI metrics for paths without printer-ascent evidence.
-    /// PDF glyph-cell sizing keeps its 1440-DPI contract, and wrapping remains unchanged.
+    /// PDF glyph-cell sizing keeps its 1440-DPI contract. Opted-in unkerned ASCII fitting
+    /// uses exact font device widths when the selected ppem record is available.
     pub fn with_printer_dpi(source: crate::FontSource, printer_dpi: NonZeroU32) -> Self {
         Self {
             inner: crate::CosmicLayout::new(crate::FontProvider::from_source(source)),
@@ -243,13 +275,27 @@ impl TextLayout for WindowsLayout {
         self.inner.width_twips(text, font)
     }
     fn wrap(&self, text: &str, width: f64, font: &FontSpec) -> Vec<String> {
-        // Crystal retains leading paragraph spaces for drawing, but excludes them
-        // from the word-fit decision. This matters near an RTL line boundary.
+        // Terminal ASCII spaces with LRM are emitted but do not create a content
+        // line in native LTR fields. Keep the complete suffix rather than dropping
+        // its control or painting spaces on a new line.
         let body = text.trim_start_matches(' ');
         let prefix = &text[..text.len() - body.len()];
-        let mut lines = self.inner.wrap(body, width, font);
-        if let Some(first) = lines.first_mut() {
-            first.insert_str(0, prefix);
+        let rtl = !body.is_empty() && self.inner.first_paragraph_is_rtl(body, font);
+        if rtl || body.is_empty() {
+            let mut lines = self.inner.wrap(body, width, font);
+            if let Some(first) = lines.first_mut() {
+                first.insert_str(0, prefix);
+            }
+            return lines;
+        }
+        let content = text.trim_end_matches([' ', '\u{200e}']);
+        let suffix = &text[content.len()..];
+        let mut lines = self
+            .inner
+            .wrap_with_device_widths(content, width, font, self.printer_dpi.get())
+            .unwrap_or_else(|| self.inner.wrap(content, width, font));
+        if let Some(last) = lines.last_mut() {
+            last.push_str(suffix);
         }
         lines
     }
@@ -468,7 +514,7 @@ mod tests {
 
 #[cfg(all(test, feature = "cosmic"))]
 #[test]
-fn leading_spaces_are_preserved_without_changing_word_fit() {
+fn leading_ltr_spaces_count_toward_word_fit_and_remain_in_the_output() {
     let l = WindowsLayout::new(crate::FontSource::Bundled);
     let f = FontSpec {
         family: "Liberation Sans".into(),
@@ -476,10 +522,7 @@ fn leading_spaces_are_preserved_without_changing_word_fit() {
         ..Default::default()
     };
     let width = l.width_twips("alpha beta", &f) + 0.01;
-    assert_eq!(
-        l.wrap("  alpha beta gamma", width, &f),
-        vec!["  alpha beta", "gamma"]
-    );
+    assert_eq!(l.wrap("  alpha beta", width, &f), vec!["  alpha", "beta"]);
 }
 
 #[cfg(all(test, feature = "cosmic"))]
@@ -626,4 +669,85 @@ fn growing_field_ascent_uses_shaped_rtl_content_and_preserves_other_metrics() {
         distinct_paths > 0,
         "at least one font size must distinguish the two metric paths"
     );
+}
+
+#[cfg(all(test, feature = "cosmic"))]
+#[test]
+fn leading_rtl_spaces_retain_the_native_fit_policy_and_all_characters() {
+    let layout = WindowsLayout::new(crate::FontSource::Bundled).without_latin_kerning();
+    let font = FontSpec {
+        family: "DejaVu Sans".into(),
+        size_pt: 10.0,
+        ..Default::default()
+    };
+    let text = "مرحبا بالعالم مرحبا بالعالم";
+    let width = layout.width_twips("مرحبا بالعالم", &font) + 0.01;
+    let expected = layout.wrap(text, width, &font);
+    assert!(expected.len() > 1);
+    for prefix in [" ", "  "] {
+        let mut lines = layout.wrap(&format!("{prefix}{text}"), width, &font);
+        assert!(lines[0].starts_with(prefix));
+        lines[0].drain(..prefix.len());
+        assert_eq!(lines, expected);
+    }
+    assert_eq!(layout.wrap("   ", width, &font), ["   "]);
+}
+
+#[cfg(all(test, feature = "cosmic"))]
+#[test]
+fn a_ltr_paragraph_with_arabic_still_counts_its_leading_spaces() {
+    let layout = WindowsLayout::new(crate::FontSource::Bundled).without_latin_kerning();
+    let font = FontSpec {
+        family: "DejaVu Sans".into(),
+        size_pt: 10.0,
+        ..Default::default()
+    };
+    let body = "alpha مرحبا";
+    let width = layout.width_twips(body, &font) + 0.01;
+    assert_eq!(layout.wrap(body, width, &font), [body]);
+    let lines = layout.wrap(&format!("  {body}"), width, &font);
+    // The shaper retains the logical separator before the RTL run on line one.
+    assert_eq!(lines, ["  alpha ", "مرحبا"]);
+}
+
+#[cfg(test)]
+#[test]
+fn device_width_records_require_exact_ppem_and_complete_valid_bounds() {
+    // Two synthetic three-glyph records, each padded to a four-byte boundary.
+    let table = [
+        0, 0, 0, 2, 0, 0, 0, 8, 75, 9, 3, 7, 9, 0, 0, 0, 83, 10, 4, 8, 10, 0, 0, 0,
+    ];
+    assert_eq!(hdmx_record(&table, 3, 83), Some([4, 8, 10].as_slice()));
+    assert_eq!(hdmx_record(&table, 3, 75), Some([3, 7, 9].as_slice()));
+    assert_eq!(hdmx_record(&table, 3, 200), None);
+    for end in 0..table.len() {
+        assert_eq!(hdmx_record(&table[..end], 3, 83), None);
+    }
+    let mut bad = table;
+    bad[1] = 1;
+    assert_eq!(hdmx_record(&bad, 3, 83), None);
+    bad = table;
+    bad[7] = 3;
+    assert_eq!(hdmx_record(&bad, 3, 83), None);
+    assert_eq!(hdmx_record(&table, 7, 83), None);
+}
+
+#[cfg(all(test, feature = "cosmic"))]
+#[test]
+fn terminal_lrm_and_spaces_stay_on_the_last_content_line() {
+    let layout = WindowsLayout::new(crate::FontSource::Bundled).without_latin_kerning();
+    let font = FontSpec {
+        family: "Liberation Sans".into(),
+        size_pt: 10.0,
+        ..Default::default()
+    };
+    let text = " alpha beta";
+    let width = layout.width_twips(text, &font) + 0.01;
+    for suffix in [" ", " \u{200e} ", "  \u{200e}  "] {
+        let input = format!("{text}{suffix}");
+        assert_eq!(layout.wrap(&input, width, &font), [input]);
+        let multiline = format!("{text} gamma{suffix}");
+        let lines = layout.wrap(&multiline, width, &font);
+        assert_eq!(lines, [text.to_owned(), format!("gamma{suffix}")]);
+    }
 }

@@ -284,3 +284,53 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Updated fork overview/coverage and canonical backend references. CR-003, CR-005,
   other eligible students, standard-report database rehearsal, authenticated delivery,
   Excel and broader bridge compatibility remain separate work. No Parent code changed.
+
+## 2026-10-17 - Checkpoint 5a: CR-003 native controls and renderer repair
+
+- Fresh baseline from clean `339404c` preserves all 52 ordered ratings over three
+  pages. Independent review isolates one English wrap and two centered RTL headings;
+  all 6,449 nonblank glyph outlines/sizes match before the repair.
+- Native zero/one/two-prefix report copies prove that LTR leading spaces consume
+  fitting width. Zero/one/two-terminal-space DataSet controls prove centered RTL
+  visible text is invariant and the terminal U+0020 is not emitted. Original report,
+  snapshot/schema and every unrelated cell remain unchanged. No SQL was executed.
+- Windows layout now counts LTR prefixes using shaper paragraph direction; RTL prefix
+  behavior remains. Centered RTL fields and late numeric rewrites prepare terminal
+  spaces consistently. Existing other-alignment/static/unknown-initial guards remain.
+- A new mixed-direction test exposed older character truncation from first/last
+  visual glyph reconstruction. Logical min/max across all glyph clusters fixes it;
+  Arabic marks, Hebrew/Arabic and constrained mixed-line tests protect the behavior.
+- Red regressions captured both compatibility defects. Final source verification
+  passes 473 focused Docker tests plus 12 minimal text tests, including six Chinese
+  tests. Strict workspace Clippy, formatting and worker build pass; independent
+  source review reports no blocker. Candidate CR-003 and CR-001 replays are next.
+- Detailed native findings: coverage/cr-003-whitespace.md. Current validation and
+  resource ledger: coverage/cr-003-parity.md. Private evidence and temp files use D:;
+  bounded sequential Docker and idle-cache reclamation protect available RAM/C: space.
+
+## 2026-10-17 - Checkpoint 5b: reject prefix-only candidate; prove device fitting
+
+- Independent full-page review rejected the first candidate despite 473 passing
+  tests: one English boundary wrapped early and a terminal LRM/space line shifted
+  later rows by 7.05 pt. The intended wrap and RTL centering were fixed, but this
+  was not an accepted comparison. Private rejected output is retained.
+- Native GDI/Arial regular+bold probes match 570 hdmx glyph widths exactly across
+  75/83/92ppem. At600DPI/83ppem, 4792.8twips fits while4802.4 does not fit4795;
+  raw design and naive pixel rounding cannot distinguish both boundaries correctly.
+- Exact font-provided device widths now drive only opted-in printable-ASCII fitting
+  through the existing shaped line layout; unavailable/malformed records and other
+  scripts fall back. Painted advances/public nominal width remain unchanged.
+- A native one-cell terminal-space/LRM removal leaves all6,449 visible glyphs and
+  positions unchanged. LTR fit separates/restores only U+0020/LRM tails, preventing
+  phantom lines while preserving logical content. Other controls/marks are guarded.
+- Initial corrected-candidate audit pairs all6,449 glyphs/377runs without exclusions;
+  maxX0.06008pt and markY0.03016pt. All-page and extended regression gates continue.
+- CR001 with the first candidate was byte-identical in PDF/IR/PNGs; the latest
+  hinted-width worker gets its own replay. No SQL, original-input change or deployment.
+- Final source validation passes 479 focused Docker tests (39 text, 371 layout,
+  57 render, 12 worker), plus 13 minimal-feature text tests, strict workspace Clippy
+  and formatting. Four in-memory synthetic font/device-table tests cover the real
+  fitting path and guards without proprietary assets. All six Chinese tests pass.
+- Corrected candidate all-page review passes all 72 English lines, 52 ratings and
+  6,449 glyphs, with documented rounding only. Latest CR-001 Rust PDF/IR/all PNGs
+  remain byte-identical to its accepted final outputs. Clean-source pair is next.

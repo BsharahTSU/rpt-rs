@@ -281,12 +281,15 @@ impl<'a> Formatter<'a> {
             let para = paragraphs.and_then(|ps| ps.get(i));
             let para_order = para.and_then(|p| p.reading_order).unwrap_or(reading_order);
             let para_align = crate::resolved_align(self.report, obj, para_order);
-            // Native probes establish this emission policy only for centered LTR fields.
-            // Other fields and static text can retain trailing glyphs; do not broaden the
-            // rule or normalize stored data and interior tab segments.
+            // Native probes establish terminal-space removal for centered LTR and RTL
+            // fields. Other alignments, unknown directions and static text keep their
+            // existing emission; stored data and interior tab segments are untouched.
             let prepare_field = matches!(kind, ObjectKind::Field)
                 && matches!(para_align, TextAlign::Center)
-                && matches!(para_order, ReadingOrder::LeftToRight);
+                && matches!(
+                    para_order,
+                    ReadingOrder::LeftToRight | ReadingOrder::RightToLeft
+                );
             let seg = if prepare_field {
                 self.text_layout.prepare_line(seg)
             } else {

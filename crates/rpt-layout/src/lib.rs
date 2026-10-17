@@ -802,7 +802,6 @@ impl<'a> Formatter<'a> {
             };
             let text = if matches!(&fx.kind, PageCountFixupKind::Field(_))
                 && matches!(run.align, TextAlign::Center)
-                && !run.rtl
             {
                 self.text_layout.prepare_line(&text).to_owned()
             } else {

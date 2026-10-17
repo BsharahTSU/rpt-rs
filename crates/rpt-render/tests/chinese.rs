@@ -289,3 +289,31 @@ fn chinese_in_an_arial_report_uses_a_covering_fallback_face() {
         }
     }
 }
+
+#[test]
+fn chinese_leading_spaces_reduce_first_line_capacity_without_losing_text() {
+    use rpt_pages::TextLayout;
+    let layout = rpt_text::WindowsLayout::with_printer_dpi(
+        FontSource::System,
+        std::num::NonZeroU32::new(600).unwrap(),
+    )
+    .without_latin_kerning();
+    for text in ["中文报告", "繁體中文"] {
+        let font = chinese_font();
+        let width = layout.width_twips(text, &font) + 0.01;
+        assert_eq!(layout.wrap(text, width, &font), [text]);
+        let padded = format!("  {text}");
+        let lines = layout.wrap(&padded, width, &font);
+        assert_eq!(
+            lines.len(),
+            2,
+            "leading spaces must consume first-line capacity"
+        );
+        assert!(lines[0].starts_with("  "));
+        assert_eq!(
+            lines.concat(),
+            padded,
+            "all spaces and Han characters survive"
+        );
+    }
+}

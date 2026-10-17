@@ -1,5 +1,5 @@
 //! Complete-line compatibility preparation must agree with measurement and emission.
-//! Synthetic widths make the verified centered-LTR anchor change independently calculable.
+//! Synthetic widths make the verified centered-field anchor change independently calculable.
 use super::*;
 use rpt_model::{Alignment, FieldFormat, ReadingOrder};
 use rpt_pages::{FontSpec, TextAlign, TextLayout};
@@ -85,7 +85,7 @@ fn anchor(run: &rpt_pages::TextRun) -> f64 {
 }
 
 #[test]
-fn only_centered_ltr_fields_prepare_text_for_alignment_advance_and_bidi() {
+fn centered_fields_prepare_text_for_alignment_advance_and_bidi_in_both_directions() {
     for value in ["  alpha  beta ", "  مرحبا بالعالم ", "  中文 評量 "] {
         for rtl in [false, true] {
             for align in [
@@ -97,7 +97,7 @@ fn only_centered_ltr_fields_prepare_text_for_alignment_advance_and_bidi() {
                 let prepared = render(vec![field(align, rtl)], value, true);
                 let old = text_runs(&original)[0];
                 let new = text_runs(&prepared)[0];
-                let eligible = matches!(align, Alignment::HorizontalCenterAlign) && !rtl;
+                let eligible = matches!(align, Alignment::HorizontalCenterAlign);
                 assert_eq!(
                     old.text, value,
                     "ordinary constructed-model behavior stays unchanged"
@@ -121,7 +121,7 @@ fn only_centered_ltr_fields_prepare_text_for_alignment_advance_and_bidi() {
                 if !eligible {
                     assert_eq!(
                         new, old,
-                        "unverified alignment/direction keeps all emitted text and metrics"
+                        "other alignments keep all emitted text and metrics"
                     );
                 }
             }
@@ -221,7 +221,7 @@ fn spaced_adapter_prepares_before_counting_retained_scalars() {
 }
 
 #[test]
-fn page_total_field_rewrite_reapplies_only_centered_ltr_preparation() {
+fn page_total_field_rewrite_reapplies_only_centered_field_preparation() {
     for (align, rtl) in [
         (Alignment::HorizontalCenterAlign, false),
         (Alignment::LeftAlign, false),
@@ -243,7 +243,7 @@ fn page_total_field_rewrite_reapplies_only_centered_ltr_preparation() {
         }
         let old = render(vec![obj.clone()], "", false);
         let new = render(vec![obj], "", true);
-        let eligible = matches!(align, Alignment::HorizontalCenterAlign) && !rtl;
+        let eligible = matches!(align, Alignment::HorizontalCenterAlign);
         // Number fields reserve a leading sign cell. Preparation must keep that cell
         // while removing only the two trailing symbol spaces reintroduced by the fixup.
         assert_eq!(
@@ -266,7 +266,7 @@ fn page_total_field_rewrite_reapplies_only_centered_ltr_preparation() {
 }
 
 #[test]
-fn currency_rewrite_reapplies_only_centered_ltr_preparation() {
+fn currency_rewrite_reapplies_only_centered_field_preparation() {
     use rpt_format_value::{CurrencyFormat, CurrencyPosition, NumberFormat};
     for (align, rtl) in [
         (Alignment::HorizontalCenterAlign, false),
@@ -308,7 +308,7 @@ fn currency_rewrite_reapplies_only_centered_ltr_preparation() {
         let DrawOp::Text(second) = &pages[0].ops[1] else {
             panic!("second field");
         };
-        let eligible = matches!(align, Alignment::HorizontalCenterAlign) && !rtl;
+        let eligible = matches!(align, Alignment::HorizontalCenterAlign);
         assert_eq!(first.text, "1$");
         assert_eq!(second.text, if eligible { "2" } else { "2  " });
         assert_eq!(
@@ -316,4 +316,21 @@ fn currency_rewrite_reapplies_only_centered_ltr_preparation() {
             Twips(if eligible { 107 } else { 203 })
         );
     }
+}
+
+#[test]
+fn centered_fields_keep_unknown_direction_and_static_rtl_text_unchanged() {
+    let mut unknown = field(Alignment::HorizontalCenterAlign, false);
+    if let ReportObjectKind::Field(f) = &mut unknown.kind {
+        f.format.as_mut().unwrap().string.reading_order = ReadingOrder::Other(99);
+    }
+    let mut static_rtl = text_object("StaticRtl", "مرحبا  ", 300);
+    static_rtl.format.horizontal_alignment = Alignment::HorizontalCenterAlign;
+    if let ReportObjectKind::Text(t) = &mut static_rtl.kind {
+        t.reading_order = ReadingOrder::RightToLeft;
+    }
+    let objects = vec![unknown, static_rtl];
+    let ordinary = render(objects.clone(), "  中文  ", false);
+    let prepared = render(objects, "  中文  ", true);
+    assert_eq!(text_runs(&prepared), text_runs(&ordinary));
 }
