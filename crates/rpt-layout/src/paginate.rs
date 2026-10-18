@@ -5,7 +5,8 @@
 //! draw-ops are emitted by [`crate::place`]; this module owns the vertical flow and page breaks.
 
 use crate::{
-    first_row, font_of, resolve::ResolveState, Formatter, GroupScope, LayoutLine, TextPlan,
+    first_row, font_of, resolve::ResolveState, Formatter, GroupScope, LayoutLine,
+    RepeatingGroupHeader, TextPlan,
 };
 use rpt_data::{DataContext, GroupInstance, Row};
 use rpt_model::{
@@ -819,18 +820,21 @@ impl<'a> Formatter<'a> {
         let key = Some(g.key.clone());
         let mut state = self.state(key.clone());
         state.summaries = Rc::new(g.summaries.clone());
-        // Group header for this level.
+        // Register before walking the sections: a multipart header can itself straddle a page.
+        // Until a section has completed, it must not be repeated on the continuation page.
+        let first = g.details.first().or_else(|| first_row(g));
+        self.repeat_headers.push(RepeatingGroupHeader {
+            level: g.level,
+            row: first,
+            state: state.clone(),
+            completed_sections: 0,
+        });
         if let Some(hdr) = self.bands.group_headers.get(g.level).cloned() {
-            let first = g.details.first().or_else(|| first_row(g));
-            for s in hdr {
+            for (index, s) in hdr.into_iter().enumerate() {
                 self.emit_band(s, first, &state, Some(UnderlayEnd::GroupFooter(g.level)));
+                self.repeat_headers.last_mut().unwrap().completed_sections = index + 1;
             }
         }
-        self.repeat_headers.push((
-            g.level,
-            g.details.first().or_else(|| first_row(g)),
-            state.clone(),
-        ));
         // Children: subgroups or detail rows.
         if g.subgroups.is_empty() {
             self.emit_details(&g.details, &g.summaries);
@@ -1122,7 +1126,13 @@ impl<'a> Formatter<'a> {
         if !self.in_report_header {
             self.emit_page_header();
             self.continue_spanning_page();
-            for (level, row, mut state) in self.repeat_headers.clone() {
+            for RepeatingGroupHeader {
+                level,
+                row,
+                mut state,
+                completed_sections,
+            } in self.repeat_headers.clone()
+            {
                 if self
                     .bands
                     .group_formats
@@ -1130,7 +1140,11 @@ impl<'a> Formatter<'a> {
                     .is_some_and(|f| f.repeat_group_header)
                 {
                     state.page_number = self.page_number;
-                    for section in self.bands.group_headers[level].clone() {
+                    for section in self.bands.group_headers[level]
+                        .clone()
+                        .into_iter()
+                        .take(completed_sections)
+                    {
                         self.emit_band_no_paginate(section, row, &state, true);
                     }
                 }

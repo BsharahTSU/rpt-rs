@@ -2252,3 +2252,66 @@ fn continued_group_then_forced_group_preserves_rows_headers_and_final_footer() {
         );
     }
 }
+
+#[test]
+fn split_group_header_repeats_only_completed_sections_before_resuming() {
+    for repeat in [false, true] {
+        for break_kind in ["overflow", "before", "after"] {
+            let (mut report, mut saved) = paging_limit_report(1200, 2, 1, 0, 0);
+            saved.columns[1].value_type = FieldValueType::String;
+            let header = &mut report.report_definition.areas[0];
+            header.format.group.as_mut().unwrap().repeat_group_header = repeat;
+            let mut second = section(
+                AreaSectionKind::GroupHeader,
+                "GH2",
+                200,
+                vec![text_object("Second", "SECOND", 0)],
+            );
+            if break_kind == "before" {
+                second
+                    .condition_formulas
+                    .push(("New_Page_Before".into(), "{t.region} = \"B\"".into()));
+            }
+            if break_kind == "after" {
+                header.sections[0]
+                    .condition_formulas
+                    .push(("New_Page_After".into(), "{t.region} = \"B\"".into()));
+            }
+            header.sections.push(second);
+            report.report_definition.areas[1].sections[0].objects =
+                vec![db_field_object("Row", "t.x", 0)];
+            let doc = rendered(&report, &saved);
+            assert_eq!(doc.pages.len(), 2);
+            // Group B's first section fits at the bottom; its second starts a new page.
+            assert_eq!(page_text_tops(&doc.pages[0], "GH"), [0, 800]);
+            assert_eq!(page_text_tops(&doc.pages[0], "SECOND"), [300]);
+            assert_eq!(page_text_tops(&doc.pages[0], "0"), [500]);
+            let prefix_height = if repeat { 300 } else { 0 };
+            assert_eq!(
+                page_text_tops(&doc.pages[1], "GH"),
+                if repeat { vec![0] } else { vec![] }
+            );
+            assert_eq!(page_text_tops(&doc.pages[1], "SECOND"), [prefix_height]);
+            assert_eq!(page_text_tops(&doc.pages[1], "1"), [prefix_height + 200]);
+            assert!(page_text_tops(&doc.pages[1], "0").is_empty());
+        }
+    }
+}
+
+#[test]
+fn group_header_moved_before_its_first_section_is_not_repeated_twice() {
+    let (mut report, saved) = paging_limit_report(1100, 2, 2, 0, 0);
+    report.report_definition.areas[0]
+        .format
+        .group
+        .as_mut()
+        .unwrap()
+        .repeat_group_header = true;
+    // Group A occupies 900 twips. Group B's first header cannot fit at all.
+    let doc = rendered(&report, &saved);
+    assert_eq!(doc.pages.len(), 2);
+    for page in &doc.pages {
+        assert_eq!(page_text_tops(page, "GH"), [0]);
+        assert_eq!(page_text_tops(page, "line"), [300, 600]);
+    }
+}

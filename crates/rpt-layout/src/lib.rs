@@ -355,11 +355,21 @@ impl<'a> Bands<'a> {
     }
 }
 
+/// Header sections already processed in an active group. A page break between sections repeats
+/// only this prefix; the suspended section and its successors still belong to the normal walk.
+#[derive(Clone)]
+pub(crate) struct RepeatingGroupHeader<'a> {
+    level: usize,
+    row: Option<&'a Row>,
+    state: ResolveState,
+    completed_sections: usize,
+}
+
 pub(crate) struct Formatter<'a> {
     report: &'a Report,
     dataset: &'a Dataset,
     formulas: &'a FormulaRegistry,
-    repeat_headers: Vec<(usize, Option<&'a Row>, ResolveState)>,
+    repeat_headers: Vec<RepeatingGroupHeader<'a>>,
     shape_spans: Vec<spans::SpanShape>,
     footer_contexts: Vec<(Option<&'a Row>, ResolveState)>,
     bands: Bands<'a>,

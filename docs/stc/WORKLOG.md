@@ -580,3 +580,16 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Final C: 313.34 GiB, D: 535.79 GiB free; RAM 6.01 GiB available, minimum sample 5.84 GiB.
   No containers or retired target volume; D: storage and caps preserved. SELECT-only SQL,
   no source-data/config/runtime changes, local commits only, no branch/worktree/push.
+
+## 2026-10-18 - Checkpoint 12a: CR-001-B03 split header fixed
+
+- Registered active group headers before their section walk and repeat only completed
+  sections across a page break. Fixes the missing-prefix cause without duplicating a
+  header moved before its first section.
+- Two synthetic regressions cover repeat on/off, overflow, New Page Before/After,
+  exact row positions and no duplication. Intended red failure reproduced; all 374
+  layout tests pass in capped Docker. Formatting checked.
+- Arabic discrepancy traced to Arial Bold `dlig` shaping; scoped repair still pending.
+  Final pair is not yet regenerated or accepted. See [repair record](coverage/cr-001-b03-parity.md).
+- Frozen data only; no SQL. D: cache/temp, RAM about 5.8 GiB available, C: 313 GiB free.
+  Local recoverable checkpoint on existing main; no branches/worktrees/push/deployment.
