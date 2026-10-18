@@ -39,5 +39,23 @@ class BatchSelectionTests(unittest.TestCase):
                 select_candidate(rows, [], 'A')
 
 
+    def test_exhausted_row_novelty_still_selects_largest_untested_student(self):
+        previous = [candidate(1, 20), candidate(2, 35)]
+        pool = [candidate(1, 90), candidate(3, 20), candidate(4, 35)]
+        self.assertEqual(select_candidate(pool, previous, 'A')['student_id'], 4)
+
+    def test_repaired_capture_history_does_not_reselect_or_change_novelty(self):
+        previous = [dict(candidate(1, 35), status='rejected'),
+                    dict(candidate(1, 35), status='accepted-after-repair')]
+        pool = [candidate(1, 90), candidate(2, 35), candidate(3, 20)]
+        self.assertEqual(select_candidate(pool, previous, 'A')['student_id'], 3)
+
+    def test_reserving_first_choice_excludes_same_student_from_next_template(self):
+        pool = [candidate(1, 40, 'A'), candidate(1, 50, 'B'), candidate(2, 20, 'B')]
+        first = select_candidate(pool, [], 'A')
+        second = select_candidate(pool, [first], 'B')
+        self.assertEqual([first['student_id'], second['student_id']], [1, 2])
+
+
 if __name__ == '__main__':
     unittest.main()

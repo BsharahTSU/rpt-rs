@@ -694,3 +694,16 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Final C: 312.09 GiB/D: 534.01 GiB free, RAM 5.40 GiB available; lowest sample 4.02 GiB.
   D: cache/temp and sequential caps retained, no task containers/retired target volume.
   No SQL/template/production changes, no branches/worktrees/push; local commits only.
+
+
+## 2026-10-18 - Checkpoint 15a: fifth evaluation batch prepared
+
+- Refreshed SELECT-only inventory: 98 ready candidates; exclude all fifteen captured
+  students, including repaired cases. Select three new 28/52/35-row cases with Arabic
+  source names. Only the first adds a new row count; no populated comments are present.
+- Reserve each selected ID before the next template, with historical coverage separate.
+  Three new selection regressions pass; all 33 Python selection/audit checks pass in Docker.
+- [Batch 05](coverage/additional-evaluation-batch-05.md) records selection, evidence,
+  reproduction and limits. Actual PDF/Chinese/visual gates pending; renderer unchanged.
+- Initial RAM 5.22 GiB/C: 312.09 GiB free; D: cache/temp and sequential resource caps.
+  No SQL writes/runtime/template/config change. Local commits only, no branches/worktrees.
