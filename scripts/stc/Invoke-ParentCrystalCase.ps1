@@ -5,11 +5,14 @@ param(
     [Parameter(Mandatory=$true)][string]$NativeBridge,
     [string]$Server='localhost\SQLSERVER2016',
     [string]$FontDirectory='C:\Windows\Fonts',
-    [string]$Image='stc-rpt-rs:bridge-dev'
+    [string]$Image='stc-rpt-rs:bridge-dev',
+    [string]$CacheRoot
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'CaseTools.ps1')
+. (Join-Path $PSScriptRoot 'DockerStorage.ps1')
+$storage=Get-StcDockerStorage -CacheRoot $CacheRoot
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $private = Join-Path $repo 'research/stc-verification'
 $CaseFile = Assert-CaseContained $private $CaseFile
@@ -41,7 +44,7 @@ foreach ($font in @('arial.ttf','arialbd.ttf','arialbi.ttf','ariali.ttf','tahoma
     $path=Join-Path $FontDirectory $font
     if (Test-Path -LiteralPath $path) { $evidence.fontFiles += @{name=$font;sha256=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()} }
 }
-$artifactProbe=Invoke-CaseProcess 'docker.exe' @('run','--rm','--network','none','--mount',"type=bind,source=$repo,target=/src,readonly",'--mount','type=volume,source=stc-rpt-rs-target,target=/target,readonly',$Image,'sha256sum','/target/debug/stc-rpt-worker','/src/bridge/Stc.CrystalBridge/bin/Debug/net10.0/stc-crystal-bridge.dll') $run 'build-artifacts'
+$artifactProbe=Invoke-CaseProcess 'docker.exe' @('run','--rm','--network','none','--mount',"type=bind,source=$repo,target=/src,readonly",'--mount',$storage.TargetReadOnlyMount,$Image,'sha256sum','/target/debug/stc-rpt-worker','/src/bridge/Stc.CrystalBridge/bin/Debug/net10.0/stc-crystal-bridge.dll') $run 'build-artifacts'
 if ($artifactProbe.exitCode -ne 0) { throw 'Built worker/bridge artifacts are missing.' }
 $evidence.builtArtifacts=@(Get-Content -Encoding UTF8 -LiteralPath $artifactProbe.response)
 $evidence.nativeCrystalVersion=[Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path (Split-Path -Parent $NativeBridge) 'CrystalDecisions.CrystalReports.Engine.dll')).FileVersion
@@ -112,7 +115,7 @@ try {
             if ($engine -eq 'native-frozen') { $process=Invoke-CaseProcess $NativeBridge @($request) $run $engine }
             else {
                 $containerName='stc-case-'+[Guid]::NewGuid().ToString('N')
-                $arguments=@('run','--rm','--name',$containerName,'--network','none','--mount',"type=bind,source=$repo,target=/src,readonly",'--mount',"type=bind,source=$run,target=/work",'--mount',"type=bind,source=$TemplateRoot,target=/reports,readonly",'--mount',"type=bind,source=$FontDirectory,target=/usr/local/share/fonts/windows,readonly",'--mount','type=volume,source=stc-rpt-rs-target,target=/target,readonly','-e','STC_RPT_WORKER=/target/debug/stc-rpt-worker','-e',('STC_RPT_LOCALE='+$culture.Name),'-e',('STC_RPT_SHORT_DATE='+$culture.DateTimeFormat.ShortDatePattern),'-e',('STC_RPT_LOCAL_DATETIME='+$clock),$Image,'dotnet','/src/bridge/Stc.CrystalBridge/bin/Debug/net10.0/stc-crystal-bridge.dll',('/work/'+[IO.Path]::GetFileName($request)))
+                $arguments=@('run','--rm','--memory','2g','--memory-swap','2g','--cpus','2','--mount',$storage.TempMount,'--name',$containerName,'--network','none','--mount',"type=bind,source=$repo,target=/src,readonly",'--mount',"type=bind,source=$run,target=/work",'--mount',"type=bind,source=$TemplateRoot,target=/reports,readonly",'--mount',"type=bind,source=$FontDirectory,target=/usr/local/share/fonts/windows,readonly",'--mount',$storage.TargetReadOnlyMount,'-e','STC_RPT_WORKER=/target/debug/stc-rpt-worker','-e',('STC_RPT_LOCALE='+$culture.Name),'-e',('STC_RPT_SHORT_DATE='+$culture.DateTimeFormat.ShortDatePattern),'-e',('STC_RPT_LOCAL_DATETIME='+$clock),$Image,'dotnet','/src/bridge/Stc.CrystalBridge/bin/Debug/net10.0/stc-crystal-bridge.dll',('/work/'+[IO.Path]::GetFileName($request)))
                 $process=Invoke-CaseProcess 'docker.exe' $arguments $run $engine
             }
             # The Rust response uses its container path, while the artifact is checked on the host.

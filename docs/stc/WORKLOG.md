@@ -440,3 +440,18 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Updated current fork, coverage and canonical backend references. All private evidence stays
   on D:. At 11:01:40 C: had 285.08 GiB free and RAM 5.71 GiB available; no container remained.
   Existing volumes grew about 0.67 GB; no new volume, pruning, branch, worktree or deployment.
+
+## 2026-10-18 - Checkpoint 8a: move Docker target storage to D:
+
+- User requested relocating the Rust build cache to D: while preserving work and printing.
+  Inventoried the C-backed named volume and started a read-only-source, hardlink-preserving
+  copy to D:\tmpppppp123\docker-cache\rpt-rs-target with independent SHA-256 verification.
+- Centralized target/temp bind mounts for Cargo, bridge printing, case artifact probes and
+  the eight existing private replay/build helpers. Default target and temporary writes now
+  resolve to D:, with an explicit/environment override for other machines. Printing remains
+  read-only against the target. Existing positional arguments, clocks and printer DPI remain.
+- Storage contracts pass in Windows PowerShell 5.1 and PowerShell 7; seven clock and five
+  printer contract checks pass. Added two-CPU/2-GiB limits and one Cargo/test thread to the
+  relevant development launchers. Rust source and production configuration are unchanged.
+- Details and rollback/safety gates: docker-cache-storage.md. At this checkpoint the original
+  volume is intact; copy verification, real build/printing and removal checks are pending.
