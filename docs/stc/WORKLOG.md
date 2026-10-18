@@ -624,3 +624,13 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Final 17:04:41 resources: C: 313.14 GiB, D: 534.41 GiB free; RAM 6.24 GiB available,
   observed minimum 5.21 GiB. No running containers or retired target volume. D: cache/temp,
   frozen data/no SQL, no runtime/template/config changes; local commits only on main.
+
+## 2026-10-18 - Checkpoint 13a: fourth evaluation batch selected
+
+- Refreshed SELECT-only eligibility: 98 ready candidates; excluded all twelve previously
+  captured students. Selected new 33-, 34- and 35-row cases, all with Arabic source names.
+- Added reusable deterministic selection and six synthetic safety/coverage tests;
+  all 30 Python audit/selection checks pass in capped Docker. No renderer change.
+- Initial RAM 2.86 GiB held exports; recovered to 4.88 GiB. C:312.73 GiB free; D: cache/temp.
+  Actual pair/Chinese checks remain pending. [Batch 04](coverage/additional-evaluation-batch-04.md)
+  records scope, evidence and selection limits. Existing main, local commits only.
