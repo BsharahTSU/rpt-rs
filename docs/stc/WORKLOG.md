@@ -634,3 +634,15 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Initial RAM 2.86 GiB held exports; recovered to 4.88 GiB. C:312.73 GiB free; D: cache/temp.
   Actual pair/Chinese checks remain pending. [Batch 04](coverage/additional-evaluation-batch-04.md)
   records scope, evidence and selection limits. Existing main, local commits only.
+
+## 2026-10-18 - Checkpoint 13b: CR-001-B04 comparison rejected
+
+- All execution stages, PDF integrity, 33 ratings (17/16/0), native replay and images
+  pass, but all-six-page reviews confirm a new stale-group header on Rust page two.
+- The extra Arabic heading/empty column block shifts English rows down42.2 pt and
+  moves signatures onto page three. Geometry fails; case explicitly rejected.
+- Retained snapshot/failed PDFs ready for focused footer/group-transition investigation;
+  no root cause or renderer fix claimed. Six new selection tests and all30 Python checks
+  pass; they do not override rejection. Next two students remain pending.
+- [Batch 04](coverage/additional-evaluation-batch-04.md); RAM4.91 GiB/C:312.74 GiB free.
+  D: storage, bounded Docker, local committed checkpoint; no branches/worktrees/push.

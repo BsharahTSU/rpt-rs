@@ -42,3 +42,33 @@ At 17:13:06: RAM 4.88 GiB available, C: 312.73 GiB and D: 534.41 GiB free. Requi
 3 GiB RAM, 30 GiB C: and 10 GiB D: before each export; use sequential two-CPU/2-GiB
 containers and 512-MiB comparisons. No unrelated application is closed or reconfigured.
 Local commits only on existing main; no branches/worktrees, push or deployment.
+
+## Checkpoint 13b: first case rejected for a new boundary layout difference
+
+CR-001-B04 exported from clean `723921d`; capture, native-live, native-frozen and
+rust-frozen all passed. All three PDFs pass qpdf, have three pages and equal boxes/dates.
+Native live/frozen raster pages are identical. All 33 source ratings match in the same
+17 / 16 / 0 page allocation, and decoded image RGB agrees exactly.
+
+All six original-frozen/Rust page images were reviewed by the coordinator and an
+independent reviewer. Page one, including the Arabic student name, agrees. On page two,
+Rust inserts the previous Arabic Language group heading and an empty blue column-header
+block before the English Language section; Crystal starts directly with English Language
+below the carry-over horizontal line. The English body is **42.2 pt lower** in Rust
+(raw PDF Y delta -42.20004 to -42.19999 pt for all sixteen rating baselines).
+This pushes Division Principal/Homeroom Teacher signatures from native page two onto
+Rust page three and moves the final principal/stamp/note area downward on page three.
+
+The case is explicitly **rejected** despite matching rating data and page count.
+Painting-glyph inventories are 1,856/1,856 on page one, 1,948/1,943 on page two and
+452/545 on page three. Page one's geometry passes; pages two/three fail inventory and
+position gates. Small residuals among a subset of matched glyphs do not imply acceptance.
+No new Arabic-name outline defect is visible. The previous CR-001-B03 repair remains
+accepted for its own captured inputs; this new boundary is separate evidence.
+
+The precise root cause and renderer repair have not been established. Preserve the
+frozen snapshot and failed pair for a focused completed-group/footer-transition
+investigation; do not change data/templates/tolerances to pass. The comparison runner
+exits nonzero as intended and private `review/visual-review.json` records the rejection.
+The other two students remain pending. Resource sample after export: RAM 4.91 GiB,
+C: 312.74 GiB and D: 534.40 GiB free. No renderer changes in this checkpoint.
