@@ -5,6 +5,7 @@
 //! batch from literal columns and rows, and inspecting rendered PDF bytes ([`pdf`]). It is depended on
 //! only under `[dev-dependencies]`.
 
+pub mod fonts;
 pub mod pdf;
 
 use rpt_model::{FieldValueType, SavedColumn, SavedData};

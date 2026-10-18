@@ -149,6 +149,7 @@ pub struct CosmicLayout {
     /// Memoized `(line_height_twips, ascent_twips)` per [`FontKey`], computed lazily on first use.
     metrics_cache: RefCell<HashMap<FontKey, (f64, f64)>>,
     disable_latin_kerning: bool,
+    legacy_arabic_ligatures: bool,
 }
 
 impl std::fmt::Debug for CosmicLayout {
@@ -171,6 +172,7 @@ impl CosmicLayout {
             known_families,
             metrics_cache: RefCell::new(HashMap::new()),
             disable_latin_kerning: false,
+            legacy_arabic_ligatures: false,
         }
     }
 
@@ -178,6 +180,13 @@ impl CosmicLayout {
     /// The PDF backend must use the same policy; other scripts retain normal shaping.
     pub fn without_latin_kerning(mut self) -> Self {
         self.disable_latin_kerning = true;
+        self
+    }
+
+    /// Enable font-defined Arabic discretionary ligatures for legacy Crystal output.
+    /// Pair with the PDF backend option; ordinary layouts keep the default shaping.
+    pub fn with_legacy_arabic_ligatures(mut self) -> Self {
+        self.legacy_arabic_ligatures = true;
         self
     }
 
@@ -323,24 +332,37 @@ impl CosmicLayout {
         if font.italic {
             attrs = attrs.style(Style::Italic);
         }
-        let ranges = if self.disable_latin_kerning {
-            crate::latin_kerning_ranges(text)
-        } else {
-            Vec::new()
-        };
+        let mut ranges = Vec::new();
+        if self.disable_latin_kerning {
+            let mut features = FontFeatures::new();
+            features.disable(FeatureTag::KERNING);
+            ranges.extend(
+                crate::latin_kerning_ranges(text)
+                    .into_iter()
+                    .map(|r| (r, features.clone())),
+            );
+        }
+        if self.legacy_arabic_ligatures {
+            let mut features = FontFeatures::new();
+            features.enable(FeatureTag::DISCRETIONARY_LIGATURES);
+            ranges.extend(
+                crate::arabic_ligature_ranges(text)
+                    .into_iter()
+                    .map(|r| (r, features.clone())),
+            );
+        }
+        ranges.sort_by_key(|(range, _)| range.start);
         if ranges.is_empty() {
             buffer.set_text(text, &attrs, Shaping::Advanced, None);
         } else {
-            let mut features = FontFeatures::new();
-            features.disable(FeatureTag::KERNING);
-            let unkerned = attrs.clone().font_features(features);
+            // ASCII and Arabic masks are disjoint; other text keeps its original attributes.
             let mut spans = Vec::new();
             let mut previous = 0;
-            for range in ranges {
+            for (range, features) in ranges {
                 if previous < range.start {
                     spans.push((&text[previous..range.start], attrs.clone()));
                 }
-                spans.push((&text[range.clone()], unkerned.clone()));
+                spans.push((&text[range.clone()], attrs.clone().font_features(features)));
                 previous = range.end;
             }
             if previous < text.len() {
@@ -873,3 +895,7 @@ fn legacy_latin_ranges_preserve_combining_glyphs_and_positions() {
 #[cfg(test)]
 #[path = "cosmic_device_tests.rs"]
 mod cosmic_device_tests;
+
+#[cfg(test)]
+#[path = "cosmic_ligature_tests.rs"]
+mod cosmic_ligature_tests;

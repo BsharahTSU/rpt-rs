@@ -409,6 +409,7 @@ impl Cli {
             fonts: self.fonts(),
             disable_latin_kerning: false,
             legacy_arabic_mark_offsets: false,
+            legacy_arabic_ligatures: false,
             legacy_bmp_quantization: false,
             conformance: self.conformance,
             created: None,

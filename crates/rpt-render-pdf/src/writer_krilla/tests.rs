@@ -552,3 +552,150 @@ fn legacy_arabic_marks_do_not_change_hebrew_clusters_in_a_shared_rtl_face_run() 
         "exercise a nonzero Arabic offset"
     );
 }
+
+fn synthetic_ligature_face() -> Rc<LoadedFace> {
+    let data = Rc::new(rpt_test_support::fonts::discretionary_ligature_font());
+    let font = Font::new(data.as_ref().clone().into(), 0).unwrap();
+    let upem = font.units_per_em();
+    let shaper_data = harfrust::ShaperData::new(&harfrust::FontRef::from_index(&data, 0).unwrap());
+    Rc::new(LoadedFace {
+        font,
+        data,
+        index: 0,
+        upem,
+        shaper_data,
+    })
+}
+
+#[test]
+fn legacy_arabic_ligatures_preserve_clusters_and_per_scalar_spacing() {
+    assert!(!PdfOptions::default().legacy_arabic_ligatures);
+    let face = synthetic_ligature_face();
+    let ordinary = Shaper::new(&face, false).unwrap();
+    let compatibility = Shaper::new(&face, false)
+        .unwrap()
+        .with_legacy_arabic_ligatures(true);
+    let (normal, normal_width) = ordinary.shape("اا", SIZE, 0.0);
+    let (joined, joined_width) = compatibility.shape("اا", SIZE, 0.0);
+    assert_eq!(normal.len(), 2);
+    assert_eq!(
+        joined.len(),
+        1,
+        "exercise an actual font-defined Arabic dlig substitution"
+    );
+    assert_eq!(joined[0].text_range, 0.."اا".len());
+    assert!(joined_width < normal_width);
+    let (spaced, spaced_width) = compatibility.shape("اا", SIZE, SPACING_PT);
+    assert_eq!(spaced[0].glyph_id, joined[0].glyph_id);
+    assert_eq!(spaced[0].text_range, joined[0].text_range);
+    assert!((spaced_width - joined_width - 2.0 * SPACING_PT).abs() < 0.001);
+}
+
+#[test]
+fn legacy_arabic_ligatures_mask_mixed_runs_and_preserve_non_arabic_glyphs() {
+    let face = synthetic_ligature_face();
+    let ordinary = Shaper::new(&face, true).unwrap();
+    let compatibility = Shaper::new(&face, true)
+        .unwrap()
+        .with_legacy_arabic_ligatures(true);
+    for text in ["ff", "AV ff", "שָלוֹם", "a\u{301}"] {
+        let (normal, width) = ordinary.shape(text, SIZE, SPACING_PT);
+        let (legacy, legacy_width) = compatibility.shape(text, SIZE, SPACING_PT);
+        assert_eq!(width, legacy_width);
+        assert_same_shaped_glyphs(&normal, &legacy);
+    }
+    // UTF-8 offsets follow a multibyte Hebrew prefix, while Latin also offers a dlig.
+    let text = "ש ff اا ff";
+    let (normal, _) = ordinary.shape_directed(text, SIZE, 0.0, Some(true), 0.0);
+    let (legacy, _) = compatibility.shape_directed(text, SIZE, 0.0, Some(true), 0.0);
+    let start = text.find('ا').unwrap();
+    let arabic = start..start + "اا".len();
+    assert_eq!(normal.len(), legacy.len() + 1);
+    let ligature = legacy.iter().find(|g| g.text_range == arabic).unwrap();
+    assert_eq!(&text[ligature.text_range.clone()], "اا");
+    let normal_other: Vec<_> = normal
+        .into_iter()
+        .filter(|g| !arabic.contains(&g.text_range.start))
+        .collect();
+    let legacy_other: Vec<_> = legacy
+        .into_iter()
+        .filter(|g| !arabic.contains(&g.text_range.start))
+        .collect();
+    assert_same_shaped_glyphs(&normal_other, &legacy_other);
+}
+
+#[test]
+fn legacy_arabic_ligature_option_reaches_pdf_and_keeps_logical_unicode() {
+    let render = |text: &str, enabled| {
+        let mut fonts = FontCache::new(FontSource::Bundled);
+        let spec = FontSpec {
+            family: "DejaVu Sans".into(),
+            size_pt: SIZE,
+            ..Default::default()
+        };
+        let segments = fonts.db.segment_by_coverage(&spec, text);
+        assert_eq!(segments.len(), 1);
+        fonts
+            .faces
+            .insert(segments[0].face, Some(synthetic_ligature_face()));
+        let mut page = Page::new(
+            1,
+            PageSize {
+                width: Twips(12240),
+                height: Twips(15840),
+            },
+        );
+        page.push(DrawOp::Text(TextRun {
+            rtl: true,
+            bounds: Rect {
+                left: Twips(720),
+                top: Twips(720),
+                width: Twips(6000),
+                height: Twips(400),
+            },
+            text: text.into(),
+            font: spec,
+            color: Color {
+                r: 0,
+                g: 0,
+                b: 0,
+                a: 255,
+            },
+            align: TextAlign::Left,
+            rotation: 0.0,
+            metrics: None,
+            character_spacing: Twips(0),
+            source: None,
+        }));
+        render_with_fonts(
+            &[page],
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            fonts,
+            &PdfOptions {
+                legacy_arabic_ligatures: enabled,
+                ..Default::default()
+            },
+        )
+        .unwrap()
+    };
+    let native = render("اا", false);
+    let legacy = render("اا", true);
+    let normal_pdf = rpt_test_support::pdf::structure(&native);
+    let legacy_pdf = rpt_test_support::pdf::structure(&legacy);
+    let normal_show = &normal_pdf.pages[0].shows[0];
+    let legacy_show = &legacy_pdf.pages[0].shows[0];
+    assert_eq!(normal_show.glyphs.len(), 2);
+    assert_eq!(legacy_show.glyphs.len(), 1);
+    assert!(legacy_show.pen_pt < normal_show.pen_pt);
+    assert_eq!(normal_show.text, "اا");
+    assert_eq!(
+        legacy_show.text, "اا",
+        "the ToUnicode map must retain both logical alefs, not substitute a presentation character"
+    );
+    assert_eq!(
+        render("ff", false),
+        render("ff", true),
+        "Latin dlig stays disabled in serialized output"
+    );
+}

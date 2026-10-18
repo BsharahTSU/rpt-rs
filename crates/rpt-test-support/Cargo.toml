@@ -16,6 +16,7 @@ rpt-model = { workspace = true }
 # Inflate a rendered PDF's /FlateDecode content streams so a test can assert on the emitted operators
 # (`pdf` module). The only compression this crate needs; PDF streams are zlib.
 miniz_oxide = { workspace = true }
+ttf-parser = { workspace = true }
 
 [lints]
 workspace = true

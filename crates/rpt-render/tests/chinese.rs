@@ -171,6 +171,7 @@ fn printer_line_metrics_preserve_chinese_pdf_text_and_fallbacks() {
                 std::num::NonZeroU32::new(600).unwrap(),
             )
             .without_latin_kerning()
+            .with_legacy_arabic_ligatures()
             .without_trailing_spaces(),
         ),
         Default::default(),
@@ -179,7 +180,9 @@ fn printer_line_metrics_preserve_chinese_pdf_text_and_fallbacks() {
     );
     // Exercise final alignment quantization through an actual PDF as well as the
     // printer metrics. Shaping/wrapping has already selected these CJK/mixed lines.
-    let alignment = rpt_text::CosmicLayout::with_system_fonts().without_latin_kerning();
+    let alignment = rpt_text::CosmicLayout::with_system_fonts()
+        .without_latin_kerning()
+        .with_legacy_arabic_ligatures();
     for op in document.pages.iter_mut().flat_map(|page| &mut page.ops) {
         if let DrawOp::Text(run) = op {
             run.align = rpt_pages::TextAlign::Center;
@@ -207,6 +210,7 @@ fn assert_chinese_pdf_round_trip(pages: rpt_pages::PagedDocument, profile: &str)
             fonts: FontSource::System,
             disable_latin_kerning: profile == "printer-600",
             legacy_arabic_mark_offsets: profile == "printer-600",
+            legacy_arabic_ligatures: profile == "printer-600",
             legacy_bmp_quantization: profile == "printer-600",
             ..Default::default()
         },

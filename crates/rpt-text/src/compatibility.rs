@@ -29,9 +29,56 @@ pub fn latin_kerning_ranges(text: &str) -> Vec<Range<usize>> {
     ranges
 }
 
+/// Arabic-script spans for the optional legacy discretionary-ligature policy.
+/// Inherited combining marks/join controls stay with an Arabic span. Common
+/// punctuation/spaces and other scripts are excluded, and a marks-only run is
+/// never enabled. This preserves the original UTF-8 text and cluster boundaries.
+pub fn arabic_ligature_ranges(text: &str) -> Vec<Range<usize>> {
+    use unicode_script::{Script, UnicodeScript};
+    let mut ranges = Vec::new();
+    let mut start = None;
+    let mut has_arabic = false;
+    for (offset, character) in text
+        .char_indices()
+        .chain(std::iter::once((text.len(), ' ')))
+    {
+        let script = character.script();
+        if script == Script::Arabic {
+            start.get_or_insert(offset);
+            has_arabic = true;
+        } else if script == Script::Inherited && start.is_some() {
+            // Keep following marks/join controls, but do not take a preceding
+            // Latin/Hebrew combining mark merely because Arabic follows it.
+        } else {
+            if let Some(from) = start.take() {
+                if has_arabic {
+                    ranges.push(from..offset);
+                }
+            }
+            has_arabic = false;
+        }
+    }
+    ranges
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn arabic_masks_keep_marks_and_joiners_without_enabling_other_scripts() {
+        let text = "ff 中文 اا ا\u{200d}ا ا\u{64e}ا שָ\u{301} ff";
+        let ranges = arabic_ligature_ranges(text);
+        assert_eq!(
+            ranges.iter().map(|r| &text[r.clone()]).collect::<Vec<_>>(),
+            ["اا", "ا\u{200d}ا", "ا\u{64e}ا"]
+        );
+        assert!(arabic_ligature_ranges("ff 中文 שָ\u{301} \u{301}").is_empty());
+        assert_eq!(arabic_ligature_ranges("اا"), vec![0..4]);
+        let adjacent = "a\u{301}اا";
+        assert_eq!(arabic_ligature_ranges(adjacent), vec![3..7]);
+        assert_eq!(&adjacent[arabic_ligature_ranges(adjacent)[0].clone()], "اا");
+    }
+
     #[test]
     fn ranges_preserve_utf8_boundaries_and_non_latin_text() {
         let text = "中文 AV العربية Wr 42 成績";

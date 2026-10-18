@@ -416,6 +416,10 @@ pub struct PdfOptions {
     /// standard Y-up offsets. Glyph selection, joining, advances and other scripts
     /// remain unchanged; this is a measured compatibility quirk, not a font fix.
     pub legacy_arabic_mark_offsets: bool,
+    /// Enable font-defined OpenType discretionary ligatures (`dlig`) only in Arabic
+    /// spans, matching legacy Crystal shaping. Off by default. Logical text and
+    /// mappings are preserved; pair with the same measurement/layout option.
+    pub legacy_arabic_ligatures: bool,
     /// Reproduce measured legacy palette conversion for opaque bottom-up 24-bit BI_RGB BMPs.
     /// Off by default, preserving source pixels. Other raster formats and BMP storage modes
     /// retain their normal decoding. Unwritten legacy inverse-map cells use deterministic

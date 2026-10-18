@@ -237,6 +237,13 @@ impl WindowsLayout {
         self
     }
 
+    /// Enable font-defined Arabic discretionary ligatures in fitting and measurement.
+    /// Pair with the PDF backend option.
+    pub fn with_legacy_arabic_ligatures(mut self) -> Self {
+        self.inner = self.inner.with_legacy_arabic_ligatures();
+        self
+    }
+
     /// Remove line-ending U+0020 only when a caller explicitly prepares a complete display line.
     /// Raw width measurement and wrapping retain their fragment semantics. The layout caller
     /// currently applies this policy only to centered field objects. Other fields and

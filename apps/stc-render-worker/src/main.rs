@@ -358,6 +358,7 @@ fn run(input: Input) -> Result<Json, String> {
         Box::new(
             rpt_text::WindowsLayout::with_printer_dpi(FontSource::System, printer_dpi)
                 .without_latin_kerning()
+                .with_legacy_arabic_ligatures()
                 .without_trailing_spaces(),
         ),
         render_locale()?,
@@ -373,7 +374,9 @@ fn run(input: Input) -> Result<Json, String> {
     // heights. Apply that conversion only after wrapping/pagination, keeping the
     // nominal baselines. This policy belongs to this compatibility adapter.
     let fonts = FontSource::System.load();
-    let alignment = rpt_text::CosmicLayout::with_system_fonts().without_latin_kerning();
+    let alignment = rpt_text::CosmicLayout::with_system_fonts()
+        .without_latin_kerning()
+        .with_legacy_arabic_ligatures();
     for op in document.pages.iter_mut().flat_map(|p| &mut p.ops) {
         if let DrawOp::Text(text) = op {
             if let Some(metrics) = fonts.windows_metrics(&text.font, true) {
@@ -423,6 +426,7 @@ fn run(input: Input) -> Result<Json, String> {
             fonts: FontSource::System,
             disable_latin_kerning: true,
             legacy_arabic_mark_offsets: true,
+            legacy_arabic_ligatures: true,
             legacy_bmp_quantization: true,
             ..Default::default()
         },

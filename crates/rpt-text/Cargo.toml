@@ -24,9 +24,13 @@ fontdb = { workspace = true }
 # Per-glyph cmap coverage lookup (does this face have a glyph for codepoint c?) driving the
 # symbol-fallback segmentation. Version matches the one already in the graph via fontdb.
 ttf-parser = { workspace = true }
+unicode-script = { workspace = true }
 rpt-pages = { workspace = true }
 # The cosmic-text shaping stack; it implements the `TextLayout` trait from rpt-pages — only under `cosmic`.
 cosmic-text = { workspace = true, optional = true }
+
+[dev-dependencies]
+rpt-test-support = { workspace = true }
 
 [lints]
 workspace = true

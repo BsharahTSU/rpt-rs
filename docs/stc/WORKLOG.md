@@ -593,3 +593,18 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   Final pair is not yet regenerated or accepted. See [repair record](coverage/cr-001-b03-parity.md).
 - Frozen data only; no SQL. D: cache/temp, RAM about 5.8 GiB available, C: 313 GiB free.
   Local recoverable checkpoint on existing main; no branches/worktrees/push/deployment.
+
+## 2026-10-18 - Checkpoint 12b: Arabic ligatures repaired and candidate reviewed
+
+- Exact native font-outline/GSUB evidence identifies optional Arabic `dlig`. Enabled
+  an explicit Arabic-only policy consistently in layout measurement and PDF shaping;
+  preserve logical Unicode and ordinary/Latin/Hebrew/CJK defaults. No data substitutions.
+- Seven new synthetic actual-font/PDF regressions pass. Combined with pagination,
+  Chinese, worker and audit suites, 542 focused checks pass. Existing pinned versions
+  retained; new dependency edges verified with locked/offline Cargo.
+- Candidate CR-001-B03 passes all 4,748 painted glyphs, all 36 ratings, images and
+  geometry (max X/Y 0.05708/0.03016 pt). Independent all-six-page visual review accepts
+  the heading, body, name and final content. Clean-source final pair/guard replays follow.
+- Findings/reproduction: [CR-001-B03 repair](coverage/cr-001-b03-parity.md).
+  D: cache/temp, two-CPU/2-GiB Docker; sampled RAM 5.21 GiB, C: 313.35 GiB free.
+  Frozen data only, no SQL/deployment/branches/worktrees/push; local commits only.
