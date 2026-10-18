@@ -521,3 +521,16 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Next two students remain pending; details in [batch 02](coverage/additional-evaluation-batch-02.md).
   C: 313.34 GiB free and RAM 5.83 GiB after first case. D: cache/temp, capped Docker,
   SELECT-only SQL, local committed checkpoint; no branch/worktree/push/deployment.
+
+## 2026-10-18 - Checkpoint 10b: symbol ratings checked against captured data
+
+- CR-003-B02 passes all exports and three-page review: 41 ratings, 5,568 painting
+  glyphs and exact image RGB, within existing displacement limits.
+- Found an audit-only omission: six source `*` ratings were displayed correctly by
+  both engines but excluded by the old letter allowlist. New reusable rating checks
+  retain all column tokens, compare per-page order and require source multiplicity.
+- Whole-word bounds exclude a crossing Arabic header and signature parenthesis;
+  four new synthetic tests cover this and shared missing/duplicate/unknown values.
+  All 22 Python checks pass; both existing pairs pass the strengthened data gate.
+- Third student and Chinese PDF checks remain pending. No renderer/source-data fix;
+  see [batch 02](coverage/additional-evaluation-batch-02.md) for full findings.
