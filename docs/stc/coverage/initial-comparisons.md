@@ -3,13 +3,14 @@
 Verified 2026-10-16 with the unchanged Windows Crystal bridge and rebuilt Docker Linux Rust worker.
 These are three representative students from the 98 SQL-ready candidates in the [inventory](sql-eligibility.md).
 They establish actual PDF generation for these representatives, not all students or authenticated
-Parent API/UI delivery. The remaining 95 candidates have eligibility evidence only.
+Parent API/UI delivery. At that checkpoint, the remaining 95 candidates had eligibility evidence only.
 
 Current status: [CR-001](cr-001-parity.md) and [CR-003](cr-003-parity.md) have since
 completed their individual repairs and fresh paired acceptance. [CR-005](cr-005-parity.md) now passes text/layout checks under those shared fixes.
 The subsequent [logo-color repair](cr-005-logo.md) closes the shared image residual:
 all 9,600 decoded logo RGB pixels match in fresh CR-005 and CR-001/003 replays.
 Whole-page pixel identity is still not claimed; documented layout tolerances remain.
+The [additional-student batch](additional-evaluation-batch-01.md) now accepts three more students, leaving 92 eligible candidates untested.
 The table and observations below retain the original October 16 results.
 
 ## Results

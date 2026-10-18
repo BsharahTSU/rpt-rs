@@ -45,10 +45,21 @@ Source and SQL discovery are complete for the documented local scope: 38 AAJ cas
 ready evaluation groups and 98 candidate students. Other local copies are metadata-only evidence;
 external Gradebook and authenticated API/UI delivery remain open. Read the [surface inventory](parent-surfaces.md),
 [SQL findings](sql-eligibility.md), [isolated runner](case-runner.md), and [clock fix](clock-parity.md).
-[Initial actual comparisons](initial-comparisons.md) now record three passing native/Rust representative exports, identical native live/replay images, matching ordered ratings and the remaining visual defects. The other 95 eligible students remain SQL-only evidence.
+[Initial actual comparisons](initial-comparisons.md) now record three passing native/Rust representative exports, identical native live/replay images, matching ordered ratings and the remaining visual defects. After the [additional-student batch](additional-evaluation-batch-01.md), six students have accepted comparisons; the other 92 eligible students remain SQL-only evidence.
 
 
-## Current comparison checkpoint: CR-005 logo repaired (2026-10-18)
+## Current comparison checkpoint: three additional students accepted (2026-10-18)
+
+[Batch 01](additional-evaluation-batch-01.md) adds one student per template, covering
+39 rows, a sparse 20-row/two-page report, and a different long-source-name candidate.
+All 94 ordered ratings, 13,272 painting glyphs and decoded image pixels agree within
+existing tolerances; all 16 compared page images were reviewed. Ten new audit tests,
+four existing comparison tests and seven Chinese PDF tests pass. A zero-area space
+contour false positive in the audit was corrected; no renderer change was required.
+Six distinct students are now accepted, leaving 92 eligible candidates untested.
+Populated comments and overflowing displayed names are not covered by this batch.
+
+## Previous comparison checkpoint: CR-005 logo repaired (2026-10-18)
 
 The [generic logo-color fix](cr-005-logo.md) is committed in `eb4656d`. Fresh original
 Crystal and Docker Rust PDFs from that clean source pass integrity and all-page review.
@@ -112,7 +123,7 @@ fresh per-engine pixels, glyph data and geometry reproduce the reviewed candidat
 This is accepted captured-case parity with documented residuals, not pixel identity.
 
 CR-003 retains its recorded text/layout acceptance. CR-005 passes text/layout and exact decoded-logo matching above; CR-001/003 replays close their same image residual.
-The other 95 eligible students remain SQL-only evidence. Unpublished standard/second-term cases,
+After the [additional-student batch](additional-evaluation-batch-01.md), six students have accepted comparisons; the other 92 eligible students remain SQL-only evidence. Unpublished standard/second-term cases,
 missing authoritative databases/templates, external Gradebook, authenticated API/UI delivery,
 BIFF/XLS and broad legacy/subreport coverage retain the gaps recorded in
 [initial comparisons](initial-comparisons.md), [SQL findings](sql-eligibility.md) and

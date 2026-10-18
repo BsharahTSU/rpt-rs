@@ -16,7 +16,8 @@ SQL/procedure/DataSet callers, PDF, and BIFF/XLS. The portable adapter uses .NET
 request validation and the Rust worker for rendering. Rust builds and candidates run in Docker
 Linux; original Crystal baselines require the existing Windows Crystal installation.
 
-PDF support is experimental. Three representative evaluation cases have native/Rust exports.
+PDF support is experimental. Six students across three evaluation templates now have accepted
+native/Rust comparisons, including the [additional-student batch](coverage/additional-evaluation-batch-01.md).
 The [CR-001 repair](coverage/cr-001-parity.md), implemented through clean commit `be022bd`,
 addresses saved-printer pitch and scoped ascent, Basic-Latin spacing, trailing-space centering,
 shaped alignment-width rounding, ordinary border/rule/rounded-frame geometry, stored paragraph

@@ -1,5 +1,14 @@
 # Additional evaluation student batch 01
 
+## Completed batch
+
+All three new students are accepted within the existing measured layout tolerances.
+Original Windows Crystal and Docker Linux Rust agree on 94 ordered ratings, all
+13,272 painting glyph outlines/sizes and every decoded image RGB value. Every page
+was reviewed. No renderer repair was necessary; the audit correction below is covered
+by synthetic tests. Six distinct students now have accepted comparisons across the
+three evaluation templates; 92 of the 98 eligible candidates remain untested.
+
 ## Scope and selection (2026-10-18)
 
 The user requested a small batch of additional eligible students, comparing original
@@ -14,8 +23,8 @@ Scratch uses `D:\tmpppppp123\rpt-rs-additional-batch-01`; the build cache remain
 | Opaque case | Selection | Source rows | English/Arabic name lengths | Status |
 | --- | --- | ---: | --- | --- |
 | CR-001-B01 | Largest available row set; long English name breaks ties | 39 | 37 / 26 | Accepted within existing tolerances |
-| CR-003-B01 | Smallest available row set | 20 | 27 / 23 | Pending export/comparison |
-| CR-005-B01 | Longest available English name | 35 | 38 / 31 | Pending export/comparison |
+| CR-003-B01 | Smallest available row set | 20 | 27 / 23 | Accepted within existing tolerances |
+| CR-005-B01 | Longest available English name | 35 | 38 / 31 | Accepted within existing tolerances |
 
 Name lengths describe source fields, not a claim that the template prints the complete
 field. All eligible candidates have empty course/general comments; populated-comment
@@ -75,4 +84,60 @@ python3 -m unittest test_glyph_audit.py test_compare_case.py
 Run from `scripts/stc` with the repository read-only, `PYTHONDONTWRITEBYTECODE=1`, D:
 temporary storage and the existing development image. There are 10 new audit checks
 and four existing comparison checks. Rust renderer sources and production configuration
-are unchanged. Remaining batch cases are executed only after this first checkpoint.
+are unchanged. The first case/audit checkpoint was committed as `56a670e` before
+running the second and third students.
+
+## Final case results
+
+| Case | Pages per engine | Ordered ratings per page | Painting glyphs | Max X / Y difference (pt) | Export source |
+| --- | ---: | --- | ---: | --- | --- |
+| CR-001-B01 | 3 | 17 / 17 / 5 | 5,060 | 0.05708 / 0.03016 | clean `7989b3b` |
+| CR-003-B01 | 2 | 16 / 4 | 3,282 | 0.06008 / 0.03016 | clean `56a670e` |
+| CR-005-B01 | 3 | 16 / 12 / 7 | 4,930 | 0.05894 / 0.03016 | clean `56a670e` |
+
+Each case passed capture, original live export, original frozen export and Docker
+Rust frozen export. All nine PDFs pass qpdf; page boxes/dates agree within each case.
+Native live/frozen raster pages are identical, independently confirming replay for
+this data. All 16 native-frozen/Rust page images were reviewed, including the two-page
+sparse case, continuation headers, different ratings, signatures and repeated footers.
+Every image's decoded RGB agrees, including each 9,600-pixel logo.
+
+The first case adds five rows relative to its earlier representative, including a
+third-page Science section. The second reduces the earlier 52-row, three-page sample
+to 20 rows and two pages, testing different page totals and final-footer placement.
+The third validates a different student and rating distribution. Its selected long
+full-name field is shortened by the existing report formula, so this is not evidence
+of handling an overflowing long displayed name. Populated comments and additional
+pagination/content shapes remain open.
+
+The 46 / 53 / 62 outline-equivalent Unicode mapping differences remain visible in the
+raw extraction diagnostics. They do not hide missing painting glyphs: matching is
+one-to-one on each page, includes marks, and uses the same explicit 0.061 pt X /
+0.031 pt Y limits for every glyph. Native/Rust whole-page raster equality and PDF byte
+identity are not claimed. The zero-area space correction changes audit counting only;
+counts in older investigation records used their then-current audit and are not directly
+comparable without rerunning it.
+
+Validation: **21 focused checks passed** (ten new synthetic glyph-audit tests, four
+existing comparison tests and seven actual Chinese PDF embedding/extraction tests).
+The seven Chinese tests ran offline in capped Docker from the existing D: cache.
+No unchanged full workspace build was repeated for this audit-only code change.
+
+Docker report exports were sequential with two CPUs and a 2 GiB cap; rendering/comparison
+checks used 512 MiB. Original Crystal exports ran sequentially on Windows. Temp and cache
+remain on D:. Final health at 15:01:14: C: 313.56 GiB
+free, D: 535.85 GiB free, host RAM 4.96 GiB available, no running containers. The lowest
+recorded available RAM during these checkpoints was 4.70 GiB; the next export was guarded
+against starting below 3 GiB. The retired C-backed target volume remains absent.
+
+Private `final-summary.json` records run directories, source revisions, checks and
+resource readings. `comparison.html` links each per-case comparison and original/Rust
+PDF. Each run retains source/template/snapshot/binary hashes, execution evidence, qpdf
+logs, raster pages, glyph details, image checks and `review/visual-review.json`.
+No student selectors, names, raw PDFs, credentials or school templates are committed.
+
+Only read-only discovery and the reviewed SELECT-only evaluation procedure ran. Parent
+access/publication, production rendering and configuration were not changed. Local
+commits only; no branch, worktree, push or deployment. Next work is additional content
+shapes and the separately blocked standard-template/other-school/Excel/subreport and
+authenticated delivery coverage, not another fix for these accepted three samples.

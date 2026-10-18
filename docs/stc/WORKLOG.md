@@ -490,3 +490,21 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Evidence and findings: [batch 01](coverage/additional-evaluation-batch-01.md). Initial
   C: 313.78 GiB, D: 535.88 GiB free, RAM 6.64 GiB. Sequential capped Docker and D: temp/cache;
   no data mutation, deployment, branch, worktree or push. Local committed checkpoint.
+
+## 2026-10-18 - Checkpoint 9b: additional evaluation batch accepted
+
+- All three additional students passed original live/frozen and Docker Rust exports,
+  qpdf checks and review of all 16 compared page images. They cover 39 rows/three pages,
+  20 rows/two pages and 35 rows/three pages. Native live/frozen raster pages agree.
+- All 94 ratings, 13,272 painting glyphs and decoded image RGB values match within
+  existing tolerances (max 0.06008 pt X / 0.03016 pt Y). No renderer fix was needed.
+  The ten new audit tests plus four existing checks and seven Chinese PDF tests pass.
+- The source-name selection is shortened by the report formula; overflowing displayed
+  names and populated comments remain untested. Extraction mappings still differ;
+  neither whole-page pixel equality nor full bridge coverage is claimed.
+- Six distinct eligible students now have accepted comparisons; 92 remain untested.
+  Updated current fork and canonical report references; private paired PDFs and index
+  remain in ignored research. See [batch 01](coverage/additional-evaluation-batch-01.md).
+- Final resources at 15:01:14: C: 313.56 GiB, D: 535.85 GiB free; RAM 4.96 GiB available.
+  No containers remained; target cache and temporary writes stayed on D:. Only reviewed
+  SELECT-only evaluation SQL ran. No data/config changes, branches, worktrees or push.
