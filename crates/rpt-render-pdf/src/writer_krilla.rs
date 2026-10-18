@@ -409,6 +409,7 @@ fn render_with_fonts(
             interpolate,
             disable_latin_kerning: opts.disable_latin_kerning,
             legacy_arabic_mark_offsets: opts.legacy_arabic_mark_offsets,
+            legacy_bmp_quantization: opts.legacy_bmp_quantization,
         };
         if tagged {
             tag_and_draw(
@@ -466,6 +467,7 @@ struct DrawCtx<'a> {
     interpolate: bool,
     disable_latin_kerning: bool,
     legacy_arabic_mark_offsets: bool,
+    legacy_bmp_quantization: bool,
 }
 
 /// Paint one draw-op onto the surface.
@@ -482,7 +484,14 @@ fn draw_op(surface: &mut Surface, ctx: &mut DrawCtx, op: &DrawOp) {
             ctx.disable_latin_kerning,
             ctx.legacy_arabic_mark_offsets,
         ),
-        DrawOp::Image(i) => draw_image(surface, ctx.assets, ctx.images, i, ctx.interpolate),
+        DrawOp::Image(i) => draw_image(
+            surface,
+            ctx.assets,
+            ctx.images,
+            i,
+            ctx.interpolate,
+            ctx.legacy_bmp_quantization,
+        ),
     }
 }
 
@@ -751,6 +760,7 @@ fn draw_image(
     images: &mut HashMap<u64, Option<Image>>,
     i: &ImageOp,
     interpolate: bool,
+    legacy_bmp_quantization: bool,
 ) {
     let Some(asset) = assets.get(&i.image_id) else {
         return;
@@ -758,7 +768,7 @@ fn draw_image(
     // Decode once per distinct byte string; a repeated image reuses the cached krilla handle.
     let image = images
         .entry(rpt_render_util::content_hash(&asset.bytes))
-        .or_insert_with(|| load_image(asset, interpolate))
+        .or_insert_with(|| load_image(asset, interpolate, legacy_bmp_quantization))
         .clone();
     let Some(image) = image else {
         return;
@@ -792,13 +802,23 @@ fn draw_image(
 /// Decode an image asset into a krilla [`Image`]. PNG/JPEG/GIF go through krilla's decoders; a BMP
 /// (the format Crystal stores embedded OLE bitmaps as) is decoded here to RGBA and embedded raw,
 /// since krilla has no BMP path. `None` for anything else or a decode failure.
-fn load_image(asset: &ImageAsset, interpolate: bool) -> Option<Image> {
+fn load_image(
+    asset: &ImageAsset,
+    interpolate: bool,
+    legacy_bmp_quantization: bool,
+) -> Option<Image> {
     match asset.media_type.as_str() {
         "image/png" => Image::from_png(asset.bytes.clone().into(), interpolate).ok(),
         "image/jpeg" => Image::from_jpeg(asset.bytes.clone().into(), interpolate).ok(),
         "image/gif" => Image::from_gif(asset.bytes.clone().into(), interpolate).ok(),
         "image/bmp" => {
-            let (rgba, w, h) = rpt_render_util::decode_bmp_rgba(&asset.bytes)?;
+            let decoded = if legacy_bmp_quantization {
+                rpt_render_util::decode_legacy_bmp_rgba(&asset.bytes)
+            } else {
+                None
+            };
+            let (rgba, w, h) =
+                decoded.or_else(|| rpt_render_util::decode_bmp_rgba(&asset.bytes))?;
             Some(Image::from_rgba8(rgba, w, h))
         }
         _ => None,

@@ -511,6 +511,18 @@ fn a_jpeg_asset_is_passed_through_as_dctdecode() {
             ..Default::default()
         },
     );
+    let compatibility = render_backend(
+        &doc,
+        &PdfBackend,
+        &PdfOptions {
+            legacy_bmp_quantization: true,
+            ..Default::default()
+        },
+    );
+    assert_eq!(
+        pdf, compatibility,
+        "BMP compatibility must preserve JPEG output byte-for-byte"
+    );
     let images = &structure(&pdf).pages[0].images;
     assert_eq!(images.len(), 1, "expected one image XObject: {images:?}");
     let image = images.values().next().expect("one image");

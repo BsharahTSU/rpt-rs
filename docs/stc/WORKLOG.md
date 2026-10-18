@@ -410,3 +410,16 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   Generic inverse mapping, PDF integration, regenerated pair and shared-case replay remain open.
 - Findings, evidence locations, resource controls and remaining gates: coverage/cr-005-logo.md.
   Existing 26 GB target cache is reused; private scratch/evidence stay on D:. No SQL or deployment.
+
+## 2026-10-18 - Checkpoint 7b: deterministic legacy bitmap PDF conversion
+
+- Independent native/model checks reproduce all9,600 captured logo pixels; all416 occupied bins
+  are written. Added an original portable directional inverse map with deterministic nearest
+  fallback only for cells native leaves unwritten. No private palette/LUT copied into runtime.
+- Added guarded opt-in bottom-up24-bitBI_RGB conversion. STC worker enables it; default/general
+  CLI and other raster formats retain existing behavior. PageIR/sourcebytes remain untouched.
+- 189 affected tests plus6doctests pass, including sevenChinese checks; strictworkspaceClippy,
+  formatting and workerbuild pass. Added inverse-map, header and actualPDFRGB regressions;
+  nativegenerated syntheticcontrols supply independent goldens. Independentreview continues.
+- Detailed contracts, fallback rationale, characterizedversions and limitations are recorded in
+  coverage/cr-005-logo.md. Fresh clean-sourcePDFpair and sharedcase replay remain acceptancegates.

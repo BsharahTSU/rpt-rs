@@ -423,6 +423,7 @@ fn run(input: Input) -> Result<Json, String> {
             fonts: FontSource::System,
             disable_latin_kerning: true,
             legacy_arabic_mark_offsets: true,
+            legacy_bmp_quantization: true,
             ..Default::default()
         },
     )

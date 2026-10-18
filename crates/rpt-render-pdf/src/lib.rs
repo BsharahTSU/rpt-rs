@@ -416,6 +416,11 @@ pub struct PdfOptions {
     /// standard Y-up offsets. Glyph selection, joining, advances and other scripts
     /// remain unchanged; this is a measured compatibility quirk, not a font fix.
     pub legacy_arabic_mark_offsets: bool,
+    /// Reproduce measured legacy palette conversion for opaque bottom-up 24-bit BI_RGB BMPs.
+    /// Off by default, preserving source pixels. Other raster formats and BMP storage modes
+    /// retain their normal decoding. Unwritten legacy inverse-map cells use deterministic
+    /// nearest-color lookup instead of native uninitialized values.
+    pub legacy_bmp_quantization: bool,
     /// The archival or accessibility standard to export against, and to fail the render on if unmet.
     pub conformance: Conformance,
     /// Emit a structure tree — what the marks mean and in what order they are read — without claiming

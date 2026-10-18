@@ -207,6 +207,7 @@ fn assert_chinese_pdf_round_trip(pages: rpt_pages::PagedDocument, profile: &str)
             fonts: FontSource::System,
             disable_latin_kerning: profile == "printer-600",
             legacy_arabic_mark_offsets: profile == "printer-600",
+            legacy_bmp_quantization: profile == "printer-600",
             ..Default::default()
         },
     )

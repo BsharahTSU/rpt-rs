@@ -107,6 +107,51 @@ pub fn structure(pdf: &[u8]) -> PdfStructure {
     PdfStructure { pages }
 }
 
+/// Read the tightly packed RGB8 samples of one opaque image XObject by object number.
+///
+/// This deliberately narrow test decoder accepts direct `/DeviceRGB` images with eight bits per
+/// component, a direct stream length, and either no filter or one `/FlateDecode` filter. It returns
+/// `None` for malformed dictionaries, unsupported filters, indirect image properties, predictors,
+/// decode arrays, masks, corrupt compression or an inexact pixel length. Nested dictionary values
+/// cannot stand in for the image's own properties. No color conversion is performed.
+pub fn image_rgb8(pdf: &[u8], object: u32) -> Option<Vec<u8>> {
+    let objects = objects(pdf);
+    let image = objects.get(&object)?;
+    let fields = image_dictionary(image.dict)?;
+    if image_name(fields.get("Subtype")?)? != "Image"
+        || image_name(fields.get("ColorSpace")?)? != "DeviceRGB"
+        || fields.get("BitsPerComponent")?.parse::<usize>().ok()? != 8
+        || ["DecodeParms", "Decode", "SMask", "Mask", "ImageMask"]
+            .iter()
+            .any(|key| fields.contains_key(*key))
+    {
+        return None;
+    }
+    let width = fields.get("Width")?.parse::<usize>().ok()?;
+    let height = fields.get("Height")?.parse::<usize>().ok()?;
+    if width == 0 || height == 0 {
+        return None;
+    }
+    let length = width.checked_mul(height)?.checked_mul(3)?;
+    let stored = image.stream?;
+    if fields.get("Length")?.parse::<usize>().ok()? != stored.len() {
+        return None;
+    }
+    let decoded = match fields.get("Filter") {
+        None => {
+            if stored.len() != length {
+                return None;
+            }
+            stored.to_vec()
+        }
+        Some(filter) if image_name(filter)? == "FlateDecode" => {
+            miniz_oxide::inflate::decompress_to_vec_zlib_with_limit(stored, length).ok()?
+        }
+        _ => return None,
+    };
+    (decoded.len() == length).then_some(decoded)
+}
+
 /// A rendered PDF's object graph, as the artifact checks read it.
 #[derive(Debug, Clone, Default)]
 pub struct PdfStructure {
@@ -295,14 +340,14 @@ fn objects(pdf: &[u8]) -> BTreeMap<u32, Object<'_>> {
             // `/Length` bounds the stream exactly, which matters because binary stream data can
             // contain `endstream`. An indirect length (`/Length 9 0 R`) is not resolved — the
             // keyword search is the fallback.
-            let end = match dict_int(dict, "Length") {
-                Some(len)
-                    if dict_ref(dict, "Length").is_none() && data + len as usize <= pdf.len() =>
-                {
-                    data + len as usize
-                }
-                _ => find_token(&pdf[data..], b"endstream").map_or(pdf.len(), |e| data + e),
-            };
+            let direct_end = dict_int(dict, "Length")
+                .filter(|_| dict_ref(dict, "Length").is_none())
+                .and_then(|len| usize::try_from(len).ok())
+                .and_then(|len| data.checked_add(len))
+                .filter(|end| *end <= pdf.len());
+            let end = direct_end.unwrap_or_else(|| {
+                find_token(&pdf[data..], b"endstream").map_or(pdf.len(), |e| data + e)
+            });
             i = end;
             &pdf[data..end]
         });
@@ -965,6 +1010,120 @@ fn stream_bytes(obj: &Object<'_>) -> Option<Vec<u8>> {
     inflate(obj).or_else(|| obj.stream.map(<[u8]>::to_vec))
 }
 
+/// Parse only the outer dictionary's entries. The existing content lexer already keeps strings
+/// intact; a delimiter stack lets us skip arrays and nested dictionaries without finding their keys
+/// in the parent. Keep value slices so integers must really be direct integer tokens, not floats.
+fn image_dictionary(dict: &str) -> Option<BTreeMap<String, &str>> {
+    let mut lexer = Lexer {
+        s: dict.as_bytes(),
+        i: 0,
+    };
+    match next_image_token(&mut lexer)?.0 {
+        Token::Operand(Operand::Raw(open)) if open == "<<" => {}
+        _ => return None,
+    }
+    let mut fields = BTreeMap::new();
+    loop {
+        let (key, start) = next_image_token(&mut lexer)?;
+        match key {
+            Token::Operand(Operand::Raw(close)) if close == ">>" => {
+                return next_image_token(&mut lexer).is_none().then_some(fields);
+            }
+            Token::Operand(Operand::Name(_)) => {}
+            _ => return None,
+        }
+        let key = image_name(&dict[start..lexer.i])?;
+        let (value, start) = next_image_token(&mut lexer)?;
+        let mut closes = Vec::new();
+        match value {
+            Token::Operand(Operand::Raw(ref open)) if open == "<<" => closes.push(">>"),
+            Token::Operand(Operand::Raw(ref open)) if open == "[" => closes.push("]"),
+            Token::Operand(Operand::Raw(ref value))
+                if matches!(value.as_str(), "true" | "false" | "null") => {}
+            Token::Operand(Operand::Raw(_)) | Token::Operator(_) => return None,
+            Token::Operand(Operand::Num(_)) => {
+                // Preserve an indirect reference as one value, so a following property is still
+                // parsed correctly. Required image properties later reject such value slices.
+                let end = lexer.i;
+                if dict[start..end].parse::<u32>().is_ok() {
+                    let mut probe = Lexer { s: lexer.s, i: end };
+                    if let Some((Token::Operand(Operand::Num(_)), generation)) =
+                        next_image_token(&mut probe)
+                    {
+                        if dict[generation..probe.i].parse::<u16>().is_ok()
+                            && matches!(next_image_token(&mut probe), Some((Token::Operator(ref token), _)) if token == "R")
+                        {
+                            lexer.i = probe.i;
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+        while !closes.is_empty() {
+            if let Token::Operand(Operand::Raw(token)) = next_image_token(&mut lexer)?.0 {
+                match token.as_str() {
+                    "<<" => closes.push(">>"),
+                    "[" => closes.push("]"),
+                    ">>" | "]" => {
+                        if closes.pop()? != token {
+                            return None;
+                        }
+                    }
+                    "{" | "}" => return None,
+                    _ => {}
+                }
+            }
+        }
+        if fields.insert(key, &dict[start..lexer.i]).is_some() {
+            return None; // An ambiguous duplicate must never hide an unsupported property.
+        }
+    }
+}
+
+/// The next token and its start, excluding comments and whitespace from a direct value slice.
+fn next_image_token(lexer: &mut Lexer<'_>) -> Option<(Token, usize)> {
+    loop {
+        lexer.skip_space();
+        if lexer.s.get(lexer.i) != Some(&b'%') {
+            break;
+        }
+        while lexer
+            .s
+            .get(lexer.i)
+            .is_some_and(|b| !matches!(b, b'\n' | b'\r'))
+        {
+            lexer.i += 1;
+        }
+    }
+    let start = lexer.i;
+    if lexer.s.get(start) == Some(&b')')
+        || (lexer.s.get(start) == Some(&b'>') && lexer.s.get(start + 1) != Some(&b'>'))
+    {
+        return None;
+    }
+    let token = lexer.next_token()?;
+    (lexer.i <= lexer.s.len()).then_some((token, start))
+}
+
+/// Decode PDF name escapes in both keys and values, including names that spell an excluded key.
+fn image_name(value: &str) -> Option<String> {
+    let bytes = value.strip_prefix('/')?.as_bytes();
+    let mut name = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'#' {
+            let pair = std::str::from_utf8(bytes.get(i + 1..i + 3)?).ok()?;
+            name.push(u8::from_str_radix(pair, 16).ok()?);
+            i += 3;
+        } else {
+            name.push(bytes[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(name).ok()
+}
+
 /// `/Key /Value` — the name value of `key`, without its slash.
 fn dict_name<'a>(dict: &'a str, key: &str) -> Option<&'a str> {
     let rest = value_of(dict, key)?.trim_start();
@@ -1271,5 +1430,158 @@ mod tests {
         // Declared: (500 + 250)/1000 * 10pt. Pen: the -100 adjustment moves it 1pt further right.
         assert!((shows[0].declared_pt - 7.5).abs() < 1e-9, "{:?}", shows[0]);
         assert!((shows[0].pen_pt - 8.5).abs() < 1e-9, "{:?}", shows[0]);
+    }
+    fn image_object(properties: &str, bytes: &[u8]) -> Vec<u8> {
+        let mut pdf = format!(
+            "%PDF-1.7\n7 0 obj\n<< /Length {} {properties} >>\nstream\n",
+            bytes.len()
+        )
+        .into_bytes();
+        pdf.extend_from_slice(bytes);
+        pdf.extend_from_slice(b"\nendstream\nendobj\n");
+        pdf
+    }
+
+    const RGB_PROPERTIES: &str =
+        "/Subtype /Image /Width 2 /Height 1 /ColorSpace /DeviceRGB /BitsPerComponent 8";
+
+    #[test]
+    fn image_rgb8_decodes_raw_and_flate_samples() {
+        let samples = [13, 79, 181, 255, 0, 17];
+        assert_eq!(
+            image_rgb8(&image_object(RGB_PROPERTIES, &samples), 7),
+            Some(samples.to_vec())
+        );
+        let compressed = miniz_oxide::deflate::compress_to_vec_zlib(&samples, 6);
+        let properties = format!("{RGB_PROPERTIES} /Filter /FlateDecode");
+        assert_eq!(
+            image_rgb8(&image_object(&properties, &compressed), 7),
+            Some(samples.to_vec())
+        );
+        assert!(image_rgb8(&image_object(RGB_PROPERTIES, &samples), 8).is_none());
+    }
+
+    #[test]
+    fn image_rgb8_reads_only_the_images_own_dictionary_properties() {
+        let samples = [13, 79, 181, 255, 0, 17];
+        // Nested and quoted property names cannot supply or override parent fields. Unknown
+        // indirect metadata must also be skipped as one value rather than consuming the next key.
+        let metadata = "/Metadata 9 0 R /Other << /ColorSpace /DeviceGray /Width 99 /Decode [0 1] >> /Comment (nested \\( /ColorSpace /DeviceGray \\) text)";
+        let properties = format!("{metadata} {RGB_PROPERTIES}");
+        assert_eq!(
+            image_rgb8(&image_object(&properties, &samples), 7),
+            Some(samples.to_vec())
+        );
+        let nested_only = "/Other << /Subtype /Image /Width 2 /Height 1 /ColorSpace /DeviceRGB /BitsPerComponent 8 >>";
+        assert!(image_rgb8(&image_object(nested_only, &samples), 7).is_none());
+        // If the old object parser sees a nested /Length first, the direct parent length check
+        // refuses its truncated stream instead of accepting only the first six bytes.
+        let mut pdf = image_object(RGB_PROPERTIES, b"abcdef");
+        let text = String::from_utf8(pdf).unwrap().replacen(
+            "/Length 6",
+            "/Other << /Length 3 >> /Length 6",
+            1,
+        );
+        pdf = text.into_bytes();
+        assert!(image_rgb8(&pdf, 7).is_none());
+    }
+
+    #[test]
+    fn image_rgb8_accepts_pdf_names_and_comments_without_prefix_matches() {
+        let samples = [13, 79, 181, 255, 0, 17];
+        let properties = "/Subty#70e /Image /Width % actual width\n2 /Height 1 /ColorSpace /Device#52GB /BitsPerComponent 8 /DecodeExtra [0 1]";
+        assert_eq!(
+            image_rgb8(&image_object(properties, &samples), 7),
+            Some(samples.to_vec())
+        );
+        let properties = format!("{RGB_PROPERTIES} /Dec#6fde [0 1]");
+        assert!(image_rgb8(&image_object(&properties, &samples), 7).is_none());
+    }
+
+    #[test]
+    fn image_rgb8_rejects_unsupported_transforms_filters_and_image_types() {
+        let samples = [13, 79, 181, 255, 0, 17];
+        for suffix in [
+            "/Decode [0 1 0 1 0 1]",
+            "/DecodeParms << /Predictor 12 >>",
+            "/SMask 9 0 R",
+            "/Mask [0 0 0 0 0 0]",
+            "/ImageMask false",
+            "/Filter /DCTDecode",
+            "/Filter [/FlateDecode]",
+            "/Filter 9 0 R",
+        ] {
+            assert!(
+                image_rgb8(
+                    &image_object(&format!("{RGB_PROPERTIES} {suffix}"), &samples),
+                    7
+                )
+                .is_none(),
+                "{suffix}"
+            );
+        }
+        for (old, new) in [
+            ("/Image", "/Form"),
+            ("/DeviceRGB", "/DeviceGray"),
+            ("/DeviceRGB", "[/Indexed /DeviceRGB 1 <000000ffffff>]"),
+            ("/BitsPerComponent 8", "/BitsPerComponent 16"),
+            ("/Width 2", "/Width 9 0 R"),
+            ("/Width 2", "/Width 2.0"),
+        ] {
+            assert!(
+                image_rgb8(
+                    &image_object(&RGB_PROPERTIES.replace(old, new), &samples),
+                    7
+                )
+                .is_none(),
+                "{new}"
+            );
+        }
+    }
+
+    #[test]
+    fn image_rgb8_rejects_bad_dimensions_lengths_and_compression() {
+        let samples = [13, 79, 181, 255, 0, 17];
+        for width in ["0", "-1", "18446744073709551615", "18446744073709551616"] {
+            let properties = RGB_PROPERTIES.replace("/Width 2", &format!("/Width {width}"));
+            assert!(
+                image_rgb8(&image_object(&properties, &samples), 7).is_none(),
+                "{width}"
+            );
+        }
+        for bytes in [&samples[..5], &[13, 79, 181, 255, 0, 17, 21][..]] {
+            assert!(image_rgb8(&image_object(RGB_PROPERTIES, bytes), 7).is_none());
+        }
+        let flate = format!("{RGB_PROPERTIES} /Filter /FlateDecode");
+        assert!(image_rgb8(&image_object(&flate, &samples), 7).is_none());
+        for pixels in [&samples[..5], &[13, 79, 181, 255, 0, 17, 21][..]] {
+            let compressed = miniz_oxide::deflate::compress_to_vec_zlib(pixels, 6);
+            assert!(image_rgb8(&image_object(&flate, &compressed), 7).is_none());
+        }
+        let raw = String::from_utf8(image_object(RGB_PROPERTIES, b"abcdef")).unwrap();
+        for length in ["-1", "9223372036854775807"] {
+            let malformed = raw.replace("/Length 6", &format!("/Length {length}"));
+            assert!(image_rgb8(malformed.as_bytes(), 7).is_none());
+        }
+    }
+
+    #[test]
+    fn image_rgb8_rejects_duplicate_and_unbalanced_dictionaries() {
+        let samples = [13, 79, 181, 255, 0, 17];
+        for extra in [
+            "/Width 2",
+            "/Wid#74h 2",
+            "/Unknown [1 2 >>",
+            "/Unknown << /Value 1 ]",
+        ] {
+            assert!(
+                image_rgb8(
+                    &image_object(&format!("{RGB_PROPERTIES} {extra}"), &samples),
+                    7
+                )
+                .is_none(),
+                "{extra}"
+            );
+        }
     }
 }

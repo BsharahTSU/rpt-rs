@@ -71,3 +71,52 @@ no SQL, original-template modification, application switch or deployment is invo
 - Regenerate both CR-005 PDFs from a clean committed implementation; check decoded image pixels,
   text/geometry and every rendered page. Replay the shared change against CR-001 and CR-003.
 - Record measured acceptance and any remaining limits in current fork and backend references.
+## Checkpoint 7b: portable pixel mapping and PDF integration
+
+The inverse mapping is now independently characterized against native BitBlt. It uses 32 bins
+per RGB axis, addressed in RGB order, with cell centers at 8*q+4. Directional scans retain their
+starting positions and preserve the existing winner unless a strictly smaller squared distance
+is found. The measured continuation bounds are zero; replacing this behavior with global nearest
+color changes valid captured pixels. The implementation is an original coordinate algorithm,
+verified against a separate state model and native controls; no proprietary code is distributed.
+
+Six generated palette controls agree on every written native cell. All 416 bins used by the
+captured logo are written, producing all 9,600 native RGB pixels exactly in the independent model.
+Generated palettes are padded to the native 256-entry DIB table with black. Native cells not
+visited by the scan can contain allocation-history values: the portable implementation instead
+fills them with deterministic global-nearest matching at the bin center, first entry winning ties.
+This fallback does not affect any captured logo pixel. It intentionally does not promise to
+reproduce native undefined behavior for arbitrary images.
+
+Implementation:
+
+- `legacy_palette_indices` uses fixed 32^3 tables (about 160 KiB) with initialized entries.
+- `decode_legacy_bmp_rgba` gates the composition on valid one-plane, bottom-up 24-bit BI_RGB BMPs,
+  validates dimension/stride/output arithmetic, and leaves other BMP storage modes to the normal
+  decoder. No original input bytes or Page IR assets are changed.
+- `PdfOptions::legacy_bmp_quantization` defaults false. The experimental STC worker enables it;
+  the general CLI retains false. PNG, JPEG and GIF paths are unchanged. One per-document image
+  cache safely reuses the converted image across placements/pages.
+- The profile does not currently parse Crystal's report-level retain-original-color-depth setting.
+  Other storage modes and engine versions remain outside this measured compatibility contract.
+  The characterization used Crystal 13.0.12.1494 and Windows GDI 10.0.26100.9444.
+
+Regression validation before the final private export:
+
+- 189 affected tests plus six doctests pass in capped Docker Linux: rendering, PDF, utilities,
+  test support and worker. All seven Chinese checks pass; the printer profile explicitly enables
+  the new bitmap option. Strict workspace Clippy and workspace formatting pass, worker builds.
+- Six inverse-map tests cover six independent native fingerprints, nonnearest written cells,
+  ties, deterministic holes, index bounds and invalid palettes. A checked-header test covers
+  truncated/unsupported BMP inputs. Eleven palette regressions remain passing.
+- Two PDF integration tests decode embedded RGB bytes from a generated 7x7 image: native color
+  fingerprint, default original pixels, repeated-image reuse, unchanged drawing operators,
+  explicit false/default equivalence, and top-down/32-bit fallback. Direct native quantization
+  and GDI independently confirmed that synthetic fixture before its fingerprint was committed.
+- JPEG output remains byte-identical with the option enabled. Six image-inspection helper tests
+  cover raw/Flate RGB, malformed streams, unsupported filters/transforms, nested dictionary keys,
+  duplicate/indirect properties and bounded inflation; no new package dependency was added.
+- The first workspace Clippy pass found a full CLI options initializer missing the new default;
+  it was repaired with explicit false, and the complete strict rerun passes.
+
+Fresh original/Docker PDF generation and shared-case replay are the next acceptance gates.
