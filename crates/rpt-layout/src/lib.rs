@@ -445,8 +445,8 @@ pub(crate) struct Formatter<'a> {
     /// trailing `NewPageAfter` doesn't leave a blank page at the end of the report).
     pending_page_break: bool,
     /// A `ResetPageNumberAfter` on a just-emitted section resets the page-number counter at the next
-    /// page top (so the following page prints as page 1). `PageNumber`/`PageNofM` honour the reset;
-    /// `TotalPageCount` stays the whole-document count (a per-reset-section total needs a second pass).
+    /// page top (so the following page prints as page 1). Final totals are scoped to each
+    /// actual numbering sequence by `page_sequence_totals`, not to an unused pending reset.
     pending_page_number_reset: bool,
     /// Set while the Report Header is being emitted. The page header belongs *below* the report
     /// header, so no page a report header occupies carries one — including the continuation pages a
@@ -767,7 +767,22 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    /// Rewrite every recorded `TotalPageCount`/`PageNofM` run with the true final page count. Each
+    /// Total pages in each reset-delimited numbering sequence, indexed by physical page.
+    /// `open_page` starts at 1 and only returns to 1 after consuming a pending reset.
+    /// Use emitted pages so a reset without a subsequent page does not split the total.
+    fn page_sequence_totals(&self) -> Vec<i64> {
+        let mut totals = vec![0; self.pages.len()];
+        let mut start = 0;
+        for end in 1..=self.pages.len() {
+            if end == self.pages.len() || self.pages[end].number == 1 {
+                totals[start..end].fill((end - start) as i64);
+                start = end;
+            }
+        }
+        totals
+    }
+
+    /// Rewrite every recorded `TotalPageCount`/`PageNofM` run with its numbering sequence's total. Each
     /// run's displayed page number is preserved (it honoured any page-number reset already); only the
     /// stale total changes. The run's stored advance is recomputed so a right/centre-aligned footer
     /// re-anchors to the new width.
@@ -775,9 +790,10 @@ impl<'a> Formatter<'a> {
         if self.page_count_fixups.is_empty() {
             return;
         }
-        let total = self.pages.len() as i64;
+        let totals = self.page_sequence_totals();
         let diag: DiagSink = RefCell::new(Vec::new());
         for fx in std::mem::take(&mut self.page_count_fixups) {
+            let total = totals[fx.page_index];
             let at = |total_pages| ResolveState {
                 page_number: fx.page_number,
                 total_pages,

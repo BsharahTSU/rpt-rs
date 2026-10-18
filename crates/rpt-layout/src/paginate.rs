@@ -1229,11 +1229,13 @@ impl<'a> Formatter<'a> {
         if self.footer_contexts.is_empty() {
             return;
         }
+        let totals = self.page_sequence_totals();
+        let pending_fixups = self.page_count_fixups.len();
         let pages = std::mem::take(&mut self.pages);
-        let total = pages.len() as i64;
-        for (page, (row, mut state)) in pages
+        for ((page, (row, mut state)), total) in pages
             .into_iter()
             .zip(std::mem::take(&mut self.footer_contexts))
+            .zip(totals)
         {
             self.page_number = page.number as i64;
             state.page_number = self.page_number;
@@ -1265,6 +1267,10 @@ impl<'a> Formatter<'a> {
                 Page::new(0, self.page_size),
             ));
         }
+        // These footer runs were planned with final sequence totals. Keep earlier body/header
+        // fixups, but do not patch already-final embedded values using a provisional page index:
+        // that could rewrite a matching literal instead of the embedded reference.
+        self.page_count_fixups.truncate(pending_fixups);
     }
 
     /// Emit an already-positioned band without the overflow check. `allow_grow` selects the band

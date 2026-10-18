@@ -594,3 +594,274 @@ fn rewritten_page_total_run_keeps_character_spacing_in_its_advance() {
         );
     }
 }
+
+/// Independent numbering sequences share physical pages, but each reset has its own total.
+/// Five detail rows fit below the header; the small group footer fits after a partial page.
+fn reset_total_report(
+    counts: &[usize],
+    reset: bool,
+    date_first: Option<bool>,
+) -> (Report, SavedData) {
+    let mut report = Report::default();
+    report.print_options.content_width = Twips(12240);
+    report.print_options.content_height = Twips(if date_first.is_some() { 3000 } else { 2700 });
+    let mut group = Group::default();
+    group.condition_field = "t.group".into();
+    group.sort.direction = SortDirection::AscendingOrder;
+    report.data_definition.groups = vec![group];
+    let mut group_footer = section(AreaSectionKind::GroupFooter, "GF", 100, vec![]);
+    group_footer.format.base.reset_page_number_after = reset;
+    group_footer.format.base.new_page_after = true;
+    let mut total = special_object("Total", "TotalPageCount", 0);
+    total.format.horizontal_alignment = rpt_model::Alignment::RightAlign;
+    let footer = section(
+        AreaSectionKind::PageFooter,
+        "Always",
+        600,
+        vec![
+            total,
+            run_text_object(
+                "EmbeddedTotal",
+                &[
+                    (
+                        if date_first.is_some() {
+                            "literal 1.00; total "
+                        } else {
+                            "total "
+                        },
+                        None,
+                    ),
+                    ("TotalPageCount", Some("Total Page Count")),
+                ],
+                300,
+            ),
+        ],
+    );
+    let footers = if let Some(first) = date_first {
+        let mut date = section(
+            AreaSectionKind::PageFooter,
+            "DateBand",
+            300,
+            vec![text_object("Date", "DATE", 0)],
+        );
+        date.condition_formulas.push((
+            "Section_Visibility".into(),
+            "PageNumber < TotalPageCount".into(),
+        ));
+        if first {
+            vec![date, footer]
+        } else {
+            vec![footer, date]
+        }
+    } else {
+        vec![footer]
+    };
+    report.report_definition.areas = vec![
+        area(
+            AreaSectionKind::PageHeader,
+            vec![section(
+                AreaSectionKind::PageHeader,
+                "PH",
+                600,
+                vec![
+                    special_object("Caption", "PageNofM", 0),
+                    run_text_object(
+                        "EmbeddedCaption",
+                        &[("-- ", None), ("PageNofM", Some("Page N of M"))],
+                        300,
+                    ),
+                ],
+            )],
+        ),
+        area(
+            AreaSectionKind::Detail,
+            vec![section(
+                AreaSectionKind::Detail,
+                "Detail",
+                300,
+                vec![db_field_object("Row", "t.row", 0)],
+            )],
+        ),
+        area(AreaSectionKind::GroupFooter, vec![group_footer]),
+        area(AreaSectionKind::PageFooter, footers),
+    ];
+    let mut rows = Vec::new();
+    for (group, count) in counts.iter().enumerate() {
+        for index in 0..*count {
+            rows.push(vec![
+                Some(group.to_string()),
+                Some(format!("row-{group}-{index}")),
+            ]);
+        }
+    }
+    let saved = SavedData {
+        record_count: rows.len() as u32,
+        columns: vec![
+            SavedColumn {
+                name: "t.group".into(),
+                value_type: FieldValueType::String,
+            },
+            SavedColumn {
+                name: "t.row".into(),
+                value_type: FieldValueType::String,
+            },
+        ],
+        rows,
+    };
+    (report, saved)
+}
+
+fn reset_total_runs<'a>(page: &'a rpt_pages::Page, object: &str) -> Vec<&'a rpt_pages::TextRun> {
+    page.ops
+        .iter()
+        .filter_map(|op| match op {
+            DrawOp::Text(run)
+                if run.source.as_ref().and_then(|s| s.object_name.as_deref()) == Some(object) =>
+            {
+                Some(run)
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+fn assert_reset_totals(
+    doc: &rpt_pages::PagedDocument,
+    numbers: &[u32],
+    totals: &[u32],
+    deferred: bool,
+) {
+    assert_eq!(
+        doc.pages.iter().map(|p| p.number).collect::<Vec<_>>(),
+        numbers
+    );
+    for ((page, number), total) in doc.pages.iter().zip(numbers).zip(totals) {
+        for (object, expected) in [
+            ("Caption", format!("Page {number} of {total}")),
+            ("EmbeddedCaption", format!("-- Page {number} of {total}")),
+            (
+                "EmbeddedTotal",
+                format!(
+                    "{}total {total}.00",
+                    if deferred { "literal 1.00; " } else { "" }
+                ),
+            ),
+        ] {
+            let runs = reset_total_runs(page, object);
+            assert_eq!(runs.len(), 1, "{object} on page {number}");
+            assert_eq!(runs[0].text, expected, "{object} on page {number}");
+        }
+        let runs = reset_total_runs(page, "Total");
+        assert_eq!(runs.len(), 1);
+        assert_eq!(runs[0].text.parse::<f64>().unwrap(), *total as f64);
+    }
+}
+
+#[test]
+fn reset_page_totals_follow_sequences_and_preserve_no_reset_counts() {
+    for reset in [false, true] {
+        let (report, saved) = reset_total_report(&[6, 1, 11, 1], reset, None);
+        let doc = rendered(&report, &saved);
+        let (numbers, totals) = if reset {
+            (vec![1, 2, 1, 1, 2, 3, 1], vec![2, 2, 1, 3, 3, 3, 1])
+        } else {
+            ((1..=7).collect(), vec![7; 7])
+        };
+        assert_reset_totals(&doc, &numbers, &totals, false);
+        assert_eq!(
+            doc.pages
+                .iter()
+                .map(|p| reset_total_runs(p, "Row").len())
+                .collect::<Vec<_>>(),
+            [5, 1, 1, 5, 5, 1, 1]
+        );
+        // The final pending NewPageAfter/reset must not invent an eighth page or empty sequence.
+        assert_eq!(doc.pages.len(), 7);
+    }
+}
+
+#[test]
+fn reset_page_totals_control_leading_and_trailing_date_footers() {
+    for reset in [false, true] {
+        for first in [false, true] {
+            let (report, saved) = reset_total_report(&[6, 1, 11, 1], reset, Some(first));
+            let doc = rendered(&report, &saved);
+            let (numbers, totals) = if reset {
+                (vec![1, 2, 1, 1, 2, 3, 1], vec![2, 2, 1, 3, 3, 3, 1])
+            } else {
+                ((1..=7).collect(), vec![7; 7])
+            };
+            assert_reset_totals(&doc, &numbers, &totals, true);
+            for ((page, number), total) in doc.pages.iter().zip(numbers).zip(totals) {
+                let last = number == total;
+                assert_eq!(
+                    page_text_tops(page, "DATE"),
+                    if last {
+                        vec![if first { 2100 } else { 2700 }]
+                    } else {
+                        vec![]
+                    }
+                );
+                assert_eq!(
+                    reset_total_runs(page, "Total")[0].bounds.top.0,
+                    2100 + if first && last { 300 } else { 0 }
+                );
+                let rows = reset_total_runs(page, "Row");
+                for (index, row) in rows.iter().enumerate() {
+                    assert_eq!(row.bounds.top.0, 600 + index as i32 * 300);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn reset_page_totals_wait_for_an_actual_page_break() {
+    let (mut report, saved) = reset_total_report(&[1, 6], true, Some(true));
+    report.report_definition.areas[2].sections[0]
+        .format
+        .base
+        .new_page_after = false;
+    let doc = rendered(&report, &saved);
+    assert_reset_totals(&doc, &[1, 1], &[1, 1], true);
+    assert_eq!(
+        reset_total_runs(&doc.pages[0], "Row")
+            .iter()
+            .map(|r| r.text.as_str())
+            .collect::<Vec<_>>(),
+        ["row-0-0", "row-1-0", "row-1-1", "row-1-2"]
+    );
+    assert_eq!(reset_total_runs(&doc.pages[1], "Row").len(), 3);
+    for page in &doc.pages {
+        assert_eq!(page_text_tops(page, "DATE"), [2100]);
+        assert_eq!(reset_total_runs(page, "Total")[0].bounds.top.0, 2400);
+    }
+}
+
+#[test]
+fn reset_page_totals_include_footer_only_pages() {
+    let (mut report, saved) = reset_total_report(&[6], true, Some(true));
+    report.report_definition.areas.push(area(
+        AreaSectionKind::ReportFooter,
+        vec![section(
+            AreaSectionKind::ReportFooter,
+            "RF",
+            300,
+            vec![text_object("Final", "FINAL", 0)],
+        )],
+    ));
+    let doc = rendered(&report, &saved);
+    assert_reset_totals(&doc, &[1, 2, 1], &[2, 2, 1], true);
+    assert!(reset_total_runs(&doc.pages[2], "Row").is_empty());
+    assert_eq!(page_text_tops(&doc.pages[2], "FINAL"), [600]);
+    for (index, page) in doc.pages.iter().enumerate() {
+        assert_eq!(
+            page_text_tops(page, "DATE"),
+            if index == 0 { vec![] } else { vec![2100] }
+        );
+        assert_eq!(
+            reset_total_runs(page, "Total")[0].bounds.top.0,
+            if index == 0 { 2100 } else { 2400 }
+        );
+    }
+}

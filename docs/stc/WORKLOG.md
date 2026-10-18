@@ -735,3 +735,22 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   samples passed the resource guard; D: cache/temp, capped sequential Docker, no task
   containers or retired target volume. No database/template/runtime/configuration changes.
   Local commits on existing main only, no branches/worktrees/push or deployment.
+
+## 2026-10-18 - Checkpoint 16a: CR-001-B05 page-total/footer repair
+
+- Partition finalized pages into actual reset-delimited numbering sequences; use their
+  totals for deferred footer conditions and earlier placed/embedded page-count runs.
+  The retained case needs totals 2/2/1, restoring its suppressed 320-twip date band without
+  an offset correction. B04 header retirement and body formula execution remain intact.
+- Discard only fixups added during already-final footer emission, preventing embedded
+  total substitution from rewriting matching literal text. Preserve earlier/currency fixups.
+- Four new synthetic regressions reproduced reset totals and embedded literal corruption.
+  All 400 Docker checks pass (381 layout, seven Chinese PDF, twelve worker); independent
+  read-only source review has no blocking finding. Fresh pair/final acceptance pending.
+- [Repair record](coverage/cr-001-b05-parity.md) documents cause, fix, red fixture correction,
+  tests, scope and private evidence. D: cache/temp, sequential caps and resource guards;
+  no SQL/template/production change, no branches/worktrees/push; local commits only.
+- Fresh candidate original/Rust pair and independent all-page review now pass: 3,962
+  glyphs, 28 ratings, dates/image RGB/page boxes, labels 1/2, 2/2, 1/1 and footer positions.
+  Strict affected Clippy/workspace format pass. Final clean-source pair and five prior-case
+  guards remain pending; candidate dirty provenance is explicitly retained.
