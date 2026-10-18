@@ -1,5 +1,11 @@
 # CR-001-B04 completed-group footer pagination repair
 
+**Accepted after repair (2026-10-18).** Final native Crystal and Docker Rust PDFs from
+clean `85ff5ce` match all 33 ratings and 4,256 painted glyphs within unchanged limits.
+All six final pages were reviewed; four prior-case Rust PDFs remain byte-identical.
+Current coverage: **15 accepted / 0 rejected / 83 untested**. Earlier checkpoints below
+retain the original failure and intermediate validation; final acceptance follows them.
+
 ## Scope and retained failure
 
 Repair the [batch 04 rejection](additional-evaluation-batch-04.md) against its retained
@@ -86,3 +92,69 @@ in capped Docker: **396 focused checks**, including three new regressions. Sourc
 also passes; the final clean-source pair and prior accepted-case guards remain pending.
 Strict Clippy for layout/worker all targets and workspace formatting also pass.
 No dependency, font, template, source-data or bridge changes were required.
+
+
+## Checkpoint 14c: final clean-source pair and regression replays
+
+Both original Crystal and Docker Rust PDFs were regenerated from clean local `85ff5ce`
+using the retained typed snapshot. `final/evidence.json` records source cleanliness,
+snapshot/template/worker/native bridge hashes and the local render clock; SQL was not
+executed. The native page PNGs exactly reproduce the original batch reference, and the
+snapshot hash is unchanged. No baseline, row, report or acceptance tolerance was altered.
+
+| Final comparison gate | Result |
+| --- | --- |
+| Pages and media boxes | 3 each; equal |
+| PDF integrity | Both pass qpdf without repair warnings |
+| Ordered/source ratings | 33; 17 / 16 / 0; all accounted for |
+| Painted glyphs per page | 1,856 / 1,948 / 452 in both engines |
+| Missing/extra painted outlines | 0 / 0 |
+| Maximum glyph X / Y residual | 0.05708 / 0.03016 pt |
+| Stale category heading/empty columns | Removed from page two |
+| Body and Division Principal/Homeroom Teacher signatures | Aligned; signatures on page two |
+| School principal/stamp/note/date | Matching page-three placement |
+| Decoded image RGB and printed date | Exact equality |
+| Visual review | All six final PNGs reviewed; accepted |
+
+The final page PNGs are byte-identical to their same-engine reviewed candidate pages;
+independent all-page candidate acceptance therefore remains applicable. The coordinator
+also inspected all six final pages. `final/review/visual-review.json` makes acceptance
+explicit; initial execution-time pending fields remain historical. The 39 outline-
+equivalent Unicode mappings and small raster residuals remain as documented above.
+
+Four accepted cases were then replayed sequentially with their own frozen input and
+recorded clock, against their retained original Crystal PDFs. All automated glyph,
+rating, image, page/date and PDF checks pass, and the Rust files remain byte-identical
+to their previously accepted exports, preserving their earlier visual review:
+
+| Prior-case guard | Pages | Ratings | Painted glyphs | Rust PDF |
+| --- | ---: | ---: | ---: | --- |
+| CR-001-B03 multipart header/Arabic | 3 | 36 | 4,748 | Byte-identical |
+| CR-001-B02 sparse continuation | 2 | 16 | 2,725 | Byte-identical |
+| CR-003-B04 boundary/sparse final page | 3 | 34 | 4,788 | Byte-identical |
+| CR-005-B04 Arabic name/final signatures | 3 | 35 | 4,943 | Byte-identical |
+
+These are regression replays, not new students. `guard-summary.json` records all four
+results. One initial replay was rejected before rendering because PowerShell converted
+the JSON timestamp to a DateTime and then a culture-specific string. The private runner
+now explicitly formats local ISO time before passing it to the bridge. Its failed attempt
+is retained; the retry uses a new tag. The production clock validation was unchanged.
+The first private edit also introduced unintended source encoding/formatting changes;
+diff review removed them before the final 396-check run and commit. Only the intended
+repeat-entry lifetime and three new tests are in the implementation diff.
+
+The candidate retains diagnostic Page IR. Later exports omit that optional debug output,
+which is unnecessary for glyph/PDF verification and adds slow writes through the host
+mount. Final rendered pixels reproduce the candidate exactly. All request files are
+removed after execution; full report data and selectors remain private and ignored.
+
+Final sampled resources at **17:45:21**: C: **312.09 GiB free**, D: **534.01 GiB free**,
+RAM **5.40 GiB available**. Lowest observed RAM during this repair was 4.02 GiB. Sequential
+caps and D: cache/temp were retained; no task containers remain and the retired C-backed
+target volume is absent. These are sampled values, not continuous peak measurements.
+
+Current coverage is **15 accepted / 0 rejected / 83 untested** of 98 eligible students.
+The next step is another bounded untested-student batch. Populated comments, demonstrated
+displayed-name overflow, blocked standard/second-term/other-school reports, BIFF/XLS,
+wider legacy/subreport behavior and authenticated Parent API/UI delivery retain their
+earlier gaps. No production rendering/configuration or database changes were made.

@@ -1,9 +1,11 @@
 # Additional evaluation student batch 04
 
-**Completed: two accepted, one rejected.** All three new students printed in both
-engines. CR-003-B04 and CR-005-B04 pass; CR-001-B04 has a stale repeated group heading,
-a 42.2 pt body shift and moved signatures. No renderer repair is claimed in this batch.
-Current coverage: 14 accepted / 1 rejected / 83 untested of 98 eligible students.
+**Subsequent repair accepted (2026-10-18).** The [CR-001-B04 repair](cr-001-b04-parity.md)
+closes the stale-heading/body/signature rejection with fresh paired PDFs from `85ff5ce`.
+All 4,256 painted glyphs and 33 ratings match within unchanged limits; all six pages were
+reviewed. CR-003-B04 and CR-005-B04 Rust replays remain byte-identical. Current cumulative
+coverage: **15 accepted / 0 rejected / 83 untested**. The sections below preserve this
+batch's original two passes and one rejection; the repair supersedes that case's status.
 
 ## Checkpoint 13a: bounded selection and test preparation (2026-10-18)
 
@@ -78,7 +80,7 @@ exits nonzero as intended and private `review/visual-review.json` records the re
 The other two students remain pending. Resource sample after export: RAM 4.91 GiB,
 C: 312.74 GiB and D: 534.40 GiB free. No renderer changes in this checkpoint.
 
-## Final results and review
+## Batch results and review before the subsequent repair
 
 | Case | Pages each | Ratings per page | Native/Rust painted glyphs | Result | Export source |
 | --- | ---: | --- | --- | --- | --- |
@@ -150,7 +152,7 @@ every export passed the 3 GiB start guard. These are sampled checks, not continu
 No task containers remain and the retired C-backed target volume is absent. Cache and
 temporary output remain on D:. No unrelated application was stopped or reconfigured.
 
-Current coverage is **14 accepted / 1 rejected / 83 untested**, with fifteen distinct
+Coverage at this batch checkpoint was **14 accepted / 1 rejected / 83 untested**, with fifteen distinct
 students compared. Prioritize the retained **CR-001-B04 stale group-heading/footer-
 transition defect** next: add a renderer-level synthetic reproduction, fix it, regenerate
 both frozen PDFs and guard prior accepted boundary/signature cases. No such renderer fix

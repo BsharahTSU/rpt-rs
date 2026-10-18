@@ -45,10 +45,21 @@ Source and SQL discovery are complete for the documented local scope: 38 AAJ cas
 ready evaluation groups and 98 candidate students. Other local copies are metadata-only evidence;
 external Gradebook and authenticated API/UI delivery remain open. Read the [surface inventory](parent-surfaces.md),
 [SQL findings](sql-eligibility.md), [isolated runner](case-runner.md), and [clock fix](clock-parity.md).
-[Initial actual comparisons](initial-comparisons.md) preserve the original three exports and their then-open defects; the subsequent repair/acceptance records supersede those defects. After [batch 04](additional-evaluation-batch-04.md), fourteen students have accepted comparisons, CR-001-B04 is rejected for stale-heading/body/signature placement, and 83 eligible students remain SQL-only evidence.
+[Initial actual comparisons](initial-comparisons.md) preserve the original three exports and their then-open defects; the subsequent repair/acceptance records supersede those defects. After the [CR-001-B04 repair](cr-001-b04-parity.md), fifteen students have accepted comparisons, none is currently rejected, and 83 eligible students remain SQL-only evidence.
 
 
-## Current comparison checkpoint: batch 04 has two passes and one rejection (2026-10-18)
+## Current comparison checkpoint: CR-001-B04 repaired and accepted (2026-10-18)
+
+The [repair](cr-001-b04-parity.md) retires the completed group's repeat entry before
+footer pagination while preserving live ancestors and footer resolution scope. Fresh
+native/Docker Rust PDFs from clean `85ff5ce` match all 4,256 painted glyphs and 33 ratings
+within existing limits; the stale heading/body shift is gone and signatures are on page two.
+All six final pages reviewed. All 396 focused checks pass, including three new synthetic
+regressions and seven Chinese PDF tests; four prior accepted Rust PDFs remain byte-identical.
+Coverage: fifteen accepted, none rejected, 83 untested. D: cache/temp; final C: 312.09 GiB
+free and RAM 5.40 GiB available. No SQL/template/production configuration changes.
+
+## Previous comparison checkpoint: batch 04 has two passes and one rejection (2026-10-18)
 
 [Batch 04](additional-evaluation-batch-04.md) compares three new 33-, 34- and 35-row
 students sequentially. CR-003/005-B04 pass all-page and glyph/data/image checks;
@@ -169,7 +180,7 @@ fresh per-engine pixels, glyph data and geometry reproduce the reviewed candidat
 This is accepted captured-case parity with documented residuals, not pixel identity.
 
 CR-003 retains its recorded text/layout acceptance. CR-005 passes text/layout and exact decoded-logo matching above; CR-001/003 replays close their same image residual.
-After [batch 04](additional-evaluation-batch-04.md), fourteen students have accepted comparisons, CR-001-B04 is rejected for stale-heading/body/signature placement, and 83 eligible students remain SQL-only evidence. Unpublished standard/second-term cases,
+After the [CR-001-B04 repair](cr-001-b04-parity.md), fifteen students have accepted comparisons, none is currently rejected, and 83 eligible students remain SQL-only evidence. Unpublished standard/second-term cases,
 missing authoritative databases/templates, external Gradebook, authenticated API/UI delivery,
 BIFF/XLS and broad legacy/subreport coverage retain the gaps recorded in
 [initial comparisons](initial-comparisons.md), [SQL findings](sql-eligibility.md) and

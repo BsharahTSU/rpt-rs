@@ -16,12 +16,14 @@ SQL/procedure/DataSet callers, PDF, and BIFF/XLS. The portable adapter uses .NET
 request validation and the Rust worker for rendering. Rust builds and candidates run in Docker
 Linux; original Crystal baselines require the existing Windows Crystal installation.
 
-PDF support is experimental. Fourteen students across three evaluation templates have accepted
-native/Rust comparisons after [batch 04](coverage/additional-evaluation-batch-04.md); CR-001-B04
-is rejected for a stale repeated heading, 42.2 pt body displacement and moved signatures. Eighty-three
-eligible students remain untested. The earlier [CR-001-B03 repair](coverage/cr-001-b03-parity.md)
-remains accepted for its captured input. Batch 04 passes 37 focused checks, including six new
-selection regressions and seven Chinese PDF checks; no renderer repair is claimed for its failure.
+PDF support is experimental. Fifteen students across three evaluation templates have accepted
+native/Rust comparisons after the [CR-001-B04 repair](coverage/cr-001-b04-parity.md) closes the
+[batch 04](coverage/additional-evaluation-batch-04.md) stale-heading/body/signature rejection.
+No compared student is currently rejected; 83 eligible students remain untested. The completed
+group's header is retired before footer pagination, preserving ancestor and footer scopes.
+Fresh paired PDFs from `85ff5ce` match 33 ratings and all 4,256 painted glyphs within unchanged
+limits. All 396 focused checks pass, including three new regressions and seven Chinese PDF tests;
+four prior accepted Rust PDFs remain byte-identical, including the CR-001-B03 repair.
 The [CR-001 repair](coverage/cr-001-parity.md), implemented through clean commit `be022bd`,
 addresses saved-printer pitch and scoped ascent, Basic-Latin spacing, trailing-space centering,
 shaped alignment-width rounding, ordinary border/rule/rounded-frame geometry, stored paragraph

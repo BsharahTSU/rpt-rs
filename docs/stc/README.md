@@ -15,10 +15,12 @@ add six accepted students, including sparse pages and symbol ratings. [Batch 03]
 initially added two passes and one rejection. The subsequent [CR-001-B03 repair](coverage/cr-001-b03-parity.md)
 restores the repeated heading/body alignment and Arabic ligature; fresh paired PDFs from `8f9fd5e`
 match all 4,748 painted glyphs; that repair passed 542 checks and preserved three prior Rust PDFs.
-[Batch 04](coverage/additional-evaluation-batch-04.md) adds two passes and one new rejection:
-CR-001-B04 repeats a stale group heading, shifts its body down 42.2 pt and moves signatures.
-Fourteen students are accepted, one rejected and 83 remain untested. All 37 batch checks pass,
-including six new selection guards and seven Chinese PDF checks; no new renderer fix is claimed.
+[Batch 04](coverage/additional-evaluation-batch-04.md) initially added two passes and a new
+heading/body/signature rejection. The [CR-001-B04 repair](coverage/cr-001-b04-parity.md) retires
+completed-group repetition before footer pagination; fresh PDFs from `85ff5ce` match all 4,256
+painted glyphs and 33 ratings. All 396 focused checks pass, including three new regressions and
+seven Chinese PDF tests; four prior Rust exports remain byte-identical. Fifteen students are
+accepted, none rejected and 83 eligible students remain untested.
 Sections below preserve earlier checkpoints and their own datasets/counts. They do not
 establish acceptance of the other Parent cases.
 

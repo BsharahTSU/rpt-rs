@@ -678,3 +678,19 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Final clean-source pair and prior-case replays pending. No SQL/template/config changes;
   local commits on main only. D: cache/temp, bounded sequential Docker; latest RAM 4.02 GiB
   available and C: 312.10 GiB free. No unrelated applications stopped.
+
+
+## 2026-10-18 - Checkpoint 14b: CR-001-B04 final paired acceptance
+
+- Fresh original Crystal/Docker Rust PDFs from clean `85ff5ce` match all 33 ratings and
+  4,256 painted glyphs, max X/Y 0.05708/0.03016 pt. All six final pages reviewed; each
+  reproduces the independently reviewed same-engine candidate pixels. Original native
+  reference pixels and snapshot are preserved; heading/body/signature defects are closed.
+- All 396 focused checks plus strict affected Clippy and workspace formatting pass.
+  CR-001-B03, CR-001-B02, CR-003-B04 and CR-005-B04 replays pass every audit and their Rust
+  PDFs remain byte-identical. Private timestamp formatting failure/retry is documented.
+- [Full repair record](coverage/cr-001-b04-parity.md) records causes, tests, final evidence,
+  residuals and scope. Coverage: fifteen accepted, none rejected, 83 eligible untested.
+- Final C: 312.09 GiB/D: 534.01 GiB free, RAM 5.40 GiB available; lowest sample 4.02 GiB.
+  D: cache/temp and sequential caps retained, no task containers/retired target volume.
+  No SQL/template/production changes, no branches/worktrees/push; local commits only.
