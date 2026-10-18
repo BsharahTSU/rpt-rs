@@ -161,3 +161,11 @@ review, with underlying glyph, outline, run, mark and geometry measurements.
 Earlier pairs are preserved under `final-before-text-origins/` and
 `final-before-growing-content/`; the isolated final change is in `growing-content/`.
 These private evidence files remain ignored by Git.
+
+## Image residual update (2026-10-18)
+
+The [CR-005 image investigation](cr-005-parity.md#shared-logo-residual) finds the
+same native/Rust decoded logo-color difference in this accepted pair. Rust exactly
+preserves the stored RGB bitmap; native Crystal reduces it to an indexed palette.
+The earlier text/layout and geometry measurements remain valid. This newly measured
+residual extends the acceptance record; exact image-color parity remains open.

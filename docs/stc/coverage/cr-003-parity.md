@@ -158,3 +158,11 @@ Implementation and initial findings are committed locally as `899ca64`. The fina
 acceptance ledger/index updates form a separate local documentation checkpoint;
 canonical backend changes contain documentation only. No branch, worktree, hosted
 fork, push, application deployment, report change or database mutation was made.
+
+## Image residual update (2026-10-18)
+
+The [CR-005 image investigation](cr-005-parity.md#shared-logo-residual) finds the
+same native/Rust decoded logo-color difference in this accepted pair. Rust exactly
+preserves the stored RGB bitmap; native Crystal reduces it to an indexed palette.
+The earlier text/layout and geometry measurements remain valid. This newly measured
+residual extends the acceptance record; exact image-color parity remains open.

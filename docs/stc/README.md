@@ -6,7 +6,9 @@ Both PDFs have been regenerated and the captured CR-001 comparison is accepted w
 documented tolerances after independent final page/operator review.
 [CR-003](coverage/cr-003-parity.md) is now also accepted from clean `899ca64`, with
 all 72 English lines, 52 ratings and 6,449 glyphs verified. Its hinted-width/LRM/RTL
-fixes preserve the accepted CR-001 PDF byte-for-byte. CR-005 remains open.
+fixes preserve the accepted CR-001 PDF byte-for-byte. [CR-005](coverage/cr-005-parity.md) now passes captured-case text/layout checks with
+the same shared fixes. Exact logo-color parity remains open across all three:
+Rust retains the original RGB bitmap while native Crystal applies lossy palette conversion.
 Sections below preserve earlier checkpoints and their own datasets/counts. They do not
 establish acceptance of the other Parent cases.
 

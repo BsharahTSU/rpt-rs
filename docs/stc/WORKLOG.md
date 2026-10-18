@@ -377,3 +377,24 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Use D:\tmpppppp123\rpt-rs-cr005 and bounded sequential Docker; local commits only,
   no branch/worktree/push, database activity, original-input change or deployment.
 - Checkpoint validation: 430 affected Docker tests (372 layout, 58 render including seven Chinese), strict affected-crate Clippy and workspace formatting pass. Independent test review has no blockers. RAM guard stopped work at 1.60GiB; idle cache reclamation with no containers allowed safe continuation, ending at 3.94GiB available.
+
+## 2026-10-18 - Checkpoint 6b: fresh CR-005 pair and explicit image limitation
+
+- Fresh native/Rust PDFs from clean 3a28dae at 10:31:55-10:32:18 pass integrity,
+  page/date and 35-rating checks. All six final PNGs were reviewed by coordinator
+  and independent auditor; the full glyph/run/path audit reproduces baseline.
+- Both fresh PDFs, Rust IR and all PNGs equal their respective reviewed baseline
+  bytes. Text/layout passes below 0.06pt X / 0.031pt mark Y. Exact image matching
+  remains open; native's lossy indexed logo differs from source-preserving Rust.
+- Read-only source/pixel investigation excludes an alternate stored logo. Standard
+  Pillow and GDI+ adaptive quantizers do not exactly reproduce native. Octree-like
+  palette ordering is a clue, not proof; no fitted palette or runtime patch added.
+- Updated current fork/coverage references and earlier CR-001/CR-003 ledgers to
+  disclose the shared image residual. Backend canonical update is Markdown only.
+- 430 affected tests, seven Chinese checks, strict affected-crate Clippy, formatting
+  and correct-package worker build pass. A rejected binary-name Cargo invocation
+  was corrected before rendering. Original template/snapshot hashes are unchanged.
+- Final resources 10:33:54: C 286.00GiB, D 561.38GiB free, host RAM 5.42GiB available,
+  WSL 1.62GiB, no running container. D temp/evidence and sequential 2GiB Docker retained.
+- Full bridge compatibility and exact logo conversion remain open. Local commits
+  only; no SQL, branches/worktrees, push, deployment or application behavior change.

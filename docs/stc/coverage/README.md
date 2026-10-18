@@ -48,7 +48,26 @@ external Gradebook and authenticated API/UI delivery remain open. Read the [surf
 [Initial actual comparisons](initial-comparisons.md) now record three passing native/Rust representative exports, identical native live/replay images, matching ordered ratings and the remaining visual defects. The other 95 eligible students remain SQL-only evidence.
 
 
-## Current repair checkpoint: CR-003 (2026-10-17)
+## Current comparison checkpoint: CR-005 (2026-10-18)
+
+[CR-005 findings and evidence](cr-005-parity.md) record freshly regenerated
+original Crystal and Docker Rust PDFs from clean `3a28dae`. All 4,918 glyphs,
+59 English lines and 35 ordered ratings agree in text/layout; three pages retain
+16 / 12 / 7 ratings. The existing CR-001/CR-003 fixes resolve the old metrics.
+No additional runtime patch is needed for the observed text/layout behavior.
+
+430 affected Docker tests pass, including seven Chinese checks, with strict
+Clippy and formatting. New synthetic regressions combine group continuation,
+forced page breaks, final footers and Chinese terminal direction markers.
+
+**Exact image matching remains open:** native Crystal reduces the stored logo
+from 2,358 RGB colors to 185 used palette colors, while Rust exactly preserves
+the original bitmap. The same residual was measured in CR-001 and CR-003; their
+previous text/layout acceptance does not establish image-color identity. No
+speculative palette conversion was added. The CR-005 ledger records the measured
+color differences separately from glyph/geometry tolerances.
+
+## Previous repair checkpoint: CR-003 (2026-10-17)
 
 [CR-003 acceptance](cr-003-parity.md) records the fresh native/Rust pair from clean
 `899ca64` and [native findings/fixes](cr-003-whitespace.md). All 6,449 glyphs,
@@ -93,13 +112,13 @@ identical outlines. The coordinator and independent reviewer inspected all six f
 fresh per-engine pixels, glyph data and geometry reproduce the reviewed candidate, as does Rust IR.
 This is accepted captured-case parity with documented residuals, not pixel identity.
 
-CR-003 is accepted by the separate current ledger above. CR-005 remains open and needs its own comparison after shared renderer fixes.
+CR-003 retains its recorded text/layout acceptance. CR-005 now passes the separate text/layout comparison above; exact logo-color matching remains open across all three.
 The other 95 eligible students remain SQL-only evidence. Unpublished standard/second-term cases,
 missing authoritative databases/templates, external Gradebook, authenticated API/UI delivery,
 BIFF/XLS and broad legacy/subreport coverage retain the gaps recorded in
 [initial comparisons](initial-comparisons.md), [SQL findings](sql-eligibility.md) and
-the [surface inventory](parent-surfaces.md). Do not infer their success from the two accepted captured cases.
+the [surface inventory](parent-surfaces.md). Do not infer their success from the three captured text/layout comparisons.
 
-Keep the current resource controls in the CR-003 record: sequential bounded containers, one Cargo
+Keep the current resource controls in the CR-005 record: sequential bounded containers, one Cargo
 build/test thread, private evidence and additional temporary files on the designated D: paths.
 No new branches, worktrees, hosted fork or deployment are part of this checkpoint.

@@ -6,7 +6,9 @@ They establish actual PDF generation for these representatives, not all students
 Parent API/UI delivery. The remaining 95 candidates have eligibility evidence only.
 
 Current status: [CR-001](cr-001-parity.md) and [CR-003](cr-003-parity.md) have since
-completed their individual repairs and fresh paired acceptance. CR-005 remains open.
+completed their individual repairs and fresh paired acceptance. [CR-005](cr-005-parity.md) now passes text/layout checks under those shared fixes.
+Its October 18 image audit identifies a shared unresolved logo-color residual in all
+three cases; none is pixel-identical.
 The table and observations below retain the original October 16 results.
 
 ## Results

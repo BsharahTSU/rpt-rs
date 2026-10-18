@@ -132,3 +132,41 @@ reached 1.60 GiB. With no running containers, only idle Linux filesystem cache w
 released; no files or applications were removed. Available RAM recovered to
 3.94 GiB after linting, with C: 286.02 GiB free. This checkpoint changes tests and
 Markdown only. The worker still uses the already verified shared renderer fixes.
+
+## Final regeneration and independent comparison
+
+Both engines were freshly regenerated from clean local `3a28dae` on 2026-10-18 at
+10:31:55-10:32:18. Native Windows Crystal and Docker Linux Rust each produced a valid
+three-page 595 x 841 pt PDF with the same date and 35 ordered ratings. Original
+snapshot/template hashes are unchanged. Requests were removed; no SQL was executed.
+
+Coordinator and independent reviewer inspected all six final PNGs. The complete
+outline/operator/path audit reproduces the measurements above without exclusions.
+Each final PDF, the Rust IR and all six PNGs are byte-identical to their respective
+baseline outputs. The worker binary hash also equals the prior CR-003 worker, as
+expected for tests/Markdown-only changes; CR-001/CR-003 were not redundantly rendered.
+This establishes the captured CR-005 text/layout gate, with exact logo-color matching
+still open. The standard quantizers tried in private (Pillow median-cut, maximum
+coverage, fast octree and Windows GDI+ optimal-palette conversion) did not reproduce
+Crystal's decoded image exactly. Palette ordering suggests an octree family, but
+does not prove a compatible algorithm. No speculative production change follows.
+
+Private final evidence under `research/stc-verification/cr-005-parity/final/`:
+
+- `native.pdf`, `rust.pdf`, `comparison.html`, `comparison.json`, six PNGs and Rust IR.
+- `evidence.json`: clean source, timestamps, unchanged frozen snapshot, no-SQL replay.
+- `engine-hashes.json`: original template, PDF, worker, bridges, image and font hashes.
+- `review/final-review.md`, `final-review-summary.json`, `baseline-identity.json`,
+  full glyph/run/path measurements and `image-residual-summary.json`.
+- `resources.json`: final C:/D:/RAM and empty running-container inventory.
+
+The final worker build passes using `cargo build --locked -p stc-render-worker`.
+An initial invocation mistakenly used its binary name `stc-rpt-worker` as the Cargo
+package; Cargo rejected that before building or generating output. The corrected
+package build and subsequent regeneration passed; both logs remain private.
+
+At 10:33:54 local, C: had 286.00 GiB free, D: 561.38 GiB free, available host RAM
+was 5.42 GiB and WSL working set was 1.62 GiB; no container remained. Temporary and
+evidence files remain on D:. The tests/findings checkpoint is `3a28dae`; a separate
+local Markdown checkpoint records final review and updates the current fork/backend
+references. No branches, worktrees, pushes, original-input changes or deployments.
