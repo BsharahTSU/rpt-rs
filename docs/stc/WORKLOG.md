@@ -477,3 +477,16 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Full details: [storage migration](docker-cache-storage.md). Backend documentation
   updated without touching unrelated code/config edits. No SQL, new branch/worktree,
   push, deployment or change to Parent report behavior.
+
+## 2026-10-18 - Checkpoint 9a: additional evaluation batch, first case
+
+- Refreshed the read-only AAJ inventory; selected three new students covering 39 rows,
+  20 rows and a long name. Candidate comments are empty, so that coverage stays open.
+- CR-001-B01 native live/frozen and Docker Rust exports pass. All three pages reviewed;
+  39 ordered ratings, image RGB and 5,060 painting glyphs agree within existing limits.
+- Found and corrected an audit false positive: a one-point space contour paints no area.
+  Added reusable pure glyph helpers and ten synthetic regressions, with four existing
+  comparison checks. Renderer behavior is unchanged; later cases remain pending.
+- Evidence and findings: [batch 01](coverage/additional-evaluation-batch-01.md). Initial
+  C: 313.78 GiB, D: 535.88 GiB free, RAM 6.64 GiB. Sequential capped Docker and D: temp/cache;
+  no data mutation, deployment, branch, worktree or push. Local committed checkpoint.
