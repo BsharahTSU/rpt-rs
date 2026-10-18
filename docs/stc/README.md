@@ -19,8 +19,13 @@ match all 4,748 painted glyphs; that repair passed 542 checks and preserved thre
 heading/body/signature rejection. The [CR-001-B04 repair](coverage/cr-001-b04-parity.md) retires
 completed-group repetition before footer pagination; fresh PDFs from `85ff5ce` match all 4,256
 painted glyphs and 33 ratings. All 396 focused checks pass, including three new regressions and
-seven Chinese PDF tests; four prior Rust exports remain byte-identical. Fifteen students are
-accepted, none rejected and 83 eligible students remain untested.
+seven Chinese PDF tests; four prior Rust exports remain byte-identical.
+[Batch 05](coverage/additional-evaluation-batch-05.md) adds two accepted students and rejects
+CR-001-B05 for wrong printed page totals, missing date blocks and raised footers. All 115
+ratings match; 40 focused checks pass, including three new selection guards and seven Chinese
+PDF tests. No renderer repair is claimed for that case. Current coverage: seventeen accepted,
+one rejected and 80 eligible students untested. D: cache/temp; final C: 312.10 GiB free,
+RAM 4.69 GiB available.
 Sections below preserve earlier checkpoints and their own datasets/counts. They do not
 establish acceptance of the other Parent cases.
 

@@ -3,7 +3,8 @@
 **Accepted after repair (2026-10-18).** Final native Crystal and Docker Rust PDFs from
 clean `85ff5ce` match all 33 ratings and 4,256 painted glyphs within unchanged limits.
 All six final pages were reviewed; four prior-case Rust PDFs remain byte-identical.
-Current coverage: **15 accepted / 0 rejected / 83 untested**. Earlier checkpoints below
+Coverage at this repair: **15 accepted / 0 rejected / 83 untested**.
+See [batch 05](additional-evaluation-batch-05.md) for subsequent coverage and its separate rejection. Earlier checkpoints below
 retain the original failure and intermediate validation; final acceptance follows them.
 
 ## Scope and retained failure
@@ -153,8 +154,8 @@ RAM **5.40 GiB available**. Lowest observed RAM during this repair was 4.02 GiB.
 caps and D: cache/temp were retained; no task containers remain and the retired C-backed
 target volume is absent. These are sampled values, not continuous peak measurements.
 
-Current coverage is **15 accepted / 0 rejected / 83 untested** of 98 eligible students.
-The next step is another bounded untested-student batch. Populated comments, demonstrated
+Coverage at this repair was **15 accepted / 0 rejected / 83 untested** of 98 eligible students.
+The subsequent [batch 05](additional-evaluation-batch-05.md) records the next bounded batch. Populated comments, demonstrated
 displayed-name overflow, blocked standard/second-term/other-school reports, BIFF/XLS,
 wider legacy/subreport behavior and authenticated Parent API/UI delivery retain their
 earlier gaps. No production rendering/configuration or database changes were made.

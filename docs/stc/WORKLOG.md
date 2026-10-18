@@ -718,3 +718,20 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - [Batch 05](coverage/additional-evaluation-batch-05.md) preserves the failed pair and exact
   findings. Root cause/renderer repair not claimed; investigate reset-aware totals and
   conditional footers. Other two students pending; resource caps/D: paths retained.
+
+
+## 2026-10-18 - Checkpoint 15c: fifth batch complete, two accepted and one rejected
+
+- CR-003-B05 and CR-005-B05 pass every page review, all 87 ratings and 11,383 painted
+  glyphs, existing 0.061/0.031-pt limits, decoded RGB/date/boxes and native replay checks.
+  All three cases print; all 115 ratings match. CR-001-B05 remains explicitly rejected
+  for wrong page totals, missing date blocks and raised footers; no renderer repair claimed.
+- [Batch 05](coverage/additional-evaluation-batch-05.md) records all outcomes, selection
+  safeguards, exact remaining defect, private evidence/index and reproduction commands.
+  All 40 focused tests pass: 33 Python checks (three new selection tests) and seven Chinese.
+- Eighteen distinct students compared: seventeen accepted, one rejected, 80 untested.
+  Prior accepted cases remain scoped to their captured inputs. Next repair is CR-001-B05.
+- Final sample: C: 312.10 GiB/D: 533.98 GiB free, RAM 4.69 GiB available. All pre-export
+  samples passed the resource guard; D: cache/temp, capped sequential Docker, no task
+  containers or retired target volume. No database/template/runtime/configuration changes.
+  Local commits on existing main only, no branches/worktrees/push or deployment.

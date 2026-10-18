@@ -3,8 +3,9 @@
 **Subsequent repair accepted (2026-10-18).** The [CR-001-B04 repair](cr-001-b04-parity.md)
 closes the stale-heading/body/signature rejection with fresh paired PDFs from `85ff5ce`.
 All 4,256 painted glyphs and 33 ratings match within unchanged limits; all six pages were
-reviewed. CR-003-B04 and CR-005-B04 Rust replays remain byte-identical. Current cumulative
-coverage: **15 accepted / 0 rejected / 83 untested**. The sections below preserve this
+reviewed. CR-003-B04 and CR-005-B04 Rust replays remain byte-identical. Coverage at that
+repair: **15 accepted / 0 rejected / 83 untested**. See [batch 05](additional-evaluation-batch-05.md)
+for subsequent coverage and its separate rejection. The sections below preserve this
 batch's original two passes and one rejection; the repair supersedes that case's status.
 
 ## Checkpoint 13a: bounded selection and test preparation (2026-10-18)

@@ -45,10 +45,21 @@ Source and SQL discovery are complete for the documented local scope: 38 AAJ cas
 ready evaluation groups and 98 candidate students. Other local copies are metadata-only evidence;
 external Gradebook and authenticated API/UI delivery remain open. Read the [surface inventory](parent-surfaces.md),
 [SQL findings](sql-eligibility.md), [isolated runner](case-runner.md), and [clock fix](clock-parity.md).
-[Initial actual comparisons](initial-comparisons.md) preserve the original three exports and their then-open defects; the subsequent repair/acceptance records supersede those defects. After the [CR-001-B04 repair](cr-001-b04-parity.md), fifteen students have accepted comparisons, none is currently rejected, and 83 eligible students remain SQL-only evidence.
+[Initial actual comparisons](initial-comparisons.md) preserve the original three exports and their then-open defects; the subsequent repair/acceptance records supersede those defects. After [batch 05](additional-evaluation-batch-05.md), seventeen students have accepted comparisons, CR-001-B05 is rejected for page-total/date-footer differences, and 80 eligible students remain SQL-only evidence.
 
 
-## Current comparison checkpoint: CR-001-B04 repaired and accepted (2026-10-18)
+## Current comparison checkpoint: batch 05 has two passes and one rejection (2026-10-18)
+
+[Batch 05](additional-evaluation-batch-05.md) compares three new 28-, 52- and 35-row
+students sequentially. CR-003/005-B05 pass independent all-page, glyph/data/image/date
+checks; CR-001-B05 is rejected for wrong reset-aware printed page totals, missing dates
+on pages two/three and legends/footers raised 16 pt. Body, Arabic names and signatures match.
+Root cause and renderer repair are not claimed. All 115 ratings match; 40 focused checks
+pass, including three new selection regressions and seven Chinese PDF tests.
+Coverage: seventeen accepted, one rejected, 80 untested. D: cache/temp; final C: 312.10 GiB
+free and RAM 4.69 GiB available. Repair CR-001-B05 from the retained frozen pair next.
+
+## Previous comparison checkpoint: CR-001-B04 repaired and accepted (2026-10-18)
 
 The [repair](cr-001-b04-parity.md) retires the completed group's repeat entry before
 footer pagination while preserving live ancestors and footer resolution scope. Fresh
@@ -180,7 +191,7 @@ fresh per-engine pixels, glyph data and geometry reproduce the reviewed candidat
 This is accepted captured-case parity with documented residuals, not pixel identity.
 
 CR-003 retains its recorded text/layout acceptance. CR-005 passes text/layout and exact decoded-logo matching above; CR-001/003 replays close their same image residual.
-After the [CR-001-B04 repair](cr-001-b04-parity.md), fifteen students have accepted comparisons, none is currently rejected, and 83 eligible students remain SQL-only evidence. Unpublished standard/second-term cases,
+After [batch 05](additional-evaluation-batch-05.md), seventeen students have accepted comparisons, CR-001-B05 is rejected for page-total/date-footer differences, and 80 eligible students remain SQL-only evidence. Unpublished standard/second-term cases,
 missing authoritative databases/templates, external Gradebook, authenticated API/UI delivery,
 BIFF/XLS and broad legacy/subreport coverage retain the gaps recorded in
 [initial comparisons](initial-comparisons.md), [SQL findings](sql-eligibility.md) and

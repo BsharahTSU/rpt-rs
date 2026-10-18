@@ -16,10 +16,13 @@ SQL/procedure/DataSet callers, PDF, and BIFF/XLS. The portable adapter uses .NET
 request validation and the Rust worker for rendering. Rust builds and candidates run in Docker
 Linux; original Crystal baselines require the existing Windows Crystal installation.
 
-PDF support is experimental. Fifteen students across three evaluation templates have accepted
-native/Rust comparisons after the [CR-001-B04 repair](coverage/cr-001-b04-parity.md) closes the
-[batch 04](coverage/additional-evaluation-batch-04.md) stale-heading/body/signature rejection.
-No compared student is currently rejected; 83 eligible students remain untested. The completed
+PDF support is experimental. [Batch 05](coverage/additional-evaluation-batch-05.md) brings
+coverage to seventeen accepted students, one rejected and 80 eligible students untested.
+CR-003/005-B05 pass; CR-001-B05 has wrong printed page totals, missing date blocks and
+raised footers. All 115 ratings match; 40 focused checks pass. No renderer repair is claimed
+for this new failure. The prior [CR-001-B04 repair](coverage/cr-001-b04-parity.md) remains
+accepted for its input and closes the [batch 04](coverage/additional-evaluation-batch-04.md)
+stale-heading/body/signature rejection. The completed
 group's header is retired before footer pagination, preserving ancestor and footer scopes.
 Fresh paired PDFs from `85ff5ce` match 33 ratings and all 4,256 painted glyphs within unchanged
 limits. All 396 focused checks pass, including three new regressions and seven Chinese PDF tests;

@@ -1,5 +1,11 @@
 # Additional evaluation student batch 05
 
+**Final result (2026-10-18): two accepted, one rejected.** CR-003-B05 and CR-005-B05
+pass all-page review; CR-001-B05 exposes wrong printed page totals, missing date blocks
+and raised footers. No renderer repair is claimed. Coverage is now **17 accepted /
+1 rejected / 80 untested**, with eighteen distinct students compared. Earlier checkpoint
+statements below retain the state at that time.
+
 ## Checkpoint 15a: bounded selection and regression preparation (2026-10-18)
 
 Refresh SELECT-only eligibility and compare three new students sequentially, one per
@@ -79,3 +85,95 @@ Private `review/visual-review.json` explicitly records rejection. The comparison
 exits nonzero; the other two students remain pending at this checkpoint. Initial review
 considered a possible name-outline issue, but all-page/operator inspection identified
 the differing glyph as the page-total digit and ruled out that visual interpretation.
+
+
+## Checkpoint 15c: complete sequential batch and acceptance
+
+| Case | Native / Rust physical pages | Ratings per page | Native / Rust painted glyphs | Final result |
+| --- | --- | --- | --- | --- |
+| CR-001-B05 | 3 / 3 | 15 / 13 / 0 | 3,962 / 3,886 | Rejected; page totals/date footers above |
+| CR-003-B05 | 3 / 3 | 18 / 21 / 13 | 6,456 / 6,456 | Accepted within existing limits |
+| CR-005-B05 | 3 / 3 | 16 / 12 / 7 | 4,927 / 4,927 | Accepted within existing limits |
+
+All three capture/native-live/native-frozen/rust-frozen stages pass. All nine exported
+PDFs pass qpdf; native live/frozen page PNGs are identical in each case. Each pair has
+equal page boxes and decoded image RGB. All **115 ratings** match engine order and source
+multiplicity, including the rejected case. Dates agree in the accepted two cases only.
+The six final paired PDFs and all eighteen page PNGs are retained and reviewed; intermediate
+native-live PDFs establish the replay checks. Each case has an explicit visual-review record.
+
+CR-003-B05 matches all 6,456 painted glyphs (2,052 / 2,187 / 2,217), max X/Y
+**0.06008 / 0.03016 pt**. Page one ends with an English heading and empty continuation
+space in both engines. Page two repeats English/Reading Comprehension and progresses
+through Mathematics/Rounding Numbers. Page three resumes Mathematics at Differentiating
+between Numbers, then Sciences and all final signature/stamp/note/date content. Arabic
+name and repeated footers match; no missing heading or clipped text was observed.
+
+CR-005-B05 matches all 4,927 painted glyphs (2,113 / 1,548 / 1,266), max X/Y
+**0.05894 / 0.03016 pt**. Page two resumes English/Grammar and Punctuation then Mathematics;
+both engines retain the same blank remainder before Sciences/Biology begins page three.
+All seven science rows, Arabic names/footers, signatures, stamp, bilingual note and date
+match. Coordinator and independent reviewer inspected all six page images for each case.
+
+Existing acceptance limits remain **0.061 pt X / 0.031 pt Y**; none was widened. The two
+accepted cases contain respectively 92 and 65 Unicode mapping differences for equivalent
+painted outlines. Raw extracted-text, native/Rust PDF-byte and whole-page pixel identity
+are not claimed. All 11,383 painted glyphs across the accepted pair of cases match.
+
+No renderer change was needed for the accepted cases, and no fix is claimed for CR-001-B05.
+Selection preparation now reserves each chosen ID before the next template; three synthetic
+regressions protect this and later-batch history/novelty behavior. All **40 focused checks**
+pass: nine selection, 24 glyph/comparison/rating audits, and seven actual Chinese PDF tests.
+The reused worker hash matches the accepted CR-001-B04 build:
+`695e77b2ba433ec29fb9b32894ac82a06618cef14b4a978d95df044f142152af`.
+CR-001-B05 was exported from clean `c66e672`; CR-003/005-B05 from clean `d9ddb1b`.
+Those checkpoints change tests/documentation only, not renderer source or the accepted worker.
+
+## Private evidence and reproduction
+
+The ignored batch directory contains SELECT inventory/procedure hash, feature rows,
+prior coverage, manifests, frozen snapshots, checksums, engine responses, qpdf logs,
+page renders, glyph/rating/image/date audits, independent visual records, resource samples,
+test logs, `final-summary.json` and a side-by-side `comparison.html`. Finalization verifies
+fifteen prior and three new distinct student IDs, clean-source stage success and agreement
+between automatic and visual outcomes. Student data/templates/PDFs remain untracked on D:.
+
+Run commands from the fork root; existing manifests contain private selectors. Do not
+rerun discovery or create a second run in a completed case directory without explicitly
+preparing a fresh wrapper and manifest destination: this fixed-case wrapper has no new-run-path
+option and its ambiguity guard executes after export.
+
+```powershell
+# Review a retained pair without another SQL capture (CR-001 returns failure as expected).
+./research/stc-verification/additional-evaluation-batch-05/verify-case.ps1 -CaseId cr-003-b05
+
+# Historical capture command used for this batch; do not rerun this completed case.
+./research/stc-verification/additional-evaluation-batch-05/run-case.ps1 -CaseId cr-005-b05
+
+# Existing D: target and temp mounts, one build/test worker and capped Docker.
+./scripts/stc/Invoke-DockerCargo.ps1 -CargoArgs @(
+  'test','--locked','--offline','-p','rpt-render','--test','chinese')
+```
+
+The Python audit command runs `python3 -m unittest test_select_batch.py test_glyph_audit.py
+ test_compare_case.py test_rating_audit.py` from `/src/scripts/stc`, with source read-only,
+`PYTHONDONTWRITEBYTECODE=1`, D: scratch mounted at `/tmp`, `--network none`, two CPUs and
+512 MiB memory/swap caps. No dependency/image rebuild was required.
+
+## Resources and next repair
+
+Final sample at **17:59:30**: C: **312.10 GiB free**, D: **533.98 GiB free**, RAM
+**4.69 GiB available**. Saved pre-export samples were 4.56 / 4.22 / 4.71 GiB available;
+all passed the 3-GiB start guard. These are samples, not continuous peak measurements.
+Target/cache temp and task scratch remain under `D:\tmpppppp123`. No task containers remain;
+only the small registry/NuGet volumes remain, and the retired C-backed target volume is absent.
+No unrelated application was stopped. Local commits on existing main only; no branches,
+worktrees, push, database/template/runtime/configuration changes or deployment.
+
+Current coverage is **17 accepted / 1 rejected / 80 untested** of 98 eligible students.
+Next, repair **CR-001-B05 printed page totals and conditional date-footer behavior** against
+its retained snapshot, add a renderer-level synthetic regression, regenerate both PDFs and
+recheck accepted cases. Root cause is still unproven. B04's accepted repair is not reopened
+by a different captured input. Populated comments, demonstrated displayed-name overflow,
+blocked standard/second-term/other-school reports, BIFF/XLS, broader legacy/subreports and
+authenticated Parent API/UI delivery retain their earlier gaps.
