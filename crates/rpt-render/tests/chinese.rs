@@ -317,3 +317,42 @@ fn chinese_leading_spaces_reduce_first_line_capacity_without_losing_text() {
         );
     }
 }
+
+#[test]
+fn chinese_terminal_space_lrm_preserves_text_without_a_phantom_line() {
+    use rpt_pages::TextLayout;
+    let layout = rpt_text::WindowsLayout::with_printer_dpi(
+        FontSource::System,
+        std::num::NonZeroU32::new(600).unwrap(),
+    )
+    .without_latin_kerning();
+    for (family, text, first_half) in [
+        ("Noto Sans CJK SC", "中文报告", "中文"),
+        ("Noto Sans CJK TC", "繁體中文", "繁體"),
+    ] {
+        let font = FontSpec {
+            family: family.into(),
+            ..chinese_font()
+        };
+        for body in [text.to_string(), format!("  {text}")] {
+            for width in [
+                layout.width_twips(&body, &font) + 0.01,
+                layout.width_twips(first_half, &font) + 0.01,
+            ] {
+                let plain = layout.wrap(&body, width, &font);
+                for tail in [" \u{200e}", "\u{200e} ", " \u{200e} "] {
+                    let padded = format!("{body}{tail}");
+                    let mut expected = plain.clone();
+                    expected.last_mut().unwrap().push_str(tail);
+                    let actual = layout.wrap(&padded, width, &font);
+                    assert_eq!(actual, expected, "terminal controls must not add a line");
+                    assert_eq!(
+                        actual.concat(),
+                        padded,
+                        "logical CJK text and controls survive"
+                    );
+                }
+            }
+        }
+    }
+}

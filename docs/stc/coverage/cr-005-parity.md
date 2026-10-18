@@ -1,0 +1,134 @@
+# CR-005 comparison and regression coverage
+
+## Current status
+
+**Text, content and layout pass for the captured case. Exact image-color parity
+remains open.** The CR-001/CR-003 shared renderer fixes already correct the
+original CR-005 text/row differences. This checkpoint adds regression tests and
+records measured evidence; it does not introduce a new renderer behavior change.
+
+The unchanged original template and frozen schema-bearing DataSet are replayed
+through Windows Crystal and Linux Docker Rust. No SQL is executed. Parent behavior,
+configuration, publication, report inputs and deployment remain unchanged. Work uses
+the existing branch and local commits only.
+
+## Findings
+
+The fresh baseline from clean `bf34df6` contains three 595 x 841 pt pages per
+engine, the same print date and 35 ordered ratings allocated 16 / 12 / 7.
+Coordinator and independent review cover all six rendered page PNGs. Continued
+headers, the group starting page three, signatures and final-page date agree.
+
+The full operator/embedded-outline audit excludes no glyph or text run:
+
+| Check | Result / maximum difference |
+| --- | --- |
+| Nonblank glyph outlines and sizes | 4,918 agree: 2,108 / 1,546 / 1,264 |
+| Text runs / aligned runs | 301 / 218, all mapped |
+| English line content and breaks | 59 agree: 25 / 20 / 14 |
+| Ordered ratings | 35 agree: 16 / 12 / 7 |
+| All glyph X origins | 0.05894 pt |
+| English glyph X origins | 0.02748 pt |
+| Ordinary text baselines | 0.00005 pt |
+| Rating baselines | 0.00004 pt |
+| Arabic mark Y rounding | 0.03016 pt |
+| Six stroked rounded frame bounds | Exact |
+| Five filled header bounds | 0.00001 pt |
+| 118 horizontal path endpoints | 0.05004 pt |
+
+The text/layout envelope is below 0.06 pt X, 0.031 pt mark Y and 0.051 pt path
+rounding. Sixty-two Unicode mapping differences pair identical embedded glyph
+outlines/sizes. Raw extracted-word equality remains false; matching visible text
+and geometry do not imply PDF byte identity or identical Unicode extraction.
+
+## Shared logo residual
+
+Decoded logo pixels differ in all three captured cases, including the earlier
+CR-001 and CR-003 accepted comparisons. This extends their residual inventory;
+their text/layout results remain valid. It must not be hidden by an image mask or
+folded into the text tolerances.
+
+Read-only compound-file inspection establishes that the selected `Ole10Native`
+image is a 96 x 100, 24-bit BMP. Rust's decoded PDF RGB pixels exactly equal its
+source pixels. The embedding has no alternate CONTENTS/OlePres representation;
+the other two embeddings contain unrelated 70 x 33 bitmaps. The original template
+hash remains unchanged.
+
+Crystal exports this image with a 256-entry indexed palette containing 219 distinct
+palette values and 185 used colors, reducing 2,358 source colors. Each original RGB
+color maps consistently to one native color; no position-dependent dithering is
+observed. This establishes lossy export-time color reduction, not a Rust image
+selection/decoding failure. The palette-generation algorithm is not established.
+
+| Per-channel decoded RGB difference (0-255) | R | G | B |
+| --- | ---: | ---: | ---: |
+| Mean absolute difference | 1.36135 | 1.31750 | 4.24479 |
+| Maximum difference | 28 | 32 | 38 |
+
+Native's dominant background is (254,254,250), while the original/Rust dominant
+background is (255,255,255). The difference is small at report scale, but exact
+logo-color matching remains unresolved. No report-specific palette, approximate
+quantizer or alteration of the original image is committed. Overall exact matching
+is not marked complete.
+
+## Regression coverage
+
+Two new synthetic tests cover the shared behavior now verified by CR-005:
+
+- Combined continuation and forced next-group pagination: two repeated header
+  sections, unique ordered row identities, three pages with 4 / 1 / 2 rows,
+  finalized Page N of M, stable footer position and final-page-only date label.
+  This catches dropped/duplicated rows, repeated forced breaks and phantom pages.
+- Simplified and Traditional Chinese terminal U+0020/LRM handling: narrow and
+  full-line widths, leading spaces, three tail orders, unchanged visible line
+  breaks and exact preservation of all logical characters. It guards the previous
+  fitting fix outside ASCII without storing school data or proprietary fonts.
+
+No private template, values or PDF becomes a committed fixture. Existing Chinese
+PDF embedding/extraction tests continue to exercise the actual PDF path. Focused
+validation results and final regeneration provenance follow in the next checkpoint.
+
+## Evidence and reproduction
+
+Use [the isolated case contract](case-runner.md). Ignored evidence lives under
+`research/stc-verification/cr-005-parity/` on D:. `baseline/` contains freshly
+regenerated native/Rust PDFs, IR, PNGs, comparison and full review. `native-metrics/`
+contains original embedding inventories, decoded-pixel mapping and logo findings.
+The original frozen input remains in `research/stc-verification/parent-cases/cr-005/`.
+Private manifests retain template/snapshot hashes, selectors and engine identities.
+
+Baseline regeneration ran 2026-10-18 10:21:14-10:21:43 local from clean `bf34df6`.
+Both original and Rust were regenerated; the original template and snapshot were
+not modified. No live connection is needed for replay.
+
+## Resources and remaining scope
+
+Temporary files use `D:\tmpppppp123\rpt-rs-cr005`; ignored evidence also stays on D:.
+Docker jobs run sequentially with 2 GiB RAM, no additional swap, two CPUs, one Cargo
+build job and one test thread. The runner checks C: >=30 GiB, D: >=10 GiB and host
+available RAM >=2 GiB before heavy work. Existing images/volumes are reused; their
+managed storage is not claimed to have moved off C:.
+
+Initial readings: C: 285.87 GiB free, D: 561.41 GiB free, available host RAM 5.66 GiB
+with Docker stopped. Resource checkpoints are retained privately. No pruning,
+volume removal, process termination or global WSL setting change is part of this work.
+
+Exact logo quantization needs a separately proven generic implementation and
+synthetic native controls before it can be claimed compatible. Other students,
+unpublished standard reports, template-owned SQL, BIFF/XLS, broad subreport/legacy
+coverage and authenticated Parent API/UI delivery remain separate open gates.
+
+## Verified tests-only checkpoint
+
+All 430 affected Docker tests pass: 372 layout and 58 render, including seven
+Chinese tests and six render documentation tests. The two added regressions also
+passed in isolation; they are not added again to that total. The existing public
+PDF reference tests pass without baseline updates. Strict all-target/all-feature
+Clippy for both affected crates and workspace format checking pass. Independent
+review of both new tests found no blocking issue.
+
+The resource guard stopped linting before it started when host available RAM
+reached 1.60 GiB. With no running containers, only idle Linux filesystem cache was
+released; no files or applications were removed. Available RAM recovered to
+3.94 GiB after linting, with C: 286.02 GiB free. This checkpoint changes tests and
+Markdown only. The worker still uses the already verified shared renderer fixes.

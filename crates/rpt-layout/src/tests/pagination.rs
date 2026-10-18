@@ -2153,3 +2153,102 @@ fn rounded_box_inset_survives_page_fragments_and_final_section_endpoint() {
         }
     }
 }
+
+/// A continued evaluation group can leave space on its second page while the next group
+/// explicitly starts a third. Both header sections repeat once, rows retain their identity,
+/// and the final-page footer is resolved after the group break establishes the total.
+#[test]
+fn continued_group_then_forced_group_preserves_rows_headers_and_final_footer() {
+    let (mut report, _) = paging_limit_report(2300, 1, 1, 0, 0);
+    let header = &mut report.report_definition.areas[0];
+    header.format.group.as_mut().unwrap().repeat_group_header = true;
+    header
+        .condition_formulas
+        .push(("New_Page_Before".into(), "{t.region} = \"B\"".into()));
+    header.sections.push(section(
+        AreaSectionKind::GroupHeader,
+        "GH2",
+        200,
+        vec![text_object("Second", "SECOND", 0)],
+    ));
+    report.report_definition.areas[1].sections[0].objects = vec![db_field_object("Row", "t.x", 0)];
+    let mut page_number = db_field_object("PageNumber", "PageNofM", 0);
+    page_number.bounds.width = Twips(3000);
+    if let ReportObjectKind::Field(field) = &mut page_number.kind {
+        field.ref_kind = FieldRefKind::Special;
+    }
+    let mut final_only = section(
+        AreaSectionKind::PageFooter,
+        "FinalOnly",
+        300,
+        vec![text_object("Date", "DATE", 0)],
+    );
+    final_only.condition_formulas.push((
+        "Section_Visibility".into(),
+        "PageNumber < TotalPageCount".into(),
+    ));
+    report.report_definition.areas.push(area(
+        AreaSectionKind::PageFooter,
+        vec![
+            section(
+                AreaSectionKind::PageFooter,
+                "Always",
+                300,
+                vec![page_number],
+            ),
+            final_only,
+        ],
+    ));
+    let saved = saved_data(
+        &[
+            ("t.region", FieldValueType::String),
+            ("t.x", FieldValueType::String),
+        ],
+        &[
+            &["A", "row-1"],
+            &["A", "row-2"],
+            &["A", "row-3"],
+            &["A", "row-4"],
+            &["A", "row-5"],
+            &["B", "row-6"],
+            &["B", "row-7"],
+        ],
+    );
+    let doc = rendered(&report, &saved);
+    assert_eq!(
+        doc.pages.len(),
+        3,
+        "no blank page or lost forced group break"
+    );
+    let expected_rows = [
+        vec!["row-1", "row-2", "row-3", "row-4"],
+        vec!["row-5"],
+        vec!["row-6", "row-7"],
+    ];
+    for (index, page) in doc.pages.iter().enumerate() {
+        let rows: Vec<_> = page
+            .ops
+            .iter()
+            .filter_map(|op| match op {
+                DrawOp::Text(run) if run.text.starts_with("row-") => Some(run.text.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            rows,
+            expected_rows[index],
+            "ordered rows on page {}",
+            index + 1
+        );
+        assert_eq!(page_text_tops(page, "GH"), [0]);
+        assert_eq!(page_text_tops(page, "SECOND"), [300]);
+        assert_eq!(
+            page_text_tops(page, &format!("Page {} of 3", index + 1)),
+            [1700]
+        );
+        assert_eq!(
+            page_text_tops(page, "DATE"),
+            if index == 2 { vec![2000] } else { vec![] }
+        );
+    }
+}

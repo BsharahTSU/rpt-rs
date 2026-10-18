@@ -357,3 +357,23 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Updated fork/current coverage and canonical backend documentation. CR-005, other
   candidates, standard-report database rehearsal, Excel/subreports and authenticated
   Parent delivery remain open. Local commits only; no branches/worktrees/push/deploy.
+
+## 2026-10-18 - Checkpoint 6a: CR-005 text/layout verified; image residual isolated
+
+- Fresh original Windows Crystal and Docker Rust baseline from clean bf34df6 uses
+  the unchanged frozen snapshot without SQL. Both have three 595x841pt pages,
+  matching date and 35 ordered ratings (16/12/7). All six PNGs were inspected.
+- Independent full outline/operator audit matches 4,918 glyphs, 301 runs and 59
+  English lines without exclusions. Max X 0.05894pt, ordinary Y 0.00005pt,
+  mark Y 0.03016pt and path rounding 0.05004pt. Shared CR-001/CR-003 fixes already
+  repair the old text/row drift; no new runtime patch is justified by these findings.
+- Logo inspection identifies a previously unmeasured shared residual in CR-001,
+  CR-003 and CR-005: Rust exactly retains stored 24-bit BMP pixels; Crystal reduces
+  2,358 source colors to 185 used indexed colors. No alternate stored logo exists.
+  Exact palette generation remains unknown. Do not claim overall exact matching.
+- Added synthetic combined continuation/forced-group/final-footer regression and
+  Simplified/Traditional Chinese trailing-space/LRM regression. Private evidence,
+  findings, source paths and remaining scope are in coverage/cr-005-parity.md.
+- Use D:\tmpppppp123\rpt-rs-cr005 and bounded sequential Docker; local commits only,
+  no branch/worktree/push, database activity, original-input change or deployment.
+- Checkpoint validation: 430 affected Docker tests (372 layout, 58 render including seven Chinese), strict affected-crate Clippy and workspace formatting pass. Independent test review has no blockers. RAM guard stopped work at 1.60GiB; idle cache reclamation with no containers allowed safe continuation, ending at 3.94GiB available.
