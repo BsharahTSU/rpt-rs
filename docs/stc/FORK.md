@@ -30,9 +30,10 @@ printer device-width fitting, terminal LRM handling, centered RTL field preparat
 and mixed-direction reconstruction are repaired and regression-tested. All 6,449
 glyphs, 72 English lines and 52 ratings agree; maximum residuals are 0.06008 pt X /
 0.03016 pt mark Y. CR-001 replay remains byte-identical. [CR-005](coverage/cr-005-parity.md) now passes text/layout checks for all 4,918
-glyphs, 59 English lines and 35 ratings. A newly measured shared logo-color residual
-remains open in all three cases; native quantizes the original bitmap while Rust
-retains its exact pixels.
+glyphs, 59 English lines and 35 ratings. The [logo-color repair](coverage/cr-005-logo.md) in `eb4656d` reproduces every decoded
+logo RGB pixel in all three captured cases. Fresh CR-005 paired exports and CR-001/003
+replays preserve drawing/font resources, other images and Page IR. Generic native-unwritten
+lookup cells use deterministic fallback; uncharacterized image modes remain outside this claim.
 These cases do not establish full coverage, pixel identity or authenticated delivery.
 
 Template-owned SQL and BIFF/XLS are explicitly unsupported. Multiple-table transport exists,

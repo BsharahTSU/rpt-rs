@@ -7,8 +7,9 @@ Parent API/UI delivery. The remaining 95 candidates have eligibility evidence on
 
 Current status: [CR-001](cr-001-parity.md) and [CR-003](cr-003-parity.md) have since
 completed their individual repairs and fresh paired acceptance. [CR-005](cr-005-parity.md) now passes text/layout checks under those shared fixes.
-Its October 18 image audit identifies a shared unresolved logo-color residual in all
-three cases; none is pixel-identical.
+The subsequent [logo-color repair](cr-005-logo.md) closes the shared image residual:
+all 9,600 decoded logo RGB pixels match in fresh CR-005 and CR-001/003 replays.
+Whole-page pixel identity is still not claimed; documented layout tolerances remain.
 The table and observations below retain the original October 16 results.
 
 ## Results

@@ -48,24 +48,23 @@ external Gradebook and authenticated API/UI delivery remain open. Read the [surf
 [Initial actual comparisons](initial-comparisons.md) now record three passing native/Rust representative exports, identical native live/replay images, matching ordered ratings and the remaining visual defects. The other 95 eligible students remain SQL-only evidence.
 
 
-## Current comparison checkpoint: CR-005 (2026-10-18)
+## Current comparison checkpoint: CR-005 logo repaired (2026-10-18)
 
-[CR-005 findings and evidence](cr-005-parity.md) record freshly regenerated
-original Crystal and Docker Rust PDFs from clean `3a28dae`. All 4,918 glyphs,
-59 English lines and 35 ordered ratings agree in text/layout; three pages retain
-16 / 12 / 7 ratings. The existing CR-001/CR-003 fixes resolve the old metrics.
-No additional runtime patch is needed for the observed text/layout behavior.
+The [generic logo-color fix](cr-005-logo.md) is committed in `eb4656d`. Fresh original
+Crystal and Docker Rust PDFs from that clean source pass integrity and all-page review.
+All 9,600 decoded logo RGB pixels match exactly. Drawing streams, fonts, other images and
+Page IR remain identical to accepted pre-fix Rust output. The three pages retain all 35
+ratings (16 / 12 / 7), 59 English lines and 4,918 glyphs within existing layout tolerances.
 
-430 affected Docker tests pass, including seven Chinese checks, with strict
-Clippy and formatting. New synthetic regressions combine group continuation,
-forced page breaks, final footers and Chinese terminal direction markers.
+CR-001/CR-003 frozen replays also match native logo RGB exactly, preserve prior drawing/font
+resources and IR, and retain their 34/52 ratings. Their original accepted native references
+were reused; only CR-005 received newly generated outputs from both engines this follow-up.
 
-**Exact image matching remains open:** native Crystal reduces the stored logo
-from 2,358 RGB colors to 185 used palette colors, while Rust exactly preserves
-the original bitmap. The same residual was measured in CR-001 and CR-003; their
-previous text/layout acceptance does not establish image-color identity. No
-speculative palette conversion was added. The CR-005 ledger records the measured
-color differences separately from glyph/geometry tolerances.
+189 affected tests plus six doctests pass, including seven Chinese checks. Strict workspace
+Clippy, formatting, worker build and independent source/PDF review pass. The opted-in STC
+BMP path uses measured palette/lookup rules with deterministic fallback for native-unwritten
+cells. Default output and other raster formats are preserved. No full-bridge or whole-page
+pixel-identity claim follows from these captured cases.
 
 ## Previous repair checkpoint: CR-003 (2026-10-17)
 
@@ -112,7 +111,7 @@ identical outlines. The coordinator and independent reviewer inspected all six f
 fresh per-engine pixels, glyph data and geometry reproduce the reviewed candidate, as does Rust IR.
 This is accepted captured-case parity with documented residuals, not pixel identity.
 
-CR-003 retains its recorded text/layout acceptance. CR-005 now passes the separate text/layout comparison above; exact logo-color matching remains open across all three.
+CR-003 retains its recorded text/layout acceptance. CR-005 passes text/layout and exact decoded-logo matching above; CR-001/003 replays close their same image residual.
 The other 95 eligible students remain SQL-only evidence. Unpublished standard/second-term cases,
 missing authoritative databases/templates, external Gradebook, authenticated API/UI delivery,
 BIFF/XLS and broad legacy/subreport coverage retain the gaps recorded in

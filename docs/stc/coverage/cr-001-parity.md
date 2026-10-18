@@ -169,3 +169,14 @@ same native/Rust decoded logo-color difference in this accepted pair. Rust exact
 preserves the stored RGB bitmap; native Crystal reduces it to an indexed palette.
 The earlier text/layout and geometry measurements remain valid. This newly measured
 residual extends the acceptance record; exact image-color parity remains open.
+
+
+## Shared image repair replay (2026-10-18)
+
+The subsequent [generic legacy bitmap fix](cr-005-logo.md), from clean `eb4656d`,
+closes the decoded-logo color residual in this captured case. A fresh Docker Rust
+replay against the original accepted native reference matches all 9,600 logo RGB
+pixels exactly. Rust drawing streams, font resources, other raster pixels and
+Page IR remain identical to the accepted pre-fix output. PDF integrity, page boxes,
+ratings and date checks pass. Prior text/layout tolerances remain unchanged.
+No SQL or new native export was needed for this historical replay.

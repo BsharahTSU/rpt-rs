@@ -1,6 +1,12 @@
 # CR-005 legacy bitmap color conversion
 
-## Scope and current checkpoint (2026-10-18)
+## Current acceptance (2026-10-18)
+
+The repair is complete for the captured cases: clean `eb4656d` produces exact logo
+RGB matching with unchanged text/layout. See the final acceptance below. Intermediate
+checkpoints preserve investigation history and their then-pending gates.
+
+## Initial scope and palette checkpoint (2026-10-18)
 
 CR-005 text/layout is already accepted within the tolerances in [its comparison](cr-005-parity.md).
 This follow-up addresses the remaining shared CR-001/003/005 logo colors. It must preserve the
@@ -120,3 +126,42 @@ Regression validation before the final private export:
   it was repaired with explicit false, and the complete strict rerun passes.
 
 Fresh original/Docker PDF generation and shared-case replay are the next acceptance gates.
+
+
+## Final fresh pair and shared-case replay (2026-10-18)
+
+Both CR-005 exports ran from clean local `eb4656d` at 10:59:25-10:59:47 using the
+same unchanged template and frozen snapshot, without SQL. Both are valid three-page
+595x841 pt PDFs with the same date and all 35 ordered ratings (16 / 12 / 7).
+All 9,600 decoded logo RGB pixels now match exactly. The native PDF is unchanged
+from the earlier reference; Rust drawing streams, embedded font resources, other
+raster pixels and Page IR are unchanged. Thus the previous complete glyph/run/path
+comparison remains applicable: max X 0.05894 pt, ordinary Y 0.00005 pt and mark Y
+0.03016 pt. The known 62 CMap aliases preserve identical outlines; coordinate-free
+text extraction still differs and is not used as the visual acceptance criterion.
+Coordinator and independent reviewer inspected every native/Rust page PNG and logo.
+No new wrapping, clipping, missing elements or alignment issue was observed.
+
+CR-001 and CR-003 also received fresh Docker Rust replays from the same commit at
+their recorded historical dates, compared with their accepted native references.
+Both now match all logo RGB pixels; drawing streams/fonts/IR/other images remain
+unchanged and integrity, dates, page boxes and 34/52 ratings pass. This closes the
+shared image residual without implying coverage of other students/templates.
+
+Private final artifacts: `research/stc-verification/cr-005-logo/final/` contains the
+paired PDFs, all page PNGs, side-by-side HTML, evidence manifest, image audit and
+independent review. Sibling `replay-cr001/` and `replay-cr003/` contain shared-case
+replays. These artifacts and private source/control data are untracked.
+
+Source validation: 189 affected tests plus six doctests, including seven Chinese
+checks; strict workspace Clippy, formatting and worker build all pass. Independent
+source review has no blocker. Tests use synthetic data only. At 11:01:40 C: had
+285.08 GiB free, D: 561.37 GiB free, host RAM 5.71 GiB available and WSL 1.31 GiB.
+No container remained. Existing Docker volumes total 27.31 GB after compilation
+(previously 26.64 GB); no new volume or pruning was performed. Temporary work uses
+D:\tmpppppp123\rpt-rs-cr005-logo, and existing Docker storage may still consume C:.
+
+Only local commits on the existing branch were created. No branch, worktree, push,
+SQL, original-input modification or application deployment occurred. Remaining work
+is broader report coverage, unsupported storage/report-color-depth modes, BIFF/XLS,
+subreports and authenticated Parent delivery, as recorded in the fork status.

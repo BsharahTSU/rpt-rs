@@ -413,13 +413,30 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 
 ## 2026-10-18 - Checkpoint 7b: deterministic legacy bitmap PDF conversion
 
-- Independent native/model checks reproduce all9,600 captured logo pixels; all416 occupied bins
+- Independent native/model checks reproduce all 9,600 captured logo pixels; all 416 occupied bins
   are written. Added an original portable directional inverse map with deterministic nearest
   fallback only for cells native leaves unwritten. No private palette/LUT copied into runtime.
-- Added guarded opt-in bottom-up24-bitBI_RGB conversion. STC worker enables it; default/general
-  CLI and other raster formats retain existing behavior. PageIR/sourcebytes remain untouched.
-- 189 affected tests plus6doctests pass, including sevenChinese checks; strictworkspaceClippy,
-  formatting and workerbuild pass. Added inverse-map, header and actualPDFRGB regressions;
-  nativegenerated syntheticcontrols supply independent goldens. Independentreview continues.
-- Detailed contracts, fallback rationale, characterizedversions and limitations are recorded in
-  coverage/cr-005-logo.md. Fresh clean-sourcePDFpair and sharedcase replay remain acceptancegates.
+- Added guarded opt-in bottom-up 24-bit BI_RGB conversion. STC worker enables it; default/general
+  CLI and other raster formats retain existing behavior. Page IR/source bytes remain untouched.
+- 189 affected tests plus six doctests pass, including seven Chinese checks; strict workspace Clippy,
+  formatting and worker build pass. Added inverse-map, header and actual PDF RGB regressions;
+  native-generated synthetic controls supply independent goldens. Independent review continues.
+- Detailed contracts, fallback rationale, characterized versions and limitations are recorded in
+  coverage/cr-005-logo.md. Fresh clean-source PDF pair and shared-case replay remain acceptance gates.
+
+
+## 2026-10-18 - Checkpoint 7c: CR-005 logo repair accepted
+
+- Fresh original Crystal and Docker Rust exports from clean `eb4656d` at 10:59:25-10:59:47
+  pass PDF integrity, three-page/date and 35-rating checks. All 9,600 decoded logo RGB pixels
+  match exactly. Both reviewers inspected all six page PNGs; no new visual issue remains.
+- Rust drawing streams, fonts, other images and Page IR are unchanged, preserving earlier
+  glyph/path tolerances. Native output equals its previous reference. Full PDF identity is
+  not claimed; known outline-equivalent CMap differences and sub-point rounding remain.
+- CR-001/CR-003 Docker replays also close exact logo matching with prior native references,
+  unchanged drawing/font/IR resources and all 34/52 ratings intact. No SQL executed.
+- 189 affected tests plus six doctests, seven Chinese checks, strict workspace Clippy,
+  formatting and worker build pass. Independent source review has no blockers.
+- Updated current fork, coverage and canonical backend references. All private evidence stays
+  on D:. At 11:01:40 C: had 285.08 GiB free and RAM 5.71 GiB available; no container remained.
+  Existing volumes grew about 0.67 GB; no new volume, pruning, branch, worktree or deployment.

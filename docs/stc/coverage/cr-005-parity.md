@@ -2,10 +2,15 @@
 
 ## Current status
 
-**Text, content and layout pass for the captured case. Exact image-color parity
-remains open.** The CR-001/CR-003 shared renderer fixes already correct the
-original CR-005 text/row differences. This checkpoint adds regression tests and
-records measured evidence; it does not introduce a new renderer behavior change.
+**Captured-case text/layout and exact decoded-logo color matching pass.** The
+[logo repair](cr-005-logo.md), committed in `eb4656d`, reproduces all 9,600 logo RGB
+pixels while preserving drawing streams, fonts, other images and Page IR. Both PDFs
+were freshly generated from that clean source and all six page PNGs reviewed. Existing
+layout tolerances remain; this is not whole-page pixel identity or full bridge coverage.
+
+The findings below preserve the earlier text/layout checkpoint and its then-open
+image investigation. The subsequent repair supersedes those image limitations for
+these captured cases; see the final follow-up at the end of this record.
 
 The unchanged original template and frozen schema-bearing DataSet are replayed
 through Windows Crystal and Linux Docker Rust. No SQL is executed. Parent behavior,
@@ -170,3 +175,42 @@ was 5.42 GiB and WSL working set was 1.62 GiB; no container remained. Temporary 
 evidence files remain on D:. The tests/findings checkpoint is `3a28dae`; a separate
 local Markdown checkpoint records final review and updates the current fork/backend
 references. No branches, worktrees, pushes, original-input changes or deployments.
+
+
+## Final fresh pair and shared-case replay (2026-10-18)
+
+Both CR-005 exports ran from clean local `eb4656d` at 10:59:25-10:59:47 using the
+same unchanged template and frozen snapshot, without SQL. Both are valid three-page
+595x841 pt PDFs with the same date and all 35 ordered ratings (16 / 12 / 7).
+All 9,600 decoded logo RGB pixels now match exactly. The native PDF is unchanged
+from the earlier reference; Rust drawing streams, embedded font resources, other
+raster pixels and Page IR are unchanged. Thus the previous complete glyph/run/path
+comparison remains applicable: max X 0.05894 pt, ordinary Y 0.00005 pt and mark Y
+0.03016 pt. The known 62 CMap aliases preserve identical outlines; coordinate-free
+text extraction still differs and is not used as the visual acceptance criterion.
+Coordinator and independent reviewer inspected every native/Rust page PNG and logo.
+No new wrapping, clipping, missing elements or alignment issue was observed.
+
+CR-001 and CR-003 also received fresh Docker Rust replays from the same commit at
+their recorded historical dates, compared with their accepted native references.
+Both now match all logo RGB pixels; drawing streams/fonts/IR/other images remain
+unchanged and integrity, dates, page boxes and 34/52 ratings pass. This closes the
+shared image residual without implying coverage of other students/templates.
+
+Private final artifacts: `research/stc-verification/cr-005-logo/final/` contains the
+paired PDFs, all page PNGs, side-by-side HTML, evidence manifest, image audit and
+independent review. Sibling `replay-cr001/` and `replay-cr003/` contain shared-case
+replays. These artifacts and private source/control data are untracked.
+
+Source validation: 189 affected tests plus six doctests, including seven Chinese
+checks; strict workspace Clippy, formatting and worker build all pass. Independent
+source review has no blocker. Tests use synthetic data only. At 11:01:40 C: had
+285.08 GiB free, D: 561.37 GiB free, host RAM 5.71 GiB available and WSL 1.31 GiB.
+No container remained. Existing Docker volumes total 27.31 GB after compilation
+(previously 26.64 GB); no new volume or pruning was performed. Temporary work uses
+D:\tmpppppp123\rpt-rs-cr005-logo, and existing Docker storage may still consume C:.
+
+Only local commits on the existing branch were created. No branch, worktree, push,
+SQL, original-input modification or application deployment occurred. Remaining work
+is broader report coverage, unsupported storage/report-color-depth modes, BIFF/XLS,
+subreports and authenticated Parent delivery, as recorded in the fork status.
