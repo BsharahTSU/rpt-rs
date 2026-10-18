@@ -60,6 +60,43 @@ class GlyphAuditTests(unittest.TestCase):
                       [[self.row(size=10)]], [[self.row(y=20.04)]]):
             self.assertFalse(compare_outline_pages(left, right)['geometry_passed'])
 
+    def test_sparse_continuation_and_final_footer_require_every_glyph(self):
+        header = self.row(outline='continuation-header', y=30)
+        detail = self.row(outline='detail', y=60)
+        footer = self.row(outline='final-signature', y=120)
+        native = [[header, detail], [header, detail, footer]]
+        reordered = [[detail, header], [footer, detail, header]]
+        self.assertTrue(compare_outline_pages(native, reordered)['geometry_passed'])
+        missing_footer = [[header, detail], [header, detail]]
+        self.assertFalse(compare_outline_pages(native, missing_footer)['geometry_passed'])
+
+    def test_chinese_page_swap_fails_with_equal_counts(self):
+        first = self.row('\u5b66', outline='school')
+        second = self.row('\u751f', outline='student')
+        result = compare_outline_pages([[first], [second]], [[second], [first]])
+        self.assertTrue(result['page_count_equal'])
+        self.assertFalse(result['geometry_passed'])
+        self.assertTrue(all(p['native_glyphs'] == p['rust_glyphs'] for p in result['pages']))
+        self.assertTrue(all(not p['passed'] for p in result['pages']))
+
+    def test_visible_outline_with_whitespace_mapping_is_still_required(self):
+        outline = simple_glyph_outline(glyph([(0, 0), (20, 0), (0, 30)])).decode('ascii')
+        for label in (' ', '\u00a0', '\u200b'):
+            with self.subTest(label=repr(label)):
+                native = [[self.row(label, outline=outline)]]
+                self.assertTrue(compare_outline_pages(native, native)['geometry_passed'])
+                self.assertFalse(compare_outline_pages(native, [[]])['geometry_passed'])
+                moved = [[self.row(label, y=32, outline=outline)]]
+                self.assertFalse(compare_outline_pages(native, moved)['geometry_passed'])
+
+    def test_extra_blank_page_fails_even_when_all_visible_glyphs_match(self):
+        page = [self.row()]
+        for native, rust in (([page], [page, []]), ([page, []], [page])):
+            result = compare_outline_pages(native, rust)
+            self.assertTrue(result['pages'][0]['passed'])
+            self.assertFalse(result['page_count_equal'])
+            self.assertFalse(result['geometry_passed'])
+
     def test_empty_report_does_not_pass(self):
         self.assertFalse(compare_outline_pages([], [])['geometry_passed'])
 

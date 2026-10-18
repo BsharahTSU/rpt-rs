@@ -508,3 +508,16 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Final resources at 15:01:14: C: 313.56 GiB, D: 535.85 GiB free; RAM 4.96 GiB available.
   No containers remained; target cache and temporary writes stayed on D:. Only reviewed
   SELECT-only evaluation SQL ran. No data/config changes, branches, worktrees or push.
+
+## 2026-10-18 - Checkpoint 10a: next evaluation batch, first case
+
+- Refreshed read-only eligibility; excluded six accepted students and selected three
+  new students with 16, 41 and 27 rows, each a new row count for its template.
+- CR-001-B02 passes all four export stages, qpdf, replay raster equality and all-page
+  review. Sixteen ratings, 2,725 painting glyphs and decoded image RGB agree within
+  existing tolerances. Sparse continuation and final signatures/footer are preserved.
+- Added four synthetic audit regressions for missing final content, Chinese page
+  swaps, visible whitespace-mapped outlines and added blank pages. No renderer fix.
+- Next two students remain pending; details in [batch 02](coverage/additional-evaluation-batch-02.md).
+  C: 313.34 GiB free and RAM 5.83 GiB after first case. D: cache/temp, capped Docker,
+  SELECT-only SQL, local committed checkpoint; no branch/worktree/push/deployment.
