@@ -10,8 +10,8 @@ fixes preserve the accepted CR-001 PDF byte-for-byte. [CR-005](coverage/cr-005-p
 the same shared fixes. The [logo-color repair](coverage/cr-005-logo.md), committed as `eb4656d`, now matches all 9,600
 logo RGB pixels exactly across CR-001/003/005. Fresh CR-005 exports and shared-case replays
 preserve drawing commands, font resources and Page IR; previous layout tolerances still apply.
-The [additional-student batch](coverage/additional-evaluation-batch-01.md) accepts three more students,
-including a two-page sparse report. Six students are now covered; 92 eligible candidates remain.
+The [first additional batch](coverage/additional-evaluation-batch-01.md) and [second batch](coverage/additional-evaluation-batch-02.md)
+add six students, including sparse pages and symbol ratings. Nine students are now covered; 89 eligible candidates remain.
 Sections below preserve earlier checkpoints and their own datasets/counts. They do not
 establish acceptance of the other Parent cases.
 

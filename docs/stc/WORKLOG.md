@@ -534,3 +534,19 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   All 22 Python checks pass; both existing pairs pass the strengthened data gate.
 - Third student and Chinese PDF checks remain pending. No renderer/source-data fix;
   see [batch 02](coverage/additional-evaluation-batch-02.md) for full findings.
+
+## 2026-10-18 - Checkpoint 10c: second additional evaluation batch accepted
+
+- Three new students pass all exports and every page review: 16 ratings/two pages,
+  41/three and 27/three. All 84 captured aliases (including six `*`), 12,481 painting
+  glyphs and decoded image RGB agree within existing 0.061 pt X / 0.031 pt Y limits.
+- The third case preserves a sparse four-row second page and native Science page break.
+  No renderer defect was found. Audit-only fixes and eight added synthetic regressions
+  are documented in [batch 02](coverage/additional-evaluation-batch-02.md). All 29 focused
+  checks pass (22 Python plus seven actual Chinese PDF tests in offline capped Docker).
+- Verified nine distinct accepted student manifests, leaving 89 eligible candidates.
+  Private PDFs, all-page galleries, final-summary and review evidence remain on D:.
+  Updated current fork and canonical backend report references; prior histories preserved.
+- Final 16:02:28 resources: C: 313.34 GiB free, D: 535.82 GiB, RAM 6.47 GiB available.
+  No containers remain; old target volume absent. Source data/config/runtime unchanged,
+  SELECT-only rehearsal, local commits only; no branch, worktree, push or deployment.

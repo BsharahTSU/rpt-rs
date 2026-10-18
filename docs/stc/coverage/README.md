@@ -45,10 +45,22 @@ Source and SQL discovery are complete for the documented local scope: 38 AAJ cas
 ready evaluation groups and 98 candidate students. Other local copies are metadata-only evidence;
 external Gradebook and authenticated API/UI delivery remain open. Read the [surface inventory](parent-surfaces.md),
 [SQL findings](sql-eligibility.md), [isolated runner](case-runner.md), and [clock fix](clock-parity.md).
-[Initial actual comparisons](initial-comparisons.md) now record three passing native/Rust representative exports, identical native live/replay images, matching ordered ratings and the remaining visual defects. After the [additional-student batch](additional-evaluation-batch-01.md), six students have accepted comparisons; the other 92 eligible students remain SQL-only evidence.
+[Initial actual comparisons](initial-comparisons.md) preserve the original three exports and their then-open defects; the subsequent repair/acceptance records supersede those defects. After [batch 01](additional-evaluation-batch-01.md) and [batch 02](additional-evaluation-batch-02.md), nine students have accepted comparisons; the other 89 eligible students remain SQL-only evidence.
 
 
-## Current comparison checkpoint: three additional students accepted (2026-10-18)
+## Current comparison checkpoint: next three students accepted (2026-10-18)
+
+[Batch 02](additional-evaluation-batch-02.md) adds new 16-, 41- and 27-row students.
+All 84 ratings, 12,481 painting glyphs and decoded image RGB values agree within the
+existing limits; all 16 compared page images were reviewed. The six valid asterisk
+ratings in CR-003 exposed a letter-only audit omission, now fixed by preserving all
+column tokens and checking captured-source multiplicity. No renderer change was needed.
+Eight new synthetic regressions bring this batch's focused checks to 29 including seven
+Chinese PDF tests. Nine students are accepted; 89 eligible candidates remain untested.
+D: cache/temp and capped sequential Docker kept C: free at 313.34 GiB; final RAM was
+6.47 GiB available. Populated comments and overflowing displayed names remain open.
+
+## Previous comparison checkpoint: first three additional students accepted (2026-10-18)
 
 [Batch 01](additional-evaluation-batch-01.md) adds one student per template, covering
 39 rows, a sparse 20-row/two-page report, and a different long-source-name candidate.
@@ -123,7 +135,7 @@ fresh per-engine pixels, glyph data and geometry reproduce the reviewed candidat
 This is accepted captured-case parity with documented residuals, not pixel identity.
 
 CR-003 retains its recorded text/layout acceptance. CR-005 passes text/layout and exact decoded-logo matching above; CR-001/003 replays close their same image residual.
-After the [additional-student batch](additional-evaluation-batch-01.md), six students have accepted comparisons; the other 92 eligible students remain SQL-only evidence. Unpublished standard/second-term cases,
+After [batch 01](additional-evaluation-batch-01.md) and [batch 02](additional-evaluation-batch-02.md), nine students have accepted comparisons; the other 89 eligible students remain SQL-only evidence. Unpublished standard/second-term cases,
 missing authoritative databases/templates, external Gradebook, authenticated API/UI delivery,
 BIFF/XLS and broad legacy/subreport coverage retain the gaps recorded in
 [initial comparisons](initial-comparisons.md), [SQL findings](sql-eligibility.md) and

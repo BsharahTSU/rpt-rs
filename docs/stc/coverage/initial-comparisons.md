@@ -10,7 +10,7 @@ completed their individual repairs and fresh paired acceptance. [CR-005](cr-005-
 The subsequent [logo-color repair](cr-005-logo.md) closes the shared image residual:
 all 9,600 decoded logo RGB pixels match in fresh CR-005 and CR-001/003 replays.
 Whole-page pixel identity is still not claimed; documented layout tolerances remain.
-The [additional-student batch](additional-evaluation-batch-01.md) now accepts three more students, leaving 92 eligible candidates untested.
+The [first additional batch](additional-evaluation-batch-01.md) and [second batch](additional-evaluation-batch-02.md) now accept six more students: nine accepted in total, leaving 89 eligible candidates untested.
 The table and observations below retain the original October 16 results.
 
 ## Results
