@@ -754,3 +754,21 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   glyphs, 28 ratings, dates/image RGB/page boxes, labels 1/2, 2/2, 1/1 and footer positions.
   Strict affected Clippy/workspace format pass. Final clean-source pair and five prior-case
   guards remain pending; candidate dirty provenance is explicitly retained.
+
+
+## 2026-10-18 - Checkpoint 16c: CR-001-B05 final acceptance and prior-case guards
+
+- Fresh original Crystal/Docker Rust PDFs from clean `0e6476a` match all 28 ratings and
+  3,962 painted glyphs, max X/Y 0.05708/0.03016 pt. Labels 1/2, 2/2, 1/1 and dates/footer
+  positions now agree. Original native pixels and input hashes are unchanged; all six
+  final pages reproduce independently reviewed same-engine candidate pixels and were
+  directly reviewed again. [Full repair record](coverage/cr-001-b05-parity.md).
+- All 400 focused tests, strict affected Clippy and workspace formatting pass. Five prior
+  accepted Rust PDFs remain byte-identical and pass every audit: CR-001-B04, B03 and B02,
+  CR-003-B05 and CR-005-B05. Four new regressions protect sequence totals/date placement.
+- Coverage: eighteen accepted, none rejected, 80 eligible untested. Another bounded batch
+  is next; broader bridge/template/API coverage retains its earlier gaps.
+- Final C: 311.40 GiB/D: 533.84 GiB free, RAM 5.96 GiB available. Lowest observed RAM
+  approximately 3.66 GiB; all exports passed guards. D: cache/temp, no task containers or
+  retired target volume, no unrelated apps stopped. No SQL/template/production change;
+  local commits on existing main only, no branches/worktrees/push.

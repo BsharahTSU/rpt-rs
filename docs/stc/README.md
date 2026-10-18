@@ -23,9 +23,12 @@ seven Chinese PDF tests; four prior Rust exports remain byte-identical.
 [Batch 05](coverage/additional-evaluation-batch-05.md) adds two accepted students and rejects
 CR-001-B05 for wrong printed page totals, missing date blocks and raised footers. All 115
 ratings match; 40 focused checks pass, including three new selection guards and seven Chinese
-PDF tests. No renderer repair is claimed for that case. Current coverage: seventeen accepted,
-one rejected and 80 eligible students untested. D: cache/temp; final C: 312.10 GiB free,
-RAM 4.69 GiB available.
+PDF tests at that checkpoint. The [CR-001-B05 repair](coverage/cr-001-b05-parity.md) in
+`0e6476a` now scopes totals to actual numbering sequences and restores date/footer placement.
+Fresh paired PDFs match all 3,962 painted glyphs and 28 ratings; all six pages reviewed.
+Four new regressions, 400 focused checks and strict affected lint/format pass; five prior
+accepted Rust PDFs remain byte-identical. Current coverage: eighteen accepted, none rejected,
+80 eligible students untested. D: cache/temp; final C: 311.40 GiB free, RAM 5.96 GiB available.
 Sections below preserve earlier checkpoints and their own datasets/counts. They do not
 establish acceptance of the other Parent cases.
 

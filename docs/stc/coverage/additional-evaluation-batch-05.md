@@ -1,8 +1,15 @@
 # Additional evaluation student batch 05
 
+**Subsequent repair accepted (2026-10-18).** The [CR-001-B05 repair](cr-001-b05-parity.md)
+closes the printed-total/date-footer rejection with fresh original/Rust PDFs from `0e6476a`.
+All 3,962 painted glyphs and 28 ratings match within unchanged limits; all six pages reviewed.
+Five prior accepted Rust PDFs remain byte-identical, including CR-003/005-B05. Current
+coverage: **18 accepted / 0 rejected / 80 untested**. The batch findings below preserve
+the original rejection; the repair supersedes that case's status.
+
 **Final result (2026-10-18): two accepted, one rejected.** CR-003-B05 and CR-005-B05
 pass all-page review; CR-001-B05 exposes wrong printed page totals, missing date blocks
-and raised footers. No renderer repair is claimed. Coverage is now **17 accepted /
+and raised footers. No renderer repair was claimed at this batch checkpoint. Coverage then was **17 accepted /
 1 rejected / 80 untested**, with eighteen distinct students compared. Earlier checkpoint
 statements below retain the state at that time.
 
@@ -170,10 +177,10 @@ only the small registry/NuGet volumes remain, and the retired C-backed target vo
 No unrelated application was stopped. Local commits on existing main only; no branches,
 worktrees, push, database/template/runtime/configuration changes or deployment.
 
-Current coverage is **17 accepted / 1 rejected / 80 untested** of 98 eligible students.
-Next, repair **CR-001-B05 printed page totals and conditional date-footer behavior** against
+Coverage at this batch checkpoint was **17 accepted / 1 rejected / 80 untested** of 98 eligible students.
+The next action then was to repair **CR-001-B05 printed page totals and conditional date-footer behavior** against
 its retained snapshot, add a renderer-level synthetic regression, regenerate both PDFs and
-recheck accepted cases. Root cause is still unproven. B04's accepted repair is not reopened
+recheck accepted cases. Root cause was still unproven at that checkpoint. B04's accepted repair is not reopened
 by a different captured input. Populated comments, demonstrated displayed-name overflow,
 blocked standard/second-term/other-school reports, BIFF/XLS, broader legacy/subreports and
 authenticated Parent API/UI delivery retain their earlier gaps.

@@ -10,7 +10,7 @@ completed their individual repairs and fresh paired acceptance. [CR-005](cr-005-
 The subsequent [logo-color repair](cr-005-logo.md) closes the shared image residual:
 all 9,600 decoded logo RGB pixels match in fresh CR-005 and CR-001/003 replays.
 Whole-page pixel identity is still not claimed; documented layout tolerances remain.
-After the [CR-001-B04 repair](cr-001-b04-parity.md) and [batch 05](additional-evaluation-batch-05.md), seventeen students are accepted, CR-001-B05 is rejected for page-total/date-footer differences, and 80 eligible candidates remain untested.
+After [batch 05](additional-evaluation-batch-05.md) and the [CR-001-B05 repair](cr-001-b05-parity.md), eighteen students are accepted, none is currently rejected, and 80 eligible candidates remain untested.
 The table and observations below retain the original October 16 results.
 
 ## Results

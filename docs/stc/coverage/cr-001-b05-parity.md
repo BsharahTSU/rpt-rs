@@ -1,5 +1,11 @@
 # CR-001-B05 reset-scoped page totals and date footers
 
+**Accepted after repair (2026-10-18).** Fresh original Crystal and Docker Rust PDFs from
+clean `0e6476a` match all 28 ratings and 3,962 painted glyphs within unchanged limits.
+Page totals/date footers are repaired; all six final pages were reviewed. Five prior
+accepted Rust PDFs remain byte-identical. Current coverage: **18 accepted / 0 rejected /
+80 untested**. Earlier checkpoints below retain their original pending status.
+
 ## Checkpoint 16a: cause, fix and synthetic validation (2026-10-18)
 
 Repair the retained [batch 05 rejection](additional-evaluation-batch-05.md) against its
@@ -34,7 +40,7 @@ already-final footers, preserving every earlier header/body fixup and currency f
 
 Four synthetic regressions cover:
 
-- Unequal 2/1/3/1-page numbering sequences, consecutive resets, no-reset totals, ordered
+- Unequal 2/1/3/1-page numbering sequences, consecutive resets, no-reset totals,
   row allocation and an unused trailing reset. Placed and embedded captions/totals agree.
 - Conditional date sections before and after other footer content, with exact date/footer
   positions, unchanged row positions and literal-safe embedded totals, with/without resets.
@@ -94,3 +100,58 @@ extracted-text and whole-page pixel identity are not claimed.
 Strict Clippy for affected layout/worker all targets and workspace formatting also pass.
 The candidate intentionally records dirty source; final clean-source regeneration and
 five prior accepted-case replays are still required before final acceptance.
+
+
+## Checkpoint 16c: final clean-source acceptance and prior-case guards
+
+Both original Crystal and Docker Rust PDFs were regenerated from clean local commit
+`0e6476a`. Native bridge, template and snapshot hashes match the retained batch; no SQL
+was executed. Final worker SHA-256 is
+`f09c89325eea0e8de90b68c1b78e9c51da113ee23d8900c72900c263d6019206`.
+All three native page rasters reproduce the original batch exactly. All six final page
+rasters reproduce their independently reviewed same-engine candidate pages, and the
+coordinator also inspected every final page directly. Private `visual-review.json` records
+acceptance and `final-summary.json` verifies source/input provenance and all guard results.
+
+| Final paired check | Result |
+| --- | --- |
+| PDF integrity and physical pages | Both qpdf checks pass; three equal page boxes |
+| Printed page labels | 1 of 2, 2 of 2, 1 of 1 in both engines |
+| Print Date block | Present and aligned on physical pages two and three |
+| Legends and page footers | Aligned; former 16 pt displacement closed |
+| Ordered/source ratings | 28, allocated 15 / 13 / 0 |
+| Painted glyphs | 3,962 / 3,962, allocated 1,789 / 1,944 / 229 |
+| Maximum X / Y residual | 0.05708 / 0.03016 pt under existing limits |
+| Decoded image RGB and dates | Equal |
+| Body, names, headings, signatures/stamp/note | Match; sparse footer-only page retained |
+
+Five sequential frozen-input Rust replays pass every audit and preserve each accepted
+Rust PDF byte-for-byte. They reuse the retained native PDFs and recorded local clocks;
+these guards add no students and do not claim freshly regenerated native exports.
+
+| Prior accepted case | Ratings | Protection |
+| --- | ---: | --- |
+| CR-001-B04 | 33 | Completed-group footer transition, body/signatures |
+| CR-001-B03 | 36 | Repeated heading and Arabic ligature repair |
+| CR-001-B02 | 16 | Sparse two-page report |
+| CR-003-B05 | 52 | Category/subsection continuations and final content |
+| CR-005-B05 | 35 | Blank remainder/Science continuation and final content |
+
+Final evidence is `research/stc-verification/cr-001-b05-repair/final/`, including
+`native.pdf`, `rust.pdf`, six page PNGs, qpdf logs, comparison HTML, audits and provenance.
+The original rejected batch stays unchanged as a historical reproduction. Its acceptance
+status is superseded by this record. The retained 39 equivalent-outline Unicode mapping
+differences and small raster residuals do not establish raw extracted-text, PDF-byte or
+whole-page native/Rust pixel identity. No tolerances were widened.
+
+Final resources at **18:16:23**: C: **311.40 GiB free**, D: **533.84 GiB free**, RAM
+**5.96 GiB available**. Lowest observed RAM during validation was approximately 3.66 GiB;
+all exports passed their start guard. These are samples, not continuous peak measurements.
+D: cache/temp and sequential container caps were retained; no task containers remain and
+the retired C-backed target volume is absent. No unrelated application was stopped.
+
+Current coverage: **18 accepted / 0 rejected / 80 untested** of 98 eligible students.
+Another bounded batch can now proceed. Populated comments, demonstrated displayed-name
+overflow, blocked standard/second-term/other-school reports, BIFF/XLS, wider legacy/subreport
+behavior and authenticated Parent API/UI delivery remain open. No production rendering,
+configuration, database or template changes; local commits only, no branches/worktrees/push.
