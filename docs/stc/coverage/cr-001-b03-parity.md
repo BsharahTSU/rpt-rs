@@ -1,5 +1,10 @@
 # CR-001-B03 continuation-header and Arabic shaping repair
 
+**Accepted after repair (2026-10-18).** Both final PDFs were regenerated from clean
+`8f9fd5e`. All 36 ratings and 4,748 painted glyphs match within the unchanged tolerances;
+all six pages were reviewed. The original failure and intermediate checkpoints below
+remain historical evidence. Current coverage: twelve accepted, none rejected, 86 untested.
+
 ## Scope and retained failure
 
 The [batch 03 rejection](additional-evaluation-batch-03.md) is preserved as the
@@ -111,3 +116,63 @@ subsequent builds/tests pass with `--locked --offline`; preserve the existing lo
 Strict `cargo clippy --locked --offline --workspace --all-targets -- -D warnings`,
 workspace formatting check and final worker build also pass in bounded Docker.
 Independent source review of the pagination commit found no blocking issue.
+
+## Checkpoint 12c: final paired acceptance and regression replays
+
+Final native Crystal and Docker Rust PDFs were regenerated from the retained typed
+snapshot with clean source `8f9fd5e` (pagination fix `de290a0`). No SQL was executed.
+The private `final/evidence.json` records source cleanliness, snapshot/template/native
+bridge/worker hashes, clock and execution times; `comparison.json` records PDF hashes.
+The original failed snapshot and outputs remain unchanged in the batch03 folder.
+
+| Final CR-001-B03 check | Result |
+| --- | --- |
+| Pages and boxes | 3 each, equal |
+| PDF integrity | qpdf passes without repair warnings |
+| Ordered/source ratings | 36, allocated 15 / 16 / 5, all accounted for |
+| Painted glyphs per page | 1,778 / 1,852 / 1,118 in each engine |
+| Missing/extra painted outlines | 0 / 0 |
+| Maximum glyph X / Y residual | 0.05708 / 0.03016 pt |
+| Page-two rating baseline delta | -0.00004 to +0.00001 pt, previously about -21.5 pt |
+| All decoded image RGB | Exact equality, including the logo |
+| Printed date and final signatures | Match |
+| Visual review | All six final PNGs reviewed; accepted |
+
+The repeated bilingual heading, table/body origins, Arabic name field and both repeated
+name footers now agree. No clipping, missing row or new wrapping discrepancy is visible.
+Independent candidate all-page review also passed; every final page PNG is byte-identical
+to its same-engine candidate page, and the coordinator reviewed all six final pages again.
+The visual acceptance is explicit in `final/review/visual-review.json`, distinct from
+original execution-time pending fields. Forty-seven known outline-equivalent Unicode
+mapping differences remain; raw extracted text, native/Rust PDF byte equality and
+whole-page pixel identity are not claimed. The existing 0.061 pt X / 0.031 pt Y limits
+were not widened. Synthetic ToUnicode tests separately protect the logical new ligature.
+
+Previously accepted cases were replayed sequentially using their own frozen data and
+retained original Crystal PDFs. All gates passed, and each new Rust PDF is byte-for-byte
+identical to its previously accepted Rust export, preserving the earlier all-page review:
+
+| Guard | Pages | Ratings | Painted glyphs | Rust PDF |
+| --- | ---: | ---: | ---: | --- |
+| CR-001-B02 sparse continuation | 2 | 16 | 2,725 | Byte-identical |
+| CR-003-B03 continuation/Arabic | 3 | 50 | 6,474 | Byte-identical |
+| CR-005-B03 Latin name/logo | 3 | 35 | 4,960 | Byte-identical |
+
+These add no new students. Coverage is **12 accepted / 0 rejected / 86 untested** of
+98 eligible candidates. Populated comments, overflowing displayed names, blocked
+standard/second-term/other-school reports, BIFF/XLS, wider legacy/subreport behavior
+and authenticated Parent API/UI delivery retain their earlier gaps. This is captured-case
+acceptance, not a production deployment or full bridge-compatibility claim.
+
+Private reproduction uses `research/stc-verification/cr-001-b03-repair/render.ps1`
+with a unique `-Tag`, `-Native` for a fresh pair, then `verify.ps1 -Tag <tag>`. Its default
+input is the retained CR-001-B03 snapshot. Prior-case guards pass `-SourceRun` and a
+retained `-NativeReference`; they do not claim fresh native or live database execution.
+`guard-summary.json` records byte comparisons. Request files are removed after each
+export. `final/comparison.html` provides the PDF links and per-page visual comparison.
+
+Final sampled resources at **17:04:41**: C: **313.14 GiB free**, D: **534.41 GiB free**,
+RAM **6.24 GiB available**. Lowest observed RAM in this repair was 5.21 GiB; these are
+samples rather than continuous peaks. D: target/temp retained, no running containers,
+old C-backed target volume absent. No source-data/template/production configuration
+changes; local commits on existing main only, no branch/worktree/push/deployment.

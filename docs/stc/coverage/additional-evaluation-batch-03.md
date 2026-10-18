@@ -1,6 +1,15 @@
 # Additional evaluation student batch 03
 
-## Completed review: two accepted, one rejected
+## Follow-up: all three now accepted after CR-001-B03 repair
+
+The subsequent [CR-001-B03 repair](cr-001-b03-parity.md) fixes both causes and regenerates
+the original/Rust pair from clean `8f9fd5e`. All 4,748 painted glyphs and 36 ratings agree
+within unchanged limits, and all six final pages were reviewed. CR-003-B03 and CR-005-B03
+Rust replays remain byte-identical. Current cumulative coverage is twelve accepted,
+none rejected, 86 untested. The sections below preserve this batch's original rejection
+and then-open findings; the linked repair supersedes that case's final status.
+
+## Original batch review: two accepted, one rejected
 
 All three new students printed in both engines. CR-003-B03 and CR-005-B03 are accepted
 within existing layout limits; CR-001-B03 is rejected for a missing repeated heading,

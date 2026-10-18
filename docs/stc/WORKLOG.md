@@ -608,3 +608,19 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Findings/reproduction: [CR-001-B03 repair](coverage/cr-001-b03-parity.md).
   D: cache/temp, two-CPU/2-GiB Docker; sampled RAM 5.21 GiB, C: 313.35 GiB free.
   Frozen data only, no SQL/deployment/branches/worktrees/push; local commits only.
+
+
+## 2026-10-18 - Checkpoint 12c: CR-001-B03 final pair accepted
+
+- Fresh original/Docker Rust PDFs from clean `8f9fd5e` pass integrity, all 36 ratings,
+  all 4,748 painted outlines, exact image RGB, equal boxes/dates and all-six-page review.
+  Page-two body residual is now -0.00004 to +0.00001 pt; max glyph X/Y 0.05708/0.03016 pt.
+- Independent candidate visual review passed; final same-engine page PNGs are identical.
+  CR-001-B02/003-B03/005-B03 guard replays pass and Rust PDFs remain byte-identical to
+  their prior accepted exports (101 ratings, 14,159 painting glyphs). No new students.
+- 542 focused checks, strict workspace clippy/formatting and final worker build pass.
+  Twelve students now accepted, none rejected, 86 untested. Historical rejection and
+  extraction/pixel/full-bridge limitations preserved in [repair record](coverage/cr-001-b03-parity.md).
+- Final 17:04:41 resources: C: 313.14 GiB, D: 534.41 GiB free; RAM 6.24 GiB available,
+  observed minimum 5.21 GiB. No running containers or retired target volume. D: cache/temp,
+  frozen data/no SQL, no runtime/template/config changes; local commits only on main.

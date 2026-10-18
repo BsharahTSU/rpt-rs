@@ -12,8 +12,10 @@ logo RGB pixels exactly across CR-001/003/005. Fresh CR-005 exports and shared-c
 preserve drawing commands, font resources and Page IR; previous layout tolerances still apply.
 The [first additional batch](coverage/additional-evaluation-batch-01.md) and [second batch](coverage/additional-evaluation-batch-02.md)
 add six accepted students, including sparse pages and symbol ratings. [Batch 03](coverage/additional-evaluation-batch-03.md)
-adds two passes and one rejection: CR-001-B03 needs a repeated-heading/body-offset and Arabic-name repair.
-Eleven students are accepted, one rejected and 86 eligible students remain untested.
+initially added two passes and one rejection. The subsequent [CR-001-B03 repair](coverage/cr-001-b03-parity.md)
+restores the repeated heading/body alignment and Arabic ligature; fresh paired PDFs from `8f9fd5e`
+match all 4,748 painted glyphs. Twelve students are now accepted, none rejected and 86 remain untested.
+542 focused checks pass; three prior-case Rust replays remain byte-identical.
 Sections below preserve earlier checkpoints and their own datasets/counts. They do not
 establish acceptance of the other Parent cases.
 
