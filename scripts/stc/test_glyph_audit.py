@@ -97,6 +97,27 @@ class GlyphAuditTests(unittest.TestCase):
             self.assertFalse(result['page_count_equal'])
             self.assertFalse(result['geometry_passed'])
 
+    def test_boundary_heading_does_not_replace_next_page_repeat(self):
+        heading = self.row('Group', y=700, outline='group-heading')
+        repeated = self.row('Group', y=30, outline='group-heading')
+        detail = self.row('O', y=60, outline='rating')
+        native = [[heading], [repeated, detail]]
+        missing_repeat = [[heading], [self.row('O', y=39, outline='rating')]]
+        result = compare_outline_pages(native, missing_repeat)
+        self.assertTrue(result['page_count_equal'])
+        self.assertTrue(result['pages'][0]['passed'])
+        self.assertFalse(result['pages'][1]['passed'])
+        self.assertFalse(result['geometry_passed'])
+
+    def test_same_arabic_text_cannot_hide_different_painted_name_outline(self):
+        # Synthetic glyph outlines, not a private student's name or font data.
+        native = [[self.row('\u0649', outline='native-joined-shape')]]
+        rust = [[self.row('\u0649', outline='different-joined-shape')]]
+        result = compare_outline_pages(native, rust)
+        self.assertEqual(result['pages'][0]['native_glyphs'], result['pages'][0]['rust_glyphs'])
+        self.assertFalse(result['pages'][0]['outline_size_inventory_equal'])
+        self.assertFalse(result['geometry_passed'])
+
     def test_empty_report_does_not_pass(self):
         self.assertFalse(compare_outline_pages([], [])['geometry_passed'])
 

@@ -550,3 +550,17 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Final 16:02:28 resources: C: 313.34 GiB free, D: 535.82 GiB, RAM 6.47 GiB available.
   No containers remain; old target volume absent. Source data/config/runtime unchanged,
   SELECT-only rehearsal, local commits only; no branch, worktree, push or deployment.
+
+## 2026-10-18 - Checkpoint 11a: third batch exposes a real CR-001 difference
+
+- Refreshed SELECT-only eligibility, excluded nine accepted students and selected
+  36-, 50- and 35-row additional cases. Comments remain empty; CR-005 has no new
+  row-count shape and uses a different longer Arabic source-name candidate.
+- CR-001-B03 prints in both engines but fails parity: the page-two English heading
+  is missing in Rust, shifting its body upward; Arabic name outlines also differ.
+  All 36 ratings, image RGB, page/date/integrity and native replay checks pass.
+- Preserved the failed pair and recorded all-page rejection. Two synthetic audit
+  regressions verify detection; all 24 Python checks pass. No renderer fix claimed.
+- Next two cases are pending. [Batch 03](coverage/additional-evaluation-batch-03.md)
+  records findings and repair evidence. D: scratch/cache, capped sequential Docker,
+  resource guards and local commits only; no branch/worktree or data/config changes.
