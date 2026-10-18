@@ -398,3 +398,15 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   WSL 1.62GiB, no running container. D temp/evidence and sequential 2GiB Docker retained.
 - Full bridge compatibility and exact logo conversion remain open. Local commits
   only; no SQL, branches/worktrees, push, deployment or application behavior change.
+
+## 2026-10-18 - Checkpoint 7a: exact generic legacy palette
+
+- Isolated and independently reproduced the sampled six-bit octree palette with a 236-color
+  budget, deepest/newest online reduction and floor centroids. All 218 captured palette entries
+  and five generated native controls match byte-for-byte; no report-specific constants added.
+- Added a bounded, checked implementation and eleven synthetic regressions. All 22 utility
+  tests pass in capped Linux Docker. PDF output is unchanged until pixel mapping is proven.
+- Direct native BitBlt reproduces the captured image, but nearest-color approximations do not.
+  Generic inverse mapping, PDF integration, regenerated pair and shared-case replay remain open.
+- Findings, evidence locations, resource controls and remaining gates: coverage/cr-005-logo.md.
+  Existing 26 GB target cache is reused; private scratch/evidence stay on D:. No SQL or deployment.

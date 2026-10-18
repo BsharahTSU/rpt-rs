@@ -15,10 +15,12 @@
 
 mod bmp;
 mod hash;
+mod legacy_palette;
 mod text;
 mod units;
 
 pub use bmp::decode_bmp_rgba;
 pub use hash::content_hash;
+pub use legacy_palette::legacy_bmp_palette;
 pub use text::{aligned_x, baseline_offset_twips, justify_gap_extra, JustifyUnit};
 pub use units::TWIPS_PER_POINT;
