@@ -3,7 +3,8 @@
 **Accepted after repair (2026-10-18).** Both final PDFs were regenerated from clean
 `8f9fd5e`. All 36 ratings and 4,748 painted glyphs match within the unchanged tolerances;
 all six pages were reviewed. The original failure and intermediate checkpoints below
-remain historical evidence. Current coverage: twelve accepted, none rejected, 86 untested.
+remain historical evidence. Coverage at that checkpoint: twelve accepted, none rejected, 86 untested.
+See [batch 04](additional-evaluation-batch-04.md) for the later comparison and repair queue.
 
 ## Scope and retained failure
 

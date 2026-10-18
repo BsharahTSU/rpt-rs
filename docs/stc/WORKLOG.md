@@ -631,7 +631,7 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   captured students. Selected new 33-, 34- and 35-row cases, all with Arabic source names.
 - Added reusable deterministic selection and six synthetic safety/coverage tests;
   all 30 Python audit/selection checks pass in capped Docker. No renderer change.
-- Initial RAM 2.86 GiB held exports; recovered to 4.88 GiB. C:312.73 GiB free; D: cache/temp.
+- Initial RAM 2.86 GiB held exports; recovered to 4.88 GiB. C: 312.73 GiB free; D: cache/temp.
   Actual pair/Chinese checks remain pending. [Batch 04](coverage/additional-evaluation-batch-04.md)
   records scope, evidence and selection limits. Existing main, local commits only.
 
@@ -639,10 +639,26 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 
 - All execution stages, PDF integrity, 33 ratings (17/16/0), native replay and images
   pass, but all-six-page reviews confirm a new stale-group header on Rust page two.
-- The extra Arabic heading/empty column block shifts English rows down42.2 pt and
+- The extra Arabic heading/empty column block shifts English rows down 42.2 pt and
   moves signatures onto page three. Geometry fails; case explicitly rejected.
 - Retained snapshot/failed PDFs ready for focused footer/group-transition investigation;
-  no root cause or renderer fix claimed. Six new selection tests and all30 Python checks
+  no root cause or renderer fix claimed. Six new selection tests and all 30 Python checks
   pass; they do not override rejection. Next two students remain pending.
-- [Batch 04](coverage/additional-evaluation-batch-04.md); RAM4.91 GiB/C:312.74 GiB free.
+- [Batch 04](coverage/additional-evaluation-batch-04.md); RAM 4.91 GiB/C: 312.74 GiB free.
   D: storage, bounded Docker, local committed checkpoint; no branches/worktrees/push.
+
+
+## 2026-10-18 - Checkpoint 13c: fourth evaluation batch complete
+
+- CR-003-B04/005-B04 accepted after both coordinator and independent all-page review:
+  69 ratings and 9,731 painted glyphs match, max X/Y 0.06008/0.03016 pt, exact image RGB.
+  Arabic names, boundary headings, sparse final page and signatures preserved.
+- CR-001-B04 remains rejected for stale header/body/signature placement; all 33 ratings
+  and name shapes match. Preserve its frozen pair for focused repair; no renderer fix.
+- All nine execution PDFs pass integrity; native replay pixels and all 102 ratings match.
+  Six new selection tests, 24 audit checks and seven Chinese tests pass (37 total).
+  Fifteen distinct students compared: fourteen accepted, one rejected, 83 untested.
+- [Batch 04](coverage/additional-evaluation-batch-04.md) records full findings/reproduction.
+  Final C: 312.72 GiB/D: 534.36 GiB free, RAM 4.16 GiB available. Initial low RAM held exports
+  until recovery; D: storage and caps retained, no running containers or old target volume.
+  Read-only SQL and local commits only; no runtime/config/template/branch/worktree changes.

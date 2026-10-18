@@ -1,5 +1,10 @@
 # Additional evaluation student batch 04
 
+**Completed: two accepted, one rejected.** All three new students printed in both
+engines. CR-003-B04 and CR-005-B04 pass; CR-001-B04 has a stale repeated group heading,
+a 42.2 pt body shift and moved signatures. No renderer repair is claimed in this batch.
+Current coverage: 14 accepted / 1 rejected / 83 untested of 98 eligible students.
+
 ## Checkpoint 13a: bounded selection and test preparation (2026-10-18)
 
 Refresh SELECT-only eligibility and compare three new students sequentially, one per
@@ -72,3 +77,86 @@ investigation; do not change data/templates/tolerances to pass. The comparison r
 exits nonzero as intended and private `review/visual-review.json` records the rejection.
 The other two students remain pending. Resource sample after export: RAM 4.91 GiB,
 C: 312.74 GiB and D: 534.40 GiB free. No renderer changes in this checkpoint.
+
+## Final results and review
+
+| Case | Pages each | Ratings per page | Native/Rust painted glyphs | Result | Export source |
+| --- | ---: | --- | --- | --- | --- |
+| CR-001-B04 | 3 | 17 / 16 / 0 | 4,256 / 4,344 | Rejected: stale heading/body/signature placement | clean `723921d` |
+| CR-003-B04 | 3 | 16 / 18 / 0 | 4,788 / 4,788 | Accepted; max X/Y 0.06008 / 0.03016 pt | clean `ddb5bdb` |
+| CR-005-B04 | 3 | 16 / 12 / 7 | 4,943 / 4,943 | Accepted; max X/Y 0.05894 / 0.03016 pt | clean `ddb5bdb` |
+
+All capture/native-live/native-frozen/rust-frozen stages pass for all three cases.
+All nine execution PDFs pass qpdf without repair warnings. Native live/frozen raster
+pages are identical, page boxes/dates agree, all **102 ratings** match in engine order
+and against captured-source multiplicity, and every decoded image RGB value matches.
+All **18** original-frozen/Rust page images were reviewed by the coordinator and an
+independent reviewer. The failed layout remains rejected despite those data successes.
+
+The two accepted cases account for 69 ratings and 9,731 painted glyphs, all matched
+within existing 0.061 pt X / 0.031 pt Y limits. CR-003's pending Mathematics subsection
+repeats correctly at the page boundary, while its school-principal/stamp/note content
+continues onto a sparse third page with zero rating rows. CR-005 has an actual Arabic
+name in the first-page field and repeated footers; its English continuation, Mathematics,
+Science, final signatures/stamp/note/date all agree. Neither adds demonstrated displayed-
+name overflow or populated-comment coverage. Known outline-equivalent Unicode mapping
+differences remain (70 for CR-003 and 63 for CR-005); native/Rust PDF bytes, extracted
+text and whole-page pixels are not claimed equal. Acceptance tolerances were not widened.
+
+The worker artifact hash matches the final accepted CR-001-B03 build from `8f9fd5e`;
+this batch changes selection safeguards/tests/docs only. The newly observed CR-001-B04
+failure is not declared a regression or repaired merely by associating it with an earlier
+commit. Its root cause needs the retained snapshot and an isolated renderer reproduction.
+Earlier accepted cases, including CR-001-B03, retain their own recorded evidence.
+
+## Tests and reproducibility
+
+Six new selection tests plus 24 existing glyph/comparison/rating checks pass in capped
+Docker: **30 Python checks**. All **seven actual Chinese PDF checks** also pass under the
+current compatibility profile, for **37 focused checks** total. Test success is separate
+from per-student visual parity; it does not override CR-001-B04's rejection.
+
+```text
+# In the development container, working directory /src/scripts/stc:
+python3 -m unittest test_select_batch.py test_glyph_audit.py test_compare_case.py test_rating_audit.py
+```
+
+```powershell
+./scripts/stc/Invoke-DockerCargo.ps1 -CargoArgs @('test','--locked','--offline','-p','rpt-render','--test','chinese')
+```
+
+Python checks use read-only source, D: scratch, network disabled, two CPUs/512 MiB and
+`PYTHONDONTWRITEBYTECODE=1`. Chinese uses the standard D: cache launcher, one Cargo job
+and one test thread, two CPUs/2 GiB. No new packages or container images were downloaded.
+
+Private `prepare.py` normalizes the refreshed inventory, checks feature/candidate row
+counts and excludes twelve unique captured students before creating three distinct new
+manifests. `run-case.ps1` requires clean source, available RAM/disk and the known worker
+hash; it runs one case and verifies it before the next export. Capture checks the reviewed
+procedure hash again. `verify-case.ps1` correctly exits nonzero for the first case.
+No credentials, student names/IDs, RPTs or report PDFs are committed.
+
+`final-summary.json` records all three statuses and verifies fifteen distinct students.
+Each run has explicit `review/visual-review.json`; original execution-time pending fields
+are historical. `comparison.html` links all six comparison PDFs and per-page galleries,
+clearly marks the rejected pair, and retains original source hashes/evidence. Native live
+exports are additional reproducibility evidence, not extra students.
+
+## Resources, current coverage and next repair
+
+Final samples at **17:22:29**: C: **312.72 GiB free**, D: **534.36 GiB free**, RAM
+**4.16 GiB available**. Initial 2.86 GiB availability held exports until memory recovered;
+every export passed the 3 GiB start guard. These are sampled checks, not continuous peaks.
+No task containers remain and the retired C-backed target volume is absent. Cache and
+temporary output remain on D:. No unrelated application was stopped or reconfigured.
+
+Current coverage is **14 accepted / 1 rejected / 83 untested**, with fifteen distinct
+students compared. Prioritize the retained **CR-001-B04 stale group-heading/footer-
+transition defect** next: add a renderer-level synthetic reproduction, fix it, regenerate
+both frozen PDFs and guard prior accepted boundary/signature cases. No such renderer fix
+was attempted in this bounded batch. Standard/second-term/other-school, BIFF/XLS, wider
+legacy/subreport and authenticated Parent API/UI delivery gaps remain.
+
+SELECT-only discovery and reviewed read-only evaluation calls only; no database,
+publication/access, template or Parent configuration changes. Local commits only on main,
+no branches/worktrees, push or deployment. Unrelated backend configuration edits preserved.

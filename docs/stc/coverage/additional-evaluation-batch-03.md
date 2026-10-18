@@ -5,7 +5,7 @@
 The subsequent [CR-001-B03 repair](cr-001-b03-parity.md) fixes both causes and regenerates
 the original/Rust pair from clean `8f9fd5e`. All 4,748 painted glyphs and 36 ratings agree
 within unchanged limits, and all six final pages were reviewed. CR-003-B03 and CR-005-B03
-Rust replays remain byte-identical. Current cumulative coverage is twelve accepted,
+Rust replays remain byte-identical. Cumulative coverage at that repair checkpoint is twelve accepted,
 none rejected, 86 untested. The sections below preserve this batch's original rejection
 and then-open findings; the linked repair supersedes that case's final status.
 
