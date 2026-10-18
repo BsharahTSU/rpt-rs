@@ -24,7 +24,8 @@ separate checkout. No current Parent App or backend deployment/configuration has
   was installed. The failed passwordless Ubuntu package attempt made no package changes.
 - `Dockerfile.stc-dev` pins Rust 1.92 and includes Noto core/CJK fonts, Poppler and qpdf for verification.
 - `scripts/stc/Invoke-DockerCargo.ps1 -Build` builds that image and runs the workspace tests.
-  Sources are mounted read-only; compilation and downloaded crates use dedicated Docker volumes.
+  Sources are mounted read-only. The Rust target and container temporary files use D: bind mounts;
+  downloaded crates retain their small Docker volume. See the completed [storage migration](docker-cache-storage.md).
 - Ignored local verification logs/artifacts live under `research/stc-verification/`. No school RPT,
   saved report rows, credentials, student selectors or private PDFs belong in this repository.
 

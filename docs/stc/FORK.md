@@ -49,6 +49,7 @@ packaging and broad template parity remain open. Production Parent configuration
 | Linux build/run entry points | `scripts/stc/Invoke-DockerCargo.ps1`, `scripts/stc/Invoke-DockerBridge.ps1` |
 | Renderer implementation history and limitations | [README](README.md) |
 | Checkpoint ledger | [WORKLOG](WORKLOG.md) |
+| D: Docker build cache, validation and recovery | [Storage migration](docker-cache-storage.md) |
 | Parent case discovery and comparison protocol | [coverage/README](coverage/README.md) |
 | Current CR-001 repair and acceptance evidence | [coverage/cr-001-parity](coverage/cr-001-parity.md) |
 | Detailed CR-001 findings and fixes | [metrics](coverage/cr-001-metrics.md), [spacing](coverage/cr-001-spacing.md), [geometry](coverage/cr-001-geometry.md), [Arabic](coverage/cr-001-arabic.md), [whitespace](coverage/cr-001-whitespace.md), [text origins](coverage/cr-001-text-origins.md) |

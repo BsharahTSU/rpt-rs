@@ -455,3 +455,25 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   relevant development launchers. Rust source and production configuration are unchanged.
 - Details and rollback/safety gates: docker-cache-storage.md. At this checkpoint the original
   volume is intact; copy verification, real build/printing and removal checks are pending.
+
+## 2026-10-18 - Checkpoint 8b: D: cache verified and C: space reclaimed
+
+- Completed the copy of 47,982 files / 35,251 unique inodes, preserving 12,731 extra
+  hardlinks. Full independent SHA-256/size/mode/hardlink verification has zero
+  mismatches. Windows rounded mtimes by less than one second; Cargo accepted the cache.
+- From implementation checkpoint `c2e9221`, the actual Docker launcher builds the
+  worker offline and passes 50 focused Rust tests, including seven Chinese tests.
+  Storage/clock/printer contracts pass. Private helper issues (JSON clock coercion,
+  slow sequential verification and PowerShell 5.1 array wrapping) are documented.
+- All three frozen reports print before removal, after removal and after Docker
+  compaction/restart, with byte-identical PDF/Page IR against accepted Rust outputs.
+  Final qpdf checks pass; all three CR-005 raster pages match and were inspected.
+- Removed only `stc-rpt-rs-target` after the copy and print gates passed. No launcher
+  recreates it. The user approved UAC for detached-disk compaction; Docker restarted
+  normally. Windows recovered 29,185,019,904 bytes (27.18 GiB) on C:.
+- Final 12:32:59 readings: C: 313.80 GiB free, D: 535.88 GiB, RAM 5.32 GiB available.
+  Source, local history, templates and prior evidence are preserved. Keep the new
+  D: cache persistent; unrelated images/BuildKit still occupy Docker's C: disk.
+- Full details: [storage migration](docker-cache-storage.md). Backend documentation
+  updated without touching unrelated code/config edits. No SQL, new branch/worktree,
+  push, deployment or change to Parent report behavior.
