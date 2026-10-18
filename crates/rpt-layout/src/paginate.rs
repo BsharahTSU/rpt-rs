@@ -854,6 +854,9 @@ impl<'a> Formatter<'a> {
             }
             self.col_offset = base;
         }
+        // A footer-only continuation must not replay this completed group's header. Ancestor
+        // groups still have content in progress, and this group's scope stays live for its footer.
+        self.repeat_headers.pop();
         // Group footer for this level: resolved against the group's last record (Crystal's
         // group-footer record context), so its field/formula objects populate. It is this level's
         // underlay companion, so any span its header opened closes first — the footer prints below
@@ -865,7 +868,6 @@ impl<'a> Formatter<'a> {
                 self.emit_band(s, last, &state, None);
             }
         }
-        self.repeat_headers.pop();
         self.group_stack.pop();
         self.refresh_group_summaries();
     }

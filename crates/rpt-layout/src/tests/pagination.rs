@@ -2315,3 +2315,203 @@ fn group_header_moved_before_its_first_section_is_not_repeated_twice() {
         assert_eq!(page_text_tops(page, "line"), [300, 600]);
     }
 }
+
+/// Once the last detail is printed, a footer-only continuation must not replay the completed
+/// group's header. Retain the last record for footer fields and room for the final signatures.
+#[test]
+fn completed_group_footer_break_does_not_repeat_heading_or_displace_signatures() {
+    for repeat in [false, true] {
+        for break_kind in ["overflow", "before", "after"] {
+            // Explicit/deferred variants have room for the footer without their forced break.
+            let page_height = if break_kind == "overflow" { 1200 } else { 1500 };
+            let (mut report, mut saved) = paging_limit_report(page_height, 1, 2, 0, 0);
+            saved.columns[1].value_type = FieldValueType::String;
+            let header = &mut report.report_definition.areas[0];
+            header.format.group.as_mut().unwrap().repeat_group_header = repeat;
+            header.sections.push(section(
+                AreaSectionKind::GroupHeader,
+                "GH2",
+                200,
+                vec![text_object("Columns", "COLUMNS", 0)],
+            ));
+            report.report_definition.areas[1].sections[0].objects =
+                vec![db_field_object("Row", "t.x", 0)];
+            let mut footer = section(
+                AreaSectionKind::GroupFooter,
+                "GF",
+                200,
+                vec![db_field_object("LastRecord", "t.x", 0)],
+            );
+            if break_kind == "before" {
+                footer.format.base.new_page_before = true;
+            }
+            if break_kind == "after" {
+                report.report_definition.areas[1].sections[0]
+                    .condition_formulas
+                    .push(("New_Page_After".into(), "{t.x} = \"1\"".into()));
+            }
+            report
+                .report_definition
+                .areas
+                .push(area(AreaSectionKind::GroupFooter, vec![footer]));
+            report.report_definition.areas.push(area(
+                AreaSectionKind::ReportFooter,
+                vec![section(
+                    AreaSectionKind::ReportFooter,
+                    "Signatures",
+                    700,
+                    vec![text_object("Signature", "SIGNATURES", 0)],
+                )],
+            ));
+            let doc = rendered(&report, &saved);
+            assert_eq!(doc.pages.len(), 2, "repeat={repeat}, break={break_kind}");
+            assert_eq!(page_text_tops(&doc.pages[0], "GH"), [0]);
+            assert_eq!(page_text_tops(&doc.pages[0], "COLUMNS"), [300]);
+            assert_eq!(page_text_tops(&doc.pages[0], "0"), [500]);
+            assert_eq!(page_text_tops(&doc.pages[0], "1"), [800]);
+            assert!(page_text_tops(&doc.pages[1], "GH").is_empty());
+            assert!(page_text_tops(&doc.pages[1], "COLUMNS").is_empty());
+            assert_eq!(
+                page_text_tops(&doc.pages[1], "1"),
+                [0],
+                "footer keeps last record"
+            );
+            assert_eq!(page_text_tops(&doc.pages[1], "SIGNATURES"), [200]);
+        }
+    }
+}
+
+#[test]
+fn completed_group_multipart_footer_keeps_header_retired_across_suppression_and_breaks() {
+    for force_break in [false, true] {
+        let page_height = if force_break { 1200 } else { 1000 };
+        let (mut report, saved) = paging_limit_report(page_height, 1, 1, 0, 0);
+        report.report_definition.areas[0]
+            .format
+            .group
+            .as_mut()
+            .unwrap()
+            .repeat_group_header = true;
+        let mut hidden = section(
+            AreaSectionKind::GroupFooter,
+            "Hidden",
+            900,
+            vec![text_object("Hidden", "HIDDEN", 0)],
+        );
+        hidden
+            .condition_formulas
+            .push(("Section_Visibility".into(), "True".into()));
+        let first = section(
+            AreaSectionKind::GroupFooter,
+            "FirstFooter",
+            300,
+            vec![text_object("First", "FIRST FOOTER", 0)],
+        );
+        let mut second = section(
+            AreaSectionKind::GroupFooter,
+            "SecondFooter",
+            300,
+            vec![text_object("Second", "SECOND FOOTER", 0)],
+        );
+        second.format.base.new_page_before = force_break;
+        report.report_definition.areas.push(area(
+            AreaSectionKind::GroupFooter,
+            vec![hidden, first, second],
+        ));
+        let doc = rendered(&report, &saved);
+        assert_eq!(doc.pages.len(), 2);
+        assert_eq!(page_text_tops(&doc.pages[0], "GH"), [0]);
+        assert_eq!(page_text_tops(&doc.pages[0], "line"), [300]);
+        assert_eq!(page_text_tops(&doc.pages[0], "FIRST FOOTER"), [600]);
+        assert_eq!(page_text_tops(&doc.pages[1], "SECOND FOOTER"), [0]);
+        assert!(page_text_tops(&doc.pages[1], "GH").is_empty());
+        for page in &doc.pages {
+            assert!(page_text_tops(page, "HIDDEN").is_empty());
+        }
+    }
+}
+
+#[test]
+fn completed_child_footer_repeats_only_live_ancestor_and_retains_both_group_scopes() {
+    let (mut report, _) = paging_limit_report(1400, 1, 1, 0, 0);
+    let mut child = rpt_model::Group::default();
+    child.condition_field = "t.child".into();
+    child.sort.direction = rpt_model::SortDirection::AscendingOrder;
+    report.data_definition.groups.push(child);
+    let outer = &mut report.report_definition.areas[0];
+    outer.name = "OuterHeader".into();
+    outer.format.group.as_mut().unwrap().repeat_group_header = true;
+    outer.sections[0].height = Twips(200);
+    outer.sections[0].objects = vec![text_object("Parent", "PARENT", 0)];
+    let mut inner = outer.clone();
+    inner.name = "InnerHeader".into();
+    inner.sections[0].name = "InnerHeaderSection".into();
+    inner.sections[0].height = Twips(300);
+    inner.sections[0].objects = vec![text_object("Child", "CHILD", 0)];
+    report.report_definition.areas.insert(1, inner);
+    report.report_definition.areas[2].sections[0].objects = vec![db_field_object("Row", "t.x", 0)];
+    let group_name = |name: &str, reference: &str, left: i32| {
+        let mut object = db_field_object(name, reference, 0);
+        object.bounds.left = Twips(left);
+        if let ReportObjectKind::Field(field) = &mut object.kind {
+            field.ref_kind = FieldRefKind::GroupName;
+        }
+        object
+    };
+    let mut inner_footer = area(
+        AreaSectionKind::GroupFooter,
+        vec![section(
+            AreaSectionKind::GroupFooter,
+            "InnerFooterSection",
+            400,
+            vec![
+                group_name("ChildScope", "GroupName ({t.child})", 100),
+                group_name("ParentScope", "GroupName ({t.region})", 4000),
+            ],
+        )],
+    );
+    inner_footer.name = "InnerFooter".into();
+    let mut outer_footer = area(
+        AreaSectionKind::GroupFooter,
+        vec![section(
+            AreaSectionKind::GroupFooter,
+            "OuterFooterSection",
+            200,
+            vec![text_object("Total", "PARENT TOTAL", 0)],
+        )],
+    );
+    outer_footer.name = "OuterFooter".into();
+    report
+        .report_definition
+        .areas
+        .extend([inner_footer, outer_footer]);
+    let saved = saved_data(
+        &[
+            ("t.region", FieldValueType::String),
+            ("t.child", FieldValueType::String),
+            ("t.x", FieldValueType::String),
+        ],
+        &[
+            &["parent-A", "child-A", "row-1"],
+            &["parent-A", "child-A", "row-2"],
+            &["parent-A", "child-B", "row-3"],
+        ],
+    );
+    let doc = rendered(&report, &saved);
+    assert_eq!(doc.pages.len(), 3);
+    assert_eq!(page_text_tops(&doc.pages[0], "CHILD"), [200]);
+    assert_eq!(page_text_tops(&doc.pages[0], "row-1"), [500]);
+    assert_eq!(page_text_tops(&doc.pages[0], "row-2"), [800]);
+    assert_eq!(page_text_tops(&doc.pages[1], "child-A"), [200]);
+    assert_eq!(page_text_tops(&doc.pages[1], "CHILD"), [600]);
+    assert_eq!(page_text_tops(&doc.pages[1], "row-3"), [900]);
+    assert!(page_text_tops(&doc.pages[2], "CHILD").is_empty());
+    assert_eq!(page_text_tops(&doc.pages[2], "child-B"), [200]);
+    assert_eq!(page_text_tops(&doc.pages[2], "PARENT TOTAL"), [600]);
+    for page in &doc.pages {
+        assert_eq!(page_text_tops(page, "PARENT"), [0]);
+    }
+    for page in &doc.pages[1..] {
+        assert_eq!(page_text_tops(page, "parent-A"), [200]);
+    }
+}

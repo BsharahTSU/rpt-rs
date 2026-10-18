@@ -662,3 +662,19 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   Final C: 312.72 GiB/D: 534.36 GiB free, RAM 4.16 GiB available. Initial low RAM held exports
   until recovery; D: storage and caps retained, no running containers or old target volume.
   Read-only SQL and local commits only; no runtime/config/template/branch/worktree changes.
+
+
+## 2026-10-18 - Checkpoint 14a: CR-001-B04 footer continuation fixed
+
+- Retire a completed group's repeating header before its footer can start a new page;
+  preserve live ancestors, multipart header continuation and all footer resolution scope.
+- Three new synthetic regressions cover overflow/explicit/deferred breaks, signatures,
+  multipart suppression and nested group scopes. Red test reproduced the extra page.
+- All 396 focused Docker checks pass: 377 layout, seven Chinese PDF and twelve worker.
+- Candidate fresh native/Rust pair matches 33 ratings and all 4,256 painted glyphs;
+  42.2 pt body shift and stale heading are gone, signatures restored to page two.
+  Coordinator and independent review accept all six candidate page images within unchanged
+  limits. [Repair record](coverage/cr-001-b04-parity.md) retains evidence and reproduction.
+- Final clean-source pair and prior-case replays pending. No SQL/template/config changes;
+  local commits on main only. D: cache/temp, bounded sequential Docker; latest RAM 4.02 GiB
+  available and C: 312.10 GiB free. No unrelated applications stopped.
