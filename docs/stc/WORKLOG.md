@@ -707,3 +707,14 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   reproduction and limits. Actual PDF/Chinese/visual gates pending; renderer unchanged.
 - Initial RAM 5.22 GiB/C: 312.09 GiB free; D: cache/temp and sequential resource caps.
   No SQL writes/runtime/template/config change. Local commits only, no branches/worktrees.
+
+
+## 2026-10-18 - Checkpoint 15b: CR-001-B05 page-total/date-footer rejection
+
+- Capture and both engines print; native replay pixels, all 28 ratings and decoded images
+  match, with three physical pages. All-six-page review rejects printed totals/date footers.
+- Native labels 1/2, 2/2, 1/1 versus Rust 1/3, 2/3, 1/3; Rust misses 38 date glyphs on each
+  of pages two/three and raises legends/footers 16 pt. Body/name/signatures match.
+- [Batch 05](coverage/additional-evaluation-batch-05.md) preserves the failed pair and exact
+  findings. Root cause/renderer repair not claimed; investigate reset-aware totals and
+  conditional footers. Other two students pending; resource caps/D: paths retained.

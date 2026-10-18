@@ -47,3 +47,35 @@ review each pair before starting the next export. Preserve a rejected pair for a
 repair rather than accepting it from matching ratings/page counts alone. No credentials,
 student names/IDs, RPTs or report PDFs are committed. Local commits on existing main only;
 no new branches, worktrees, push or deployment.
+
+
+## Checkpoint 15b: CR-001-B05 rejected for page-total/date-footer differences
+
+All capture/native-live/native-frozen/rust-frozen stages pass from clean `c66e672`.
+The three PDFs pass qpdf and contain three equal physical page boxes. Native live/frozen
+page PNGs are identical. All 28 source ratings match in engine order, allocated 15 / 13 / 0,
+and decoded image RGB matches exactly. These successes do not establish visual parity.
+
+Coordinator and independent all-six-page reviews reject this case:
+
+- Native printed page labels are **1 of 2, 2 of 2, 1 of 1**; Rust prints **1 of 3,
+  2 of 3, 1 of 3**. The sole page-one outline difference is the page-total digit, not
+  the Arabic name. Physical PDF page count alone does not capture reset semantics.
+- Rust omits the entire **Print Date block on pages two and three**, 38 painted glyphs
+  each. Native date rows are retained in both live and frozen exports.
+- The legends and page footers on those pages are **16 pt higher** in Rust: native
+  page-number baseline is y=12 pt, Rust y=28 pt in PDF coordinates. Body, headings,
+  Arabic-name shapes, signatures and final note align; this is not the B04 body/signature
+  displacement and not a newly observed Arabic shaping failure.
+
+Painted glyph inventories are 1,789/1,789, 1,944/1,906 and 229/191 (native/Rust), totaling
+3,962/3,886. Geometry and per-page date gates fail as intended; matching ratings/page
+counts cannot override rejection. Root cause is not established. Retain the frozen pair
+for focused reset-aware page-total and conditional-footer investigation; do not change
+source data, templates or tolerances to force a pass. No renderer repair is claimed.
+The previous CR-001-B04 acceptance remains valid for its own captured input.
+
+Private `review/visual-review.json` explicitly records rejection. The comparison runner
+exits nonzero; the other two students remain pending at this checkpoint. Initial review
+considered a possible name-outline issue, but all-page/operator inspection identified
+the differing glyph as the page-total digit and ruled out that visual interpretation.
