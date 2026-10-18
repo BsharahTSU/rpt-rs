@@ -11,7 +11,9 @@ the same shared fixes. The [logo-color repair](coverage/cr-005-logo.md), committ
 logo RGB pixels exactly across CR-001/003/005. Fresh CR-005 exports and shared-case replays
 preserve drawing commands, font resources and Page IR; previous layout tolerances still apply.
 The [first additional batch](coverage/additional-evaluation-batch-01.md) and [second batch](coverage/additional-evaluation-batch-02.md)
-add six students, including sparse pages and symbol ratings. Nine students are now covered; 89 eligible candidates remain.
+add six accepted students, including sparse pages and symbol ratings. [Batch 03](coverage/additional-evaluation-batch-03.md)
+adds two passes and one rejection: CR-001-B03 needs a repeated-heading/body-offset and Arabic-name repair.
+Eleven students are accepted, one rejected and 86 eligible students remain untested.
 Sections below preserve earlier checkpoints and their own datasets/counts. They do not
 establish acceptance of the other Parent cases.
 

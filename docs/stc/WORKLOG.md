@@ -564,3 +564,19 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - Next two cases are pending. [Batch 03](coverage/additional-evaluation-batch-03.md)
   records findings and repair evidence. D: scratch/cache, capped sequential Docker,
   resource guards and local commits only; no branch/worktree or data/config changes.
+
+## 2026-10-18 - Checkpoint 11b: third batch complete, two passes and one rejection
+
+- CR-003-B03 and CR-005-B03 pass all-page comparisons: 50 and 35 ratings, 6,474 and
+  4,960 painting glyphs, exact image RGB, within existing layout tolerances.
+- CR-001-B03 remains rejected: missing page-two repeated heading, 21.5 pt body shift,
+  and Arabic name-outline mismatches. All 36 source ratings and native replay match.
+  No renderer fix claimed; frozen evidence is ready for the next focused repair.
+- All 18 comparison images reviewed; all nine execution PDFs pass integrity checks.
+  Thirty-one focused checks pass, including two new audit-rejection regressions and
+  seven Chinese PDF tests. CR-005 covers Latin text stored in the Arabic-name field.
+- Twelve distinct students compared: eleven accepted, one rejected, 86 eligible untested.
+  [Batch 03](coverage/additional-evaluation-batch-03.md) records evidence and next repair.
+- Final C: 313.34 GiB, D: 535.79 GiB free; RAM 6.01 GiB available, minimum sample 5.84 GiB.
+  No containers or retired target volume; D: storage and caps preserved. SELECT-only SQL,
+  no source-data/config/runtime changes, local commits only, no branch/worktree/push.
