@@ -772,3 +772,16 @@ checks and four Chinese integration checks passed. Database-gated workspace test
   approximately 3.66 GiB; all exports passed guards. D: cache/temp, no task containers or
   retired target volume, no unrelated apps stopped. No SQL/template/production change;
   local commits on existing main only, no branches/worktrees/push.
+
+## 2026-10-19 - Checkpoint 17a: sixth evaluation batch prepared
+
+- Refreshed SELECT-only eligibility: 98 ready; exclude eighteen previously captured students.
+  Three new cases have 26/52/35 rows and Arabic source names; comments remain empty.
+- Four printed-page-label regressions protect reset sequences and fail missing/duplicate
+  captions. All 37 Python checks pass in Docker; retained B05 bad/fixed PDFs fail/pass.
+  Private acceptance requires complete and equal labels; no tolerance/renderer change.
+- [Batch 06](coverage/additional-evaluation-batch-06.md) records selection, guards, evidence
+  and audit limitations. Chinese checks and fresh paired PDF/visual gates pending.
+- D: scratch/cache, sequential Docker caps and resource guards retained. Initial RAM
+  6.37 GiB available, C: 311.49 GiB free. Recapture guard now runs before SQL execution.
+  No database/template/production changes; local commits only, no branches/worktrees.

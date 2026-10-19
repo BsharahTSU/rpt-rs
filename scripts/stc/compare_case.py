@@ -19,6 +19,27 @@ def normalize(text):
     return ''.join(c for c in unicodedata.normalize('NFC', text) if unicodedata.category(c) != 'Cf')
 
 
+def printed_page_labels(page):
+    """Read English Page N of M captions per bbox line, retaining resets and duplicates.
+
+    This is a separate diagnostic for reports that print this caption, not an inferred
+    PDF page count. Other caption languages/formats still require visual review.
+    """
+    labels = []
+    for line in page.iter(NS + 'line'):
+        text = ' '.join(normalize(w.text or '') for w in line.iter(NS + 'word'))
+        labels.extend([int(n), int(total)] for n, total in re.findall(
+            r'\bPage\s+([0-9]+)\s+of\s+([0-9]+)\b', text, flags=re.IGNORECASE))
+    return labels
+
+
+def page_labels_complete(facts):
+    """Whether every physical page has exactly one recognized caption."""
+    labels = facts.get('printed_page_labels')
+    return (labels is not None and len(labels) == facts['pages'] and bool(labels)
+            and all(len(page) == 1 for page in labels))
+
+
 def compare(left, right):
     """Retain order and multiplicity; coordinate-free counters are only diagnostics."""
     a, b = left['words'], right['words']
@@ -30,6 +51,9 @@ def compare(left, right):
         'word_multiset_equal': ca == cb,
         'only_left': dict(ca - cb), 'only_right': dict(cb - ca),
         'dates_per_page_equal': left['dates'] == right['dates'],
+        'printed_page_labels_equal': (left['printed_page_labels'] == right['printed_page_labels']
+            if 'printed_page_labels' in left and 'printed_page_labels' in right else None),
+        'printed_page_labels_complete': page_labels_complete(left) and page_labels_complete(right),
         'visual_acceptance': 'not-assessed-by-script',
     }
 
@@ -50,6 +74,7 @@ def inspect(directory, engine):
     return {
         'pages': len(pages), 'page_boxes': [[float(p.attrib['width']), float(p.attrib['height'])] for p in pages],
         'words': words,
+        'printed_page_labels': [printed_page_labels(page) for page in pages],
         'dates': [[w for w in row if re.fullmatch(r'\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}', w)] for row in words],
         'bytes': path.stat().st_size, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
         'integrity': 'passed',
