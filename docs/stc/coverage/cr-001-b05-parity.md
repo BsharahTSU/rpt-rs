@@ -3,7 +3,7 @@
 **Accepted after repair (2026-10-18).** Fresh original Crystal and Docker Rust PDFs from
 clean `0e6476a` match all 28 ratings and 3,962 painted glyphs within unchanged limits.
 Page totals/date footers are repaired; all six final pages were reviewed. Five prior
-accepted Rust PDFs remain byte-identical. Current coverage: **18 accepted / 0 rejected /
+accepted Rust PDFs remain byte-identical. Coverage at that repair checkpoint: **18 accepted / 0 rejected /
 80 untested**. Earlier checkpoints below retain their original pending status.
 
 ## Checkpoint 16a: cause, fix and synthetic validation (2026-10-18)
@@ -150,8 +150,9 @@ all exports passed their start guard. These are samples, not continuous peak mea
 D: cache/temp and sequential container caps were retained; no task containers remain and
 the retired C-backed target volume is absent. No unrelated application was stopped.
 
-Current coverage: **18 accepted / 0 rejected / 80 untested** of 98 eligible students.
-Another bounded batch can now proceed. Populated comments, demonstrated displayed-name
+Coverage at that repair: **18 accepted / 0 rejected / 80 untested** of 98 eligible students.
+[Batch 06](additional-evaluation-batch-06.md) subsequently raises acceptance to 21, with 77 untested.
+At that checkpoint another bounded batch was next. Populated comments, demonstrated displayed-name
 overflow, blocked standard/second-term/other-school reports, BIFF/XLS, wider legacy/subreport
 behavior and authenticated Parent API/UI delivery remain open. No production rendering,
 configuration, database or template changes; local commits only, no branches/worktrees/push.

@@ -785,3 +785,20 @@ checks and four Chinese integration checks passed. Database-gated workspace test
 - D: scratch/cache, sequential Docker caps and resource guards retained. Initial RAM
   6.37 GiB available, C: 311.49 GiB free. Recapture guard now runs before SQL execution.
   No database/template/production changes; local commits only, no branches/worktrees.
+
+## 2026-10-19 - Checkpoint 17b: sixth batch accepted
+
+- All three new students pass sequential original Crystal/Docker Rust comparisons from
+  clean `4607ed4`: 26/52/35 ratings, 2/3/3 pages and 15,033 painted glyphs within existing
+  limits. All sixteen final page PNGs independently reviewed; names/headings/signatures,
+  date blocks and printed labels agree. Native replay pixels and decoded RGB are exact.
+- [Batch 06](coverage/additional-evaluation-batch-06.md) records selection, every case,
+  four new page-label regressions, private evidence and reproduction. All 44 focused tests
+  pass (37 Python plus seven Chinese). No renderer fix or tolerance change was needed.
+- Coverage: twenty-one accepted, none rejected, 77 eligible untested. No new template/API
+  coverage claimed. Source checkpoint `4607ed4` contains the audit/tests and preparation.
+- Final C: 311.44 GiB free, D: 533.81 GiB free, RAM 3.08 GiB available. Lowest observed RAM 1.55 GiB during first pair;
+  later Chinese test start held at 2.78 GiB until recovery. All exports started above 3 GiB.
+  D: cache/temp, sequential caps, no remaining containers/retired target volume. No SQL,
+  template or production changes; unrelated backend configuration edit left untouched.
+  Local commits only, no branches/worktrees/push. Another bounded batch is next.

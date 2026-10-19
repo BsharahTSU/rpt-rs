@@ -16,9 +16,11 @@ SQL/procedure/DataSet callers, PDF, and BIFF/XLS. The portable adapter uses .NET
 request validation and the Rust worker for rendering. Rust builds and candidates run in Docker
 Linux; original Crystal baselines require the existing Windows Crystal installation.
 
-PDF support is experimental. After [batch 05](coverage/additional-evaluation-batch-05.md)
-and the [CR-001-B05 repair](coverage/cr-001-b05-parity.md), eighteen students are accepted,
-none rejected and 80 eligible students remain untested. Clean `0e6476a` scopes page totals
+PDF support is experimental. After [batch 06](coverage/additional-evaluation-batch-06.md),
+twenty-one students are accepted, none rejected and 77 eligible students remain untested.
+Its three new cases match 113 ratings and 15,033 painted glyphs; all sixteen final page PNGs
+reviewed and 44 focused tests pass. No renderer change was needed. The preceding
+[CR-001-B05 repair](coverage/cr-001-b05-parity.md) in clean `0e6476a` scopes page totals
 to actual numbering sequences, restoring conditional dates and footer positions. Fresh
 paired PDFs match 28 ratings and all 3,962 painted glyphs; all six pages reviewed. Four new
 regressions, 400 focused checks and strict affected lint/format pass; five prior accepted

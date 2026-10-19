@@ -45,10 +45,21 @@ Source and SQL discovery are complete for the documented local scope: 38 AAJ cas
 ready evaluation groups and 98 candidate students. Other local copies are metadata-only evidence;
 external Gradebook and authenticated API/UI delivery remain open. Read the [surface inventory](parent-surfaces.md),
 [SQL findings](sql-eligibility.md), [isolated runner](case-runner.md), and [clock fix](clock-parity.md).
-[Initial actual comparisons](initial-comparisons.md) preserve the original three exports and their then-open defects; the subsequent repair/acceptance records supersede those defects. After the [CR-001-B05 repair](cr-001-b05-parity.md), eighteen students have accepted comparisons, none is currently rejected, and 80 eligible students remain SQL-only evidence.
+[Initial actual comparisons](initial-comparisons.md) preserve the original three exports and their then-open defects; the subsequent repair/acceptance records supersede those defects. After [batch 06](additional-evaluation-batch-06.md), twenty-one students have accepted comparisons, none is currently rejected, and 77 eligible students remain SQL-only evidence.
 
 
-## Current comparison checkpoint: CR-001-B05 repaired and accepted (2026-10-18)
+## Current comparison checkpoint: batch 06 accepted (2026-10-19)
+
+[Batch 06](additional-evaluation-batch-06.md) accepts three new students from clean `4607ed4`.
+All 113 ratings and 15,033 painted glyphs match within unchanged limits across 2/3/3 pages.
+Coordinator and independent reviews cover all sixteen final page images; printed page totals,
+Arabic names, headings, signatures, dates and decoded RGB agree. All 44 focused checks pass,
+including four new page-label regressions and seven Chinese PDF tests. No renderer fix needed.
+Coverage: **21 accepted / 0 rejected / 77 untested**. D: cache/temp; final C: 311.44 GiB free, D: 533.81 GiB free, RAM 3.08 GiB available.
+RAM briefly fell to 1.55 GiB; the later test start waited for recovery above 3 GiB. No SQL,
+template or production changes. Another bounded student batch is next.
+
+## Previous comparison checkpoint: CR-001-B05 repaired and accepted (2026-10-18)
 
 The [repair](cr-001-b05-parity.md) scopes page totals to actual numbering sequences and
 restores conditional date sections without an offset correction. Fresh original/Docker
@@ -202,7 +213,7 @@ fresh per-engine pixels, glyph data and geometry reproduce the reviewed candidat
 This is accepted captured-case parity with documented residuals, not pixel identity.
 
 CR-003 retains its recorded text/layout acceptance. CR-005 passes text/layout and exact decoded-logo matching above; CR-001/003 replays close their same image residual.
-After the [CR-001-B05 repair](cr-001-b05-parity.md), eighteen students have accepted comparisons, none is currently rejected, and 80 eligible students remain SQL-only evidence. Unpublished standard/second-term cases,
+After [batch 06](additional-evaluation-batch-06.md), twenty-one students have accepted comparisons, none is currently rejected, and 77 eligible students remain SQL-only evidence. Unpublished standard/second-term cases,
 missing authoritative databases/templates, external Gradebook, authenticated API/UI delivery,
 BIFF/XLS and broad legacy/subreport coverage retain the gaps recorded in
 [initial comparisons](initial-comparisons.md), [SQL findings](sql-eligibility.md) and

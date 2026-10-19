@@ -27,8 +27,13 @@ PDF tests at that checkpoint. The [CR-001-B05 repair](coverage/cr-001-b05-parity
 `0e6476a` now scopes totals to actual numbering sequences and restores date/footer placement.
 Fresh paired PDFs match all 3,962 painted glyphs and 28 ratings; all six pages reviewed.
 Four new regressions, 400 focused checks and strict affected lint/format pass; five prior
-accepted Rust PDFs remain byte-identical. Current coverage: eighteen accepted, none rejected,
-80 eligible students untested. D: cache/temp; final C: 311.40 GiB free, RAM 5.96 GiB available.
+accepted Rust PDFs remain byte-identical at that repair checkpoint.
+[Batch 06](coverage/additional-evaluation-batch-06.md) adds three accepted students from clean
+`4607ed4`: 113 ratings and 15,033 painted glyphs match within existing limits; all sixteen
+final page PNGs reviewed. Four new printed-page-label regressions and all 44 focused tests
+pass, including seven Chinese PDF checks. No renderer change was needed. Current coverage:
+**21 accepted, none rejected, 77 eligible students untested**. D: cache/temp; final C: 311.44 GiB free, D: 533.81 GiB free, RAM 3.08 GiB available.
+RAM briefly reached 1.55 GiB; later tests waited for the 3-GiB guard before running.
 Sections below preserve earlier checkpoints and their own datasets/counts. They do not
 establish acceptance of the other Parent cases.
 

@@ -3,8 +3,8 @@
 **Subsequent repair accepted (2026-10-18).** The [CR-001-B05 repair](cr-001-b05-parity.md)
 closes the printed-total/date-footer rejection with fresh original/Rust PDFs from `0e6476a`.
 All 3,962 painted glyphs and 28 ratings match within unchanged limits; all six pages reviewed.
-Five prior accepted Rust PDFs remain byte-identical, including CR-003/005-B05. Current
-coverage: **18 accepted / 0 rejected / 80 untested**. The batch findings below preserve
+Five prior accepted Rust PDFs remain byte-identical, including CR-003/005-B05. Coverage
+at that repair: **18 accepted / 0 rejected / 80 untested**. The batch findings below preserve
 the original rejection; the repair supersedes that case's status.
 
 **Final result (2026-10-18): two accepted, one rejected.** CR-003-B05 and CR-005-B05
